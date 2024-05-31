@@ -1,0 +1,56 @@
+\section{Preamble}
+
+\begin{table*}
+\centering
+\begin{tabular}{lll}
+\hline
+\textbf{Output} & \textbf{natbib command} & \textbf{Old ACL-style command}\\
+\hline
+\citep{ct1965} & \verb|\citep| & \verb|\cite| \\
+\citealp{ct1965} & \verb|\citealp| & no equivalent \\
+\citet{ct1965} & \verb|\citet| & \verb|\newcite| \\
+\citeyearpar{ct1965} & \verb|\citeyearpar| & \verb|\shortcite| \\
+\citeposs{ct1965} & \verb|\citeposs| & no equivalent \\
+\citep[FFT;][]{ct1965} &  \verb|\citep[FFT;][]| & no equivalent\\
+\hline
+\end{tabular}
+\caption{\label{citation-guide}
+Citation commands supported by the style file.
+The style is based on the natbib package and supports all natbib citation commands.
+It also supports commands defined in previous ACL style files for compatibility.
+}
+\end{table*}
+The first line of the file must be
+\begin{quote}
+\begin{verbatim}
+\documentclass[11pt]{article}
+\end{verbatim}
+\end{quote}
+To load the style file in the review version:
+\begin{quote}
+\begin{verbatim}
+\usepackage[review]{ACL2023}
+\end{verbatim}
+\end{quote}
+For the final version, omit the \verb|review| option:
+\begin{quote}
+\begin{verbatim}
+\usepackage{ACL2023}
+\end{verbatim}
+\end{quote}
+To use Times Roman, put the following in the preamble:
+\begin{quote}
+\begin{verbatim}
+\usepackage{times}
+\end{verbatim}
+\end{quote}
+(Alternatives like txfonts or newtx are also acceptable.)
+Please see the \LaTeX{} source of this document for comments on other packages that may be useful.
+Set the title and author using \verb|\title| and \verb|\author|. Within the author list, format multiple authors using \verb|\and| and \verb|\And| and \verb|\AND|; please see the \LaTeX{} source for examples.
+By default, the box containing the title and author names is set to the minimum of 5 cm. If you need more space, include the following in the preamble:
+\begin{quote}
+\begin{verbatim}
+\setlength\titlebox{<dim>}
+\end{verbatim}
+\end{quote}
+where \verb|<dim>| is replaced with a length. Do not set this length smaller than 5 cm.
