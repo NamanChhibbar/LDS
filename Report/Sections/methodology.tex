@@ -1,4 +1,74 @@
-\section{Methodology}
+\section{Proposed Methods}
+% \section{Methodology}
 \label{sec:methodology}
 
-To be filled
+
+\subsection{Truncation from the middle}
+\label{sub:truncation}
+
+The trivial and the most common approach to handle long texts that exceed the context
+size of an LLM is truncation.
+Truncation is done in three main ways:
+
+\begin{enumerate}
+	\item \textbf{Head Only}: Truncate tokens from the \textbf{end} of the text,
+	retaining the initial segment.
+	\item \textbf{Tail Only}: Truncate tokens from the \textbf{start} of the text,
+	retaining the final segment.
+	\item \textbf{Head+Tail}: Truncate tokens from the \textbf{middle} of the text,
+	retaining both the initial and final segments.
+\end{enumerate}
+
+Though the "head only" method is most commonly used, keeping the initial tokens
+allowed by the LLM, \citet{sun2019fine} have found that the "head+tail" approach
+produces better results than both the "head only" and the "tail only" methods.
+Their research also shows that the "head+tail" approach is even better than the more
+complicated hierarchical methods, displaying superiority with simplicity.
+
+
+\subsection{Document skimming}
+\label{sub:skimming}
+
+One simlpe way to process long texts is by employing a speed reading strategy known as
+"skimming".
+Skimming is done by reading the whole text in a go while selectively skipping some
+parts of the text for quicker reading.
+The reader usually omits the portions that seem redundant or irrelevant in the text,
+minimizing information loss.
+
+Since an LLM can not know which parts of a text are irrelevant, we suggest uniformly
+selecting sentences/segments of text to be used for summarization.
+This approach ensures we get a segment from each part of the text.
+
+A similar methodology is employed by \citet{wang2024videoagent} for
+question-answering based on long videos;
+instead of sampling segments of texts, as we propose in our approach, they sample
+frames from the video to try and answer the given query.
+Given a video is a sequence of frames, a long video is analogous to a long document.
+Therefore, we propose that a similar approach can be utilized to summarize long texts
+effectively.
+
+
+\subsection{Summarization using 1D convolution}
+\label{sub:serial}
+
+Another way to approach the problem is to apply convolution to encoded segments of
+the document.
+The convolution operation multiplies a sliding window of weights element-wise by the
+embeddings and then sums the result.
+This allows the model to learn cross-segment relationships and acts as a
+limited-range attention mechanism.
+
+This method begins with separating sentences from the document and grouping them
+based on a fixed maximum number of sentences per group.
+These groups are then encoded and passed through a 1D convolution layer of size $k$,
+where $k$ is one of the hyperparameters in the model.
+A decoder-only transformer then uses these processed embeddings as keys and values
+for the encoder-decoder attention mechanism to generate the summary.
+
+A similar algorithm is used by \citet{chen2022long} to classify Chinese news in the
+form of natural language.
+The study uses the BERT model to encode the segmented news.
+These encodings are then convolved and max-pooled.
+A classifier head with a fully connected layer with softmax activation is then used
+to classify.
