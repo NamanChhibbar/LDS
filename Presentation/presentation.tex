@@ -18,10 +18,16 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 
-\title[Your Short Title]{Your Presentation}
-\author{You}
-\institute{Where You're From}
-\date{Date of Presentation}
+% My packages
+\usepackage{graphicx}
+
+\title[Long Document Summarization]{Automatic Summarization for Long Documents}
+\author[Naman Chhibbar]{
+  Naman Chhibbar \\
+  \textup{\scriptsize advised by Dr. Jugal Kalita}
+}
+\institute{University of Colorado, Colorado Springs}
+\date{June 7th, 2024}
 
 \begin{document}
 
@@ -35,6 +41,18 @@
 % \end{frame}
 
 \input{Sections/introduction.tex}
-\input{Sections/examples.tex}
+\input{Sections/problem.tex}
+
+
+\section{References}
+
+\begin{frame}{References}
+\tiny
+
+\nocite{*}
+\bibliography{../Report/anthology}
+\bibliographystyle{../Report/acl_natbib}
+  
+\end{frame}
 
 \end{document}
