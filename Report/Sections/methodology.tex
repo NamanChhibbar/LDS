@@ -18,8 +18,15 @@ This approch is a modification to the methodology \citet{wang2024videoagent} use
 QA on long videos. \citet{worsham-kalita-2018-genre} also use random sampling for genre
 identification.
 
-Furthermore, we can use keywords from an extractive summarization algorithm to pick
-sentences intelligently instead of randomly sampling them.
+
+\subsection{Document Skimming w/ Extraction}
+
+In addition to skimming, we can use keywords from an extractive summarization
+algorithm to obtain similarity scores for keywords and text segments.
+We can then create a probability distribution using the scores from which we can sample
+text segments to include.
+This will help us choose segemnts intelligently instead of randomly sampling them.
+
 Some extractive summarization algorithms that can be used are:
 
 \begin{itemize}
@@ -37,8 +44,7 @@ Some extractive summarization algorithms that can be used are:
 	Developed by \citet{Nallapati_Zhai_Zhou_2017}.
 \end{itemize}
 
-Using keyword and sentence extraction techniques is similar to the methodology adopted
-by \citet{10.1145/3639233.3639253}
+This approach is similar to the methodology adopted by \citet{10.1145/3639233.3639253}.
 
 
 \subsection{Summarization using Convolutions}
@@ -52,8 +58,7 @@ limited-range attention mechanism, an algorithm similar to \citet{chen2022long}.
 
 This method begins with separating sentences from the document and grouping them
 based on a fixed maximum number of sentences per group.
-These groups are then encoded and passed through a 1D convolution layer of size $k$,
-where $k$ is one of the hyperparameters in the model.
+These groups are then encoded and passed through a 1D convolution layer of size $k$ with $f$ filters, where $k$ and $f$ are hyperparameters in the model.
 A max-pooling layer can also be applied for feature enhancement.
 A decoder-only transformer then uses these processed embeddings as keys and values
 for the encoder-decoder attention mechanism to generate the summary.
@@ -64,7 +69,7 @@ Our 1D convolution operation outperforms the windowed attention mechanism since 
 linear complexity and is more efficient to calculate than attention.
 
 
-\subsection{Truncation from the middle}
+\subsection{Central Truncation}
 
 Truncation is the most common and straightforward approach used to handle long texts
 that exceed the context size of an LLM.
@@ -78,8 +83,8 @@ It is done in three main ways:
 
 \citet{worsham-kalita-2018-genre} also employ "retaining head" and "retaining tail"
 strategies on long texts and find promising results.
-Though the "head only" method is often used, keeping the initial tokens allowed by the
-LLM, \citet{sun2019fine} have found that keeping both head and tail produces better
-results than both the "head only" and the "tail only" methods.
-Their research also shows that the "head+tail" approach is even better than the more
+Though the "retaining head" method is often used, keeping the initial tokens allowed
+by the LLM, \citet{sun2019fine} have found that keeping both head and tail produces
+better results than both the "retaining head" and the "retaining tail" methods.
+Their research also shows that truncating the middle is even better than the more
 complicated hierarchical methods, displaying superiority with simplicity.
