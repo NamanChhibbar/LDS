@@ -1,5 +1,7 @@
 .DS_Store
 
+temp*
+
 *.aux
 *.bbl
 *.blg
@@ -7,7 +9,7 @@
 *.fls
 *.log
 *.out
-*.synctex.gz
+*.synctex*
 *.nav
 *.snm
 *.toc

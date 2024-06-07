@@ -19,12 +19,12 @@
 \usepackage[T1]{fontenc}
 
 % My packages
-\usepackage{graphicx}
+\usepackage{natbib}
 
 \title[Long Document Summarization]{Automatic Summarization for Long Documents}
 \author[Naman Chhibbar]{
   Naman Chhibbar \\
-  \textup{\scriptsize advised by Dr. Jugal Kalita}
+  \scriptsize advised by Dr. Jugal Kalita
 }
 \institute{University of Colorado, Colorado Springs}
 \date{June 7th, 2024}
@@ -35,24 +35,9 @@
   \titlepage
 \end{frame}
 
-% Uncomment these lines for an automatically generated outline.
-% \begin{frame}{Outline}
-%   \tableofcontents
-% \end{frame}
-
 \input{Sections/introduction.tex}
 \input{Sections/problem.tex}
-
-
-\section{References}
-
-\begin{frame}{References}
-\tiny
-
-\nocite{*}
-\bibliography{../Report/anthology}
-\bibliographystyle{../Report/acl_natbib}
-  
-\end{frame}
+\input{Sections/methods.tex}
+\input{Sections/references.tex}
 
 \end{document}

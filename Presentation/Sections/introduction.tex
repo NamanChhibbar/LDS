@@ -3,10 +3,10 @@
 
 \subsection{Summarization}
 
-\begin{frame}{About Summarization}
+\begin{frame}{Summarization Overview}
 
 \begin{itemize}
-  \item<1-> \textbf{Definition} Summarization involves condensing natural language
+  \item \textbf{Definition} Summarization involves condensing natural language
 	while retaining essential information for quicker readability and interpretation.
 	\item<2-> \textbf{Importance} Summarization is crucial because it helps us extract
 	important information efficiently.
@@ -16,20 +16,17 @@
 
 \vskip .5cm
 
-\centering{
+\begin{figure}
+	\centering
 	\includegraphics[width=.8\textwidth]{Images/summarize.jpg}
-}
-
-% \begin{block}{Examples}
-% Some examples of commonly used commands and features are included, to help you get started.
-% \end{block}
+\end{figure}
 
 \end{frame}
 
 
 \subsection{Automatic Summarization}
 
-\begin{frame}{What is Automatic Summarization?}
+\begin{frame}{What's Automatic Summarization?}
 
 Summarization done by a computer algorithm automatically is known as automatic
 summarization.
@@ -46,27 +43,35 @@ summarization.
 
 \vskip .5cm
 
-\centering{
+\begin{figure}
+	\centering
 	\includegraphics[width=.9\textwidth]{Images/algorithm-summarize.jpg}
-}
+\end{figure}
 
 \end{frame}
 
 \begin{frame}{How is it done today?}
 
-	Nowadays, we have sophisticated Large Language Models (LLMs) based on the
-	transformer architecture for automatic summarization.
-	These methods have pushed the boundaries of abstractive summarization and can
-	generate accurate, coherent, and human-like summaries.
+Nowadays, we have sophisticated Large Language Models (LLMs) based on the
+transformer architecture for automatic summarization.
+These methods have pushed the boundaries of abstractive summarization and can
+generate accurate, coherent, and human-like summaries.
+
+\only<1>{
+	\vskip 2.63cm
+}
 
 \vskip 1.3cm
 
-\centering{
-	\includegraphics[width=.2\textwidth]{Images/GPT-4.png}
-	\hfill
-	\includegraphics[width=.4\textwidth]{Images/bert.jpg}
-	\hfill
-	\includegraphics[width=.35\textwidth]{Images/llama.jpg}
+\only<2>{
+	\begin{figure}
+		\centering
+		\includegraphics[width=.2\textwidth]{Images/GPT-4.png}
+		\hfill
+		\includegraphics[width=.4\textwidth]{Images/bert.jpg}
+		\hfill
+		\includegraphics[width=.35\textwidth]{Images/llama.jpg}
+	\end{figure}
 }
 
 \end{frame}
