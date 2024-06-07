@@ -1,6 +1,8 @@
 .DS_Store
 
 temp*
+*.pdf
+*.txt
 
 *.aux
 *.bbl
@@ -13,6 +15,4 @@ temp*
 *.nav
 *.snm
 *.toc
-
-*.pdf
-*.txt
+.$*

@@ -1,26 +1,22 @@
 \section{Related Work}
-\label{sec:related-work}
 
-In this section, we discuss some related works that give insights into the problem.
+In this section, we discuss some recent works related to long document summarization.
 
 
 \subsection*{Question-Answering on Long Videos}
-\label{sub:long-videos}
 
-\citet{wang2024videoagent} introduce the VideoAgent, an AI agent designed to answer a
+\citet{wang2024videoagent} introduce VideoAgent, an AI agent designed to answer a
 given question using the context of a long video (approximately an hour long).
 The agent first generates captions from multiple uniformly sampled frames from the
 video, which are used to answer the question.
-If the agent feels that the captions can not answer the question, it identifies a
-segment between the initial frames to obtain more frames.
-
+If the agent feels that the captions are not sufficient to answer the question, it
+identifies a segment between the initial frames to obtain more frames.
 This work is relevant since a long video, a sequence of frames, can be considered
 analogous to a long document, a sequence of tokens. The techniques utilized by
 VideoAgent can be adapted to perform query-based summarization in long documents.
 
 
-\subsection*{Long Chinese news classification}
-\label{sub:chinese}
+\subsection*{Long Chinese News Classification}
 
 \citet{chen2022long} describe a novel algorithm for long document classification
 aimed to classify Chinese news into a set of pre-defined categories.
@@ -30,9 +26,8 @@ and forming groups of sentences determined by a fixed maximum number of tokens a
 group should have.
 BERT is then used to encode these groups of sentences for further processing.
 Each sentence embedding is passed through a 1D convolution layer for local feature
-extraction, followed by a 1D max pooling layer.
+extraction, followed by a 1D max-pooling layer.
 Finally, a classifier head with softmax activation is used to classify using the
 extracted features.
-
 Methods utilized in this video, like segmenting and convolving, may prove helpful in
 encoding long documents.

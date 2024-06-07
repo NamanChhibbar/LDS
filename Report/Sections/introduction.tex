@@ -3,16 +3,19 @@
 
 Due to the abundance of online text data, document summarization has become crucial
 for efficiently and accurately extracting relevant information from a piece of text.
-Over the past few years, Large Language Models (LLMs) have shown unique abilities for
-many NLP tasks, including document summarization \cite{yadav2023state}.
-Recent developments have demonstrated remarkable improvements in the relevancy of
-summaries generated and the computational resources utilized by LLMs.
+Over the past few years, Large Language Models (LLMs) based on the transformer model
+\cite{vaswani2017attention} have shown unique abilities for many NLP tasks, including
+document summarization \cite{yadav2023state}.
+Recent developments have demonstrated remarkable improvements in the relevancy and
+coherence of summaries generated and the computational resources utilized by LLMs.
 
 Even after the rapid growth of these models, one of the significant limitations of
-LLMs is their context size, which disallows them from working on long documents.
+LLMs is their context size, which is due to the quadratic attention mechanism in the
+transofrmer architecture.
+LLMs are unable to process large documents due to these restrictions.
 Long document summarization is more crucial than ever since summarization involves
 removing redundancies from a piece of text, which makes reading the text concise and
 efficient.
 
-This paper introduces several proposed algorithms that aim to handle long documents,
+This paper introduces three novel algorithms that aim to handle long documents,
 removing input size limitations in LLMs.
