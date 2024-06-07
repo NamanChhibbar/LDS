@@ -1,6 +1,22 @@
-\section{Related Work}
+\section{Related Works}
 
 In this section, we discuss some recent works related to long document summarization.
+
+
+\subsection*{Summarization of Long Meeting Transcripts}
+
+\citet{10.1145/3639233.3639253} describe a unique way of summarizing long meeting
+transcripts.
+Their approach is based on "Divide-and-Conquer", which starts with
+segmenting the transcript to summarize each segment individually and combine them.
+They use the BART (Bidirectional and Auto-Regressive Transformer) model for
+summarization due to its high speed and performance.
+They also extract action-item pairs to aid summarization.
+After processing each segment, all summaries are combined for a final abstractive
+summarization.
+If the combined summarires fail to fit the context size, the combined summaries are
+recursively segmented and summarized.
+This study gives us insights into how we can process long inputs for summarization.
 
 
 \subsection*{Question-Answering on Long Videos}
@@ -20,7 +36,6 @@ VideoAgent can be adapted to perform query-based summarization in long documents
 
 \citet{chen2022long} describe a novel algorithm for long document classification
 aimed to classify Chinese news into a set of pre-defined categories.
-
 Their approach begins with pre-processing a long text by segmenting it into sentences
 and forming groups of sentences determined by a fixed maximum number of tokens a
 group should have.
