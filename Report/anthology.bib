@@ -1,3 +1,5 @@
+% Literature
+
 @article{wang2024videoagent,
   title={VideoAgent: Long-form Video Understanding with Large Language Model as Agent},
   author={Wang, Xiaohan and Zhang, Yuhui and Zohar, Orr and Yeung-Levy, Serena},
@@ -91,54 +93,6 @@
   abstract = "Recent advances in Natural Language Processing are finding ways to place an emphasis on the hierarchical nature of text instead of representing language as a flat sequence or unordered collection of words or letters. A human reader must capture multiple levels of abstraction and meaning in order to formulate an understanding of a document. In this paper, we address the problem of developing approaches which are capable of working with extremely large and complex literary documents to perform Genre Identification. The task is to assign the literary classification to a full-length book belonging to a corpus of literature, where the works on average are well over 200,000 words long and genre is an abstract thematic concept. We introduce the Gutenberg Dataset for Genre Identification. Additionally, we present a study on how current deep learning models compare to traditional methods for this task. The results are presented as a baseline along with findings on how using an ensemble of chapters can significantly improve results in deep learning methods. The motivation behind the ensemble of chapters method is discussed as the compositionality of subtexts which make up a larger work and contribute to the overall genre.",
 }
 
-@inproceedings{lin-2004-rouge,
-  title = "{ROUGE}: A Package for Automatic Evaluation of Summaries",
-  author = "Lin, Chin-Yew",
-  booktitle = "Text Summarization Branches Out",
-  month = jul,
-  year = "2004",
-  address = "Barcelona, Spain",
-  publisher = "Association for Computational Linguistics",
-  url = "https://aclanthology.org/W04-1013",
-  pages = "74--81",
-}
-
-@inproceedings{papineni-etal-2002-bleu,
-  title = "{B}leu: a Method for Automatic Evaluation of Machine Translation",
-  author = "Papineni, Kishore  and
-    Roukos, Salim  and
-    Ward, Todd  and
-    Zhu, Wei-Jing",
-  editor = "Isabelle, Pierre  and
-    Charniak, Eugene  and
-    Lin, Dekang",
-  booktitle = "Proceedings of the 40th Annual Meeting of the Association for Computational Linguistics",
-  month = jul,
-  year = "2002",
-  address = "Philadelphia, Pennsylvania, USA",
-  publisher = "Association for Computational Linguistics",
-  url = "https://aclanthology.org/P02-1040",
-  doi = "10.3115/1073083.1073135",
-  pages = "311--318",
-}
-
-@inproceedings{banerjee-lavie-2005-meteor,
-  title = "{METEOR}: An Automatic Metric for {MT} Evaluation with Improved Correlation with Human Judgments",
-  author = "Banerjee, Satanjeev  and
-    Lavie, Alon",
-  editor = "Goldstein, Jade  and
-    Lavie, Alon  and
-    Lin, Chin-Yew  and
-    Voss, Clare",
-  booktitle = "Proceedings of the {ACL} Workshop on Intrinsic and Extrinsic Evaluation Measures for Machine Translation and/or Summarization",
-  month = jun,
-  year = "2005",
-  address = "Ann Arbor, Michigan",
-  publisher = "Association for Computational Linguistics",
-  url = "https://aclanthology.org/W05-0909",
-  pages = "65--72",
-}
-
 @inproceedings{mihalcea-tarau-2004-textrank,
   title = "{T}ext{R}ank: Bringing Order into Text",
   author = "Mihalcea, Rada  and
@@ -206,4 +160,111 @@
   author={Nallapati, Ramesh and Zhai, Feifei and Zhou, Bowen},
   year={2017},
   month={Feb.}
+}
+
+
+% Datasets
+
+%% GovReport
+@inproceedings{huang-etal-2021-efficient,
+  title = "Efficient Attentions for Long Document Summarization",
+  author = "Huang, Luyang  and
+    Cao, Shuyang  and
+    Parulian, Nikolaus  and
+    Ji, Heng  and
+    Wang, Lu",
+  booktitle = "Proceedings of the 2021 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+  month = jun,
+  year = "2021",
+  address = "Online",
+  publisher = "Association for Computational Linguistics",
+  url = "https://aclanthology.org/2021.naacl-main.112",
+  doi = "10.18653/v1/2021.naacl-main.112",
+  pages = "1419--1436",
+  abstract = "The quadratic computational and memory complexities of large Transformers have limited their scalability for long document summarization. In this paper, we propose Hepos, a novel efficient encoder-decoder attention with head-wise positional strides to effectively pinpoint salient information from the source. We further conduct a systematic study of existing efficient self-attentions. Combined with Hepos, we are able to process ten times more tokens than existing models that use full attentions. For evaluation, we present a new dataset, GovReport, with significantly longer documents and summaries. Results show that our models produce significantly higher ROUGE scores than competitive comparisons, including new state-of-the-art results on PubMed. Human evaluation also shows that our models generate more informative summaries with fewer unfaithful errors.",
+}
+
+%% BookSum
+@article{kryscinski2021booksum,
+  title={BookSum: A Collection of Datasets for Long-form Narrative Summarization}, 
+  author={Wojciech Kry{\'s}ci{\'n}ski and Nazneen Rajani and Divyansh Agarwal and Caiming Xiong and Dragomir Radev},
+  year={2021},
+  eprint={2105.08209},
+  archivePrefix={arXiv},
+  primaryClass={cs.CL},
+  url="https://arxiv.org/abs/2105.08209"
+}
+
+%% BigPatent
+@inproceedings{sharma-etal-2019-bigpatent,
+  title = "{BIGPATENT}: A Large-Scale Dataset for Abstractive and Coherent Summarization",
+  author = "Sharma, Eva  and
+    Li, Chen  and
+    Wang, Lu",
+  editor = "Korhonen, Anna  and
+    Traum, David  and
+    M{\`a}rquez, Llu{\'\i}s",
+  booktitle = "Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics",
+  month = jul,
+  year = "2019",
+  address = "Florence, Italy",
+  publisher = "Association for Computational Linguistics",
+  url = "https://aclanthology.org/P19-1212",
+  doi = "10.18653/v1/P19-1212",
+  pages = "2204--2213",
+  abstract = "Most existing text summarization datasets are compiled from the news domain, where summaries have a flattened discourse structure. In such datasets, summary-worthy content often appears in the beginning of input articles. Moreover, large segments from input articles are present verbatim in their respective summaries. These issues impede the learning and evaluation of systems that can understand an article{'}s global content structure as well as produce abstractive summaries with high compression ratio. In this work, we present a novel dataset, BIGPATENT, consisting of 1.3 million records of U.S. patent documents along with human written abstractive summaries. Compared to existing summarization datasets, BIGPATENT has the following properties: i) summaries contain a richer discourse structure with more recurring entities, ii) salient content is evenly distributed in the input, and iii) lesser and shorter extractive fragments are present in the summaries. Finally, we train and evaluate baselines and popular learning models on BIGPATENT to shed light on new challenges and motivate future directions for summarization research.",
+}
+
+
+% Metrics
+
+%% ROUGE
+@inproceedings{lin-2004-rouge,
+  title = "{ROUGE}: A Package for Automatic Evaluation of Summaries",
+  author = "Lin, Chin-Yew",
+  booktitle = "Text Summarization Branches Out",
+  month = jul,
+  year = "2004",
+  address = "Barcelona, Spain",
+  publisher = "Association for Computational Linguistics",
+  url = "https://aclanthology.org/W04-1013",
+  pages = "74--81",
+}
+
+%% BLEU
+@inproceedings{papineni-etal-2002-bleu,
+  title = "{B}leu: a Method for Automatic Evaluation of Machine Translation",
+  author = "Papineni, Kishore  and
+    Roukos, Salim  and
+    Ward, Todd  and
+    Zhu, Wei-Jing",
+  editor = "Isabelle, Pierre  and
+    Charniak, Eugene  and
+    Lin, Dekang",
+  booktitle = "Proceedings of the 40th Annual Meeting of the Association for Computational Linguistics",
+  month = jul,
+  year = "2002",
+  address = "Philadelphia, Pennsylvania, USA",
+  publisher = "Association for Computational Linguistics",
+  url = "https://aclanthology.org/P02-1040",
+  doi = "10.3115/1073083.1073135",
+  pages = "311--318",
+}
+
+%% METEOR
+@inproceedings{banerjee-lavie-2005-meteor,
+  title = "{METEOR}: An Automatic Metric for {MT} Evaluation with Improved Correlation with Human Judgments",
+  author = "Banerjee, Satanjeev  and
+    Lavie, Alon",
+  editor = "Goldstein, Jade  and
+    Lavie, Alon  and
+    Lin, Chin-Yew  and
+    Voss, Clare",
+  booktitle = "Proceedings of the {ACL} Workshop on Intrinsic and Extrinsic Evaluation Measures for Machine Translation and/or Summarization",
+  month = jun,
+  year = "2005",
+  address = "Ann Arbor, Michigan",
+  publisher = "Association for Computational Linguistics",
+  url = "https://aclanthology.org/W05-0909",
+  pages = "65--72",
 }
