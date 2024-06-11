@@ -2,6 +2,27 @@
 % \section{Methodology}
 
 
+\subsection{Central Truncation}
+
+Truncation is the most common and straightforward approach used to handle long texts
+that exceed the context size of an LLM.
+It is done in three main ways:
+
+\begin{itemize}
+	\item \textbf{Retaining Head}: Keeping tokens from the start.
+	\item \textbf{Retaining Tail}: Keeping tokens from the end.
+	\item \textbf{Head and Tail}: Keeping tokens from both start and end.
+\end{itemize}
+
+\citet{worsham-kalita-2018-genre} also employ "retaining head" and "retaining tail"
+strategies on long texts and find promising results.
+Though the "retaining head" method is often used, keeping the initial tokens allowed
+by the LLM, \citet{sun2019fine} have found that keeping both head and tail produces
+better results than both the "retaining head" and the "retaining tail" methods.
+Their research also shows that truncating the middle is even better than the more
+complicated hierarchical methods, displaying superiority with simplicity.
+
+
 \subsection{Document Skimming}
 
 One way to process long texts is by employing a speed reading strategy known as
@@ -12,14 +33,14 @@ The reader usually omits the portions that seem redundant or irrelevant in the t
 minimizing information loss.
 
 Since we do not know which parts of a text are relevant, we suggest uniformly sampling
-sentences/segments of the text such that they fit in the context size of the LLM.
+sentences or segments of the text such that they fit in the context size of the LLM.
 This approach ensures we sample a segment from each part of the text.
 This approch is a modification to the methodology \citet{wang2024videoagent} use for
 QA on long videos. \citet{worsham-kalita-2018-genre} also use random sampling for genre
 identification.
 
 
-\subsection{Document Skimming w/ Extraction}
+\subsection{Document Skimming with Extraction}
 
 In addition to skimming, we can use keywords from an extractive summarization
 algorithm to obtain similarity scores for keywords and text segments.
@@ -44,7 +65,8 @@ Some extractive summarization algorithms that can be used are:
 	Developed by \citet{Nallapati_Zhai_Zhou_2017}.
 \end{itemize}
 
-This approach is similar to the methodology adopted by \citet{10.1145/3639233.3639253}.
+This approach is similar to the way \citet{10.1145/3639233.3639253} use .
+% This approach is similar to the methodology adopted by \citet{10.1145/3639233.3639253}.
 
 
 \subsection{Summarization using Convolutions}
@@ -67,24 +89,3 @@ Longformer model \cite{beltagy2020longformer} uses a windowed attention mechanis
 linear complexity to process long texts.
 Our 1D convolution operation outperforms the windowed attention mechanism since it has
 linear complexity and is more efficient to calculate than attention.
-
-
-\subsection{Central Truncation}
-
-Truncation is the most common and straightforward approach used to handle long texts
-that exceed the context size of an LLM.
-It is done in three main ways:
-
-\begin{itemize}
-	\item \textbf{Retaining Head}: Keeping tokens from the start.
-	\item \textbf{Retaining Tail}: Keeping tokens from the end.
-	\item \textbf{Head and Tail}: Keeping tokens from both start and end.
-\end{itemize}
-
-\citet{worsham-kalita-2018-genre} also employ "retaining head" and "retaining tail"
-strategies on long texts and find promising results.
-Though the "retaining head" method is often used, keeping the initial tokens allowed
-by the LLM, \citet{sun2019fine} have found that keeping both head and tail produces
-better results than both the "retaining head" and the "retaining tail" methods.
-Their research also shows that truncating the middle is even better than the more
-complicated hierarchical methods, displaying superiority with simplicity.
