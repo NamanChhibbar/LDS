@@ -1,7 +1,8 @@
 .DS_Store
 
-temp*
+# temp*
 *.pdf
+booksum-main/
 
 *.aux
 *.bbl
