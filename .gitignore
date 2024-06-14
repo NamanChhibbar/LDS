@@ -1,8 +1,9 @@
-.DS_Store
-
 # temp*
 *.pdf
 booksum-main/
+
+.DS_Store
+__pycache__/
 
 *.aux
 *.bbl
