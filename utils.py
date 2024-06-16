@@ -33,8 +33,15 @@ class TextPreprocessor:
 		self.space_before_newline = re.compile(r"[ \t]\n")
 		# Match multiple newlines
 		self.newlines = re.compile(r"\n{3,}")
-	
-	def __call__(self, text, remove_numbers=False):
+
+	def __call__(self, texts: list[str], remove_numbers=False):
+		if isinstance(texts, str):
+			texts = [texts]
+		for i, text in enumerate(texts):
+			texts[i] = self.preprocess(text, remove_numbers)
+		return texts
+
+	def preprocess(self, text: str, remove_numbers=False):
 		# Convert non-ASCII quotes to ASCII quotes
 		text = self.single_quote.sub("'", text)
 		text = self.double_quote.sub('"', text)
@@ -60,6 +67,8 @@ class TextPreprocessor:
 		text = self.space_before_newline.sub("\n", text)
 		# Concatenate multiple newlines
 		text = self.newlines.sub("\n\n", text)
+		# Remove trailing and leading spaces
+		text = text.strip()
 		return text
 
 def combine_subsections(sections):
