@@ -105,11 +105,18 @@ def pick_sents(text, sent_tokenizer, tokenizer, context_size):
 		if len(flattened) <= context_size:
 			return torch.tensor(flattened, dtype=int)
 
-def truncate_middle(text_ids, size, head_size=.5):
-	head_len = int(size * head_size)
-	tail_len = size - head_len
-	truncated = np.concatenate([
-		text_ids[:head_len],
-		text_ids[len(text_ids) - tail_len:]
-	])
-	return torch.tensor(truncated)
+def truncate_middle(texts, tokenizer, size, head_size=.5):
+	head_idx = int(size * head_size)
+	truncated_ids = []
+	for text in texts:
+		text_ids = tokenizer.encode(text)
+		tail_idx = len(text_ids) - size + head_idx
+		truncated = np.concatenate([
+			text_ids[:head_idx],
+			text_ids[tail_idx:]
+		])
+		truncated_ids.append(truncated)
+	padded_ids = tokenizer.pad({
+		"input_ids": truncated_ids
+		}, return_tensors="pt")
+	return padded_ids
