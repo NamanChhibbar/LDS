@@ -5,46 +5,62 @@ import torch
 def count_words(text):
 	return len(text.split())
 
-def preprocess_text(text, stop_words=None):
+class TextPreprocessor:
 
-	# Convert non-ASCII quotes to ASCII quotes
-	text = re.sub(r"‘|’", "'", text)
-	text = re.sub(r"“|”", '"', text)
-
-	# Remove non-ASCII characters
-	text = re.sub(r"[^\x00-\x7f]+", "", text)
-
-	# Remove emails
-	text = re.sub(r"[^\s]+@[^\s]+\.com", "", text)
-
-	# Remove hyperlinks
-	text = re.sub(r"[^\s]*://[^\s]*", "", text)
-
-	# Remove hashtags
-	text = re.sub(r"#[^\s]+", "", text)
-
-	# Remove HTML tags
-	text = re.sub(r"<[^\n>]+>", "", text)
-
-	# Remove numbers
-	# text = re.sub(r"[+?\d+-?]+", "", text)
-
-	# Remove stop words
-	if stop_words:
-		text = re.sub(r"|".join([
+	def __init__(self, stop_words=None):
+		# Match non-ASCII quotes
+		self.single_quote = re.compile(r"‘|’")
+		self.double_quote = re.compile(r"“|”")
+		# Match non-ASCII characters
+		self.non_ascii = re.compile(r"[^\x00-\x7f]+")
+		# Match emails
+		self.email = re.compile(r"[^\s]+@[^\s]+\.com")
+		# Match hyperlinks
+		self.hyperlink = re.compile(r"[^\s]*://[^\s]*")
+		# Match hashtags
+		self.hashtag = re.compile(r"#[^\s]+")
+		# Match HTML tags
+		self.html = re.compile(r"<[^\n>]+>")
+		# Match numbers
+		self.number = re.compile(r"[+?\d+-?]+")
+		# Match stop words
+		self.stop_words = re.compile(r"|".join([
 			rf"\W?{word}(\W)" for word in stop_words
-		]), r"\1", text)
-
-	# Concatenating multiple spaces and tabs
-	text = re.sub(r"([ \t]){2,}", r"\1", text)
-
-	# Removing spaces and tabs before newline
-	text = re.sub(r"[ \t]\n", "\n", text)
-
-	# Concatenating multiple newlines
-	text = re.sub(r"\n{3,}", "\n\n", text)
-
-	return text
+		])) if stop_words else None
+		# Match multiple spaces and tabs
+		self.spaces_tabs = re.compile(r"([ \t]){2,}")
+		# Match spaces and tabs before newline
+		self.space_before_newline = re.compile(r"[ \t]\n")
+		# Match multiple newlines
+		self.newlines = re.compile(r"\n{3,}")
+	
+	def __call__(self, text, remove_numbers=False):
+		# Convert non-ASCII quotes to ASCII quotes
+		text = self.single_quote.sub("'", text)
+		text = self.double_quote.sub('"', text)
+		# Remove non-ASCII characters
+		text = self.non_ascii.sub("", text)
+		# Remove emails
+		text = self.email.sub("", text)
+		# Remove hyperlinks
+		text = self.hyperlink.sub("", text)
+		# Remove hashtags
+		text = self.hashtag.sub("", text)
+		# Remove HTML tags
+		text = self.html.sub("", text)
+		# Remove numbers
+		if remove_numbers:
+			text = self.number.sub("", text)
+		# Remove stop words
+		if self.stop_words:
+			text = self.stop_words.sub(r"\1", text)
+		# Concatenate multiple spaces and tabs
+		text = self.spaces_tabs.sub(r"\1", text)
+		# Remove spaces and tabs before newline
+		text = self.space_before_newline.sub("\n", text)
+		# Concatenate multiple newlines
+		text = self.newlines.sub("\n\n", text)
+		return text
 
 def combine_subsections(sections):
 	text = ""
@@ -79,3 +95,12 @@ def pick_sents(text, sent_tokenizer, tokenizer, context_size):
 		])
 		if len(flattened) <= context_size:
 			return torch.tensor(flattened, dtype=int)
+
+def truncate_middle(text_ids, size, head_size=.5):
+	head_len = int(size * head_size)
+	tail_len = size - head_len
+	truncated = np.concatenate([
+		text_ids[:head_len],
+		text_ids[len(text_ids) - tail_len:]
+	])
+	return torch.tensor(truncated)
