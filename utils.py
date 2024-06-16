@@ -2,6 +2,9 @@ import re
 import numpy as np
 import torch
 
+def count_words(text):
+	return len(text.split())
+
 def preprocess_text(text, stop_words=None):
 
 	# Convert non-ASCII quotes to ASCII quotes
