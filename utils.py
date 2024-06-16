@@ -2,8 +2,18 @@ import re
 import numpy as np
 import torch
 
+
+def get_device():
+	if torch.cuda.is_available():
+		return "cuda"
+	if torch.backends.mps.is_available():
+		return "mps"
+	return "cpu"
+
+
 def count_words(text):
 	return len(text.split())
+
 
 class TextPreprocessor:
 
@@ -71,6 +81,7 @@ class TextPreprocessor:
 		text = text.strip()
 		return text
 
+
 def combine_subsections(sections):
 	text = ""
 	for sec in sections:
@@ -83,22 +94,32 @@ def combine_subsections(sections):
 			text = f"{text}\n\n{sub_text}" if text else sub_text
 	return text
 
+
 def max_lengths(model):
-	configs = model.config.to_dict()
-	max_input = configs["max_position_embeddings"]
-	max_output = configs["max_length"]
+	model_configs = model.config.to_dict()
+	max_input = model_configs["max_position_embeddings"]
+	max_output = model_configs["max_length"]
 	return max_input, max_output
+
 
 def pick_sents(texts, sent_tokenizer, tokenizer, context_size):
 	processed_texts = []
+
 	for text in texts:
+		# Extract and encode sentences
 		sents = sent_tokenizer(text)
 		sents = tokenizer(sents)["input_ids"]
+		sents = np.array(sents, dtype=object)
+
+		# Mean length of sentences
 		mean_length = np.mean([
 			len(sent) for sent in sents
 		])
+
+		# Approximate number of sentences needed
 		num_samples = int(context_size / mean_length)
-		sents = np.array(sents, dtype=object)
+
+		# Sample until sentences fit in model
 		while True:
 			sampled = np.random.choice(sents, size=num_samples, replace=False)
 			flattened = [
@@ -107,23 +128,42 @@ def pick_sents(texts, sent_tokenizer, tokenizer, context_size):
 			if len(flattened) <= context_size:
 				processed_texts.append(flattened)
 				break
+
+	# Pad sentences and create attention mask
 	padded_ids = tokenizer.pad({
 		"input_ids": processed_texts
 	}, return_tensors="pt")
+
 	return padded_ids
 
+
 def truncate_middle(texts, tokenizer, size, head_size=.5):
-	head_idx = int(size * head_size)
+	# Constant head size
+	head_size = int(size * head_size)
 	truncated_ids = []
+
 	for text in texts:
+		# Encode the text
 		text_ids = tokenizer.encode(text)
-		tail_idx = len(text_ids) - size + head_idx
+
+		# Check if ids fit in model
+		if len(text_ids) <= size:
+			truncated_ids.append(text_ids)
+			continue
+
+		# Calculate beginning index of tail
+		tail_idx = len(text_ids) - size + head_size
+
+		# Truncate the middle and concatenate head and tail
 		truncated = np.concatenate([
-			text_ids[:head_idx],
+			text_ids[:head_size],
 			text_ids[tail_idx:]
 		])
 		truncated_ids.append(truncated)
+	
+	# Pad sentences and create attention mask
 	padded_ids = tokenizer.pad({
 		"input_ids": truncated_ids
 		}, return_tensors="pt")
+
 	return padded_ids
