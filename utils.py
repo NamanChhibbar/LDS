@@ -87,23 +87,30 @@ def max_lengths(model):
 	configs = model.config.to_dict()
 	max_input = configs["max_position_embeddings"]
 	max_output = configs["max_length"]
-	return max_input , max_output
+	return max_input, max_output
 
-def pick_sents(text, sent_tokenizer, tokenizer, context_size):
-	sents = sent_tokenizer(text)
-	sents = tokenizer(sents)["input_ids"]
-	mean_length = np.mean([
-		len(sent) for sent in sents
-	])
-	num_samples = int(context_size / mean_length)
-	sents = np.array(sents, dtype=object)
-	while True:
-		sampled = np.random.choice(sents, size=num_samples, replace=False)
-		flattened = np.array([
-			elm for lis in sampled for elm in lis
+def pick_sents(texts, sent_tokenizer, tokenizer, context_size):
+	processed_texts = []
+	for text in texts:
+		sents = sent_tokenizer(text)
+		sents = tokenizer(sents)["input_ids"]
+		mean_length = np.mean([
+			len(sent) for sent in sents
 		])
-		if len(flattened) <= context_size:
-			return torch.tensor(flattened, dtype=int)
+		num_samples = int(context_size / mean_length)
+		sents = np.array(sents, dtype=object)
+		while True:
+			sampled = np.random.choice(sents, size=num_samples, replace=False)
+			flattened = [
+				elm for lis in sampled for elm in lis
+			]
+			if len(flattened) <= context_size:
+				processed_texts.append(flattened)
+				break
+	padded_ids = tokenizer.pad({
+		"input_ids": processed_texts
+	}, return_tensors="pt")
+	return padded_ids
 
 def truncate_middle(texts, tokenizer, size, head_size=.5):
 	head_idx = int(size * head_size)
