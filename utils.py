@@ -3,6 +3,38 @@ import numpy as np
 import torch
 
 
+def get_device():
+	if torch.cuda.is_available():
+		return "cuda"
+	if torch.backends.mps.is_available():
+		return "mps"
+	return "cpu"
+
+
+def max_lengths(model):
+	model_configs = model.config.to_dict()
+	max_input = model_configs["max_position_embeddings"]
+	max_output = model_configs["max_length"]
+	return max_input, max_output
+
+
+def count_words(text):
+	return len(text.split())
+
+
+def combine_subsections(sections):
+	text = ""
+	for sec in sections:
+		sec_text = "\n\n".join(sec["paragraphs"])
+		if sec["section_title"]:
+			sec_text = f"Section {sec["section_title"]}:\n\n{sec_text}"
+		text = f"{text}\n\n{sec_text}" if text else sec_text
+		if sec["subsections"]:
+			sub_text = combine_subsections(sec["subsections"])
+			text = f"{text}\n\n{sub_text}" if text else sub_text
+	return text
+
+
 class TextPreprocessor:
 
 	def __init__(self, stop_words=None, remove_nums=False):
@@ -209,35 +241,3 @@ class TruncateMiddle(SummarizationPipeline):
 			}, return_tensors="pt")
 
 		return padded_ids
-
-
-def get_device():
-	if torch.cuda.is_available():
-		return "cuda"
-	if torch.backends.mps.is_available():
-		return "mps"
-	return "cpu"
-
-
-def max_lengths(model):
-	model_configs = model.config.to_dict()
-	max_input = model_configs["max_position_embeddings"]
-	max_output = model_configs["max_length"]
-	return max_input, max_output
-
-
-def count_words(text):
-	return len(text.split())
-
-
-def combine_subsections(sections):
-	text = ""
-	for sec in sections:
-		sec_text = "\n\n".join(sec["paragraphs"])
-		if sec["section_title"]:
-			sec_text = f"Section {sec["section_title"]}:\n\n{sec_text}"
-		text = f"{text}\n\n{sec_text}" if text else sec_text
-		if sec["subsections"]:
-			sub_text = combine_subsections(sec["subsections"])
-			text = f"{text}\n\n{sub_text}" if text else sub_text
-	return text
