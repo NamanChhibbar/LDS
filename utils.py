@@ -84,19 +84,28 @@ class TextPostprocessor:
 
 class SummarizationPipeline:
 
-	def __init__(self, text_preprocessor, text_postprocessor):
+	def __init__(
+			self, text_preprocessor, text_postprocessor, tokenizer, summarizer,
+			max_output_tokens: int, device="cpu"
+		):
 		self.preprocessor = text_preprocessor
 		self.postprocessor = text_postprocessor
+		self.tokenizer = tokenizer
+		self.summarizer = summarizer.to(device)
+		self.max_tokens = max_output_tokens
+		self.device = device
 
 	def __call__(self, texts: list[str]):
 		if isinstance(texts, str):
 			texts = [texts]
 		preprocessed = self.preprocessor(texts)
-		summaries = self.summarize(preprocessed)
+		inputs = self.generate_ids(preprocessed).to(self.device)
+		outputs = self.summarizer.generate(**inputs, max_length=self.max_tokens)
+		summaries = [self.tokenizer.decode(out) for out in outputs]
 		postprocessed = self.postprocessor(summaries)
 		return postprocessed
 	
-	def summarize(self, texts: list[str]):
+	def generate_ids(self, texts: list[str]):
 		...
 
 
@@ -104,23 +113,17 @@ class UniformSampler(SummarizationPipeline):
 
 	def __init__(
 			self, text_preprocessor, text_postprocessor,  sent_tokenizer, tokenizer,
-			summarizer, summarizer_context_size, max_output_tokens, device="cpu"
+			summarizer, summarizer_context_size: int, max_output_tokens: int,
+			device="cpu"
 		):
-		super().__init__(text_preprocessor, text_postprocessor)
+		super().__init__(
+			text_preprocessor, text_postprocessor, tokenizer, summarizer,
+			max_output_tokens, device
+		)
 		self.sent_tokenizer = sent_tokenizer
-		self.tokenizer = tokenizer
-		self.summarizer = summarizer.to(device)
 		self.context_size = summarizer_context_size
-		self.max_tokens = max_output_tokens
-		self.device = device
-	
-	def summarize(self, texts: list[str]):
-		inputs = self.pick_sents(texts).to(self.device)
-		outputs = self.summarizer.generate(**inputs, max_length=self.max_tokens)
-		summaries = [self.tokenizer.decode(out) for out in outputs]
-		return summaries
 
-	def pick_sents(self, texts):
+	def generate_ids(self, texts: list[str]):
 		sent_tokenizer = self.sent_tokenizer
 		tokenizer = self.tokenizer
 		context_size = self.context_size
@@ -160,6 +163,52 @@ class UniformSampler(SummarizationPipeline):
 		}, return_tensors="pt")
 
 		return padded_ids
+	
+
+class TruncateMiddle(SummarizationPipeline):
+
+	def __init__(
+			self, text_preprocessor, text_postprocessor, tokenizer, summarizer,
+			context_size: int, max_output_tokens: int, head_size: float=.5,
+			device="cpu"
+		):
+		super().__init__(
+			text_preprocessor, text_postprocessor, tokenizer, summarizer,
+			max_output_tokens, device
+		)
+		self.context_size = context_size
+		self.head_size = head_size
+
+	def generate_ids(self, texts: list[str]):
+		# Constant head size
+		head_size = int((size := self.context_size) * self.head_size)
+		truncated_ids = []
+
+		for text in texts:
+			# Encode the text
+			text_ids = self.tokenizer.encode(text)
+
+			# Check if ids fit in model
+			if len(text_ids) <= size:
+				truncated_ids.append(text_ids)
+				continue
+
+			# Calculate beginning index of tail
+			tail_idx = len(text_ids) - size + head_size
+
+			# Truncate the middle and concatenate head and tail
+			truncated = np.concatenate([
+				text_ids[:head_size],
+				text_ids[tail_idx:]
+			])
+			truncated_ids.append(truncated)
+		
+		# Pad sentences and create attention mask
+		padded_ids = self.tokenizer.pad({
+			"input_ids": truncated_ids
+			}, return_tensors="pt")
+
+		return padded_ids
 
 
 def get_device():
@@ -192,35 +241,3 @@ def combine_subsections(sections):
 			sub_text = combine_subsections(sec["subsections"])
 			text = f"{text}\n\n{sub_text}" if text else sub_text
 	return text
-
-
-def truncate_middle(texts, tokenizer, size, head_size=.5):
-	# Constant head size
-	head_size = int(size * head_size)
-	truncated_ids = []
-
-	for text in texts:
-		# Encode the text
-		text_ids = tokenizer.encode(text)
-
-		# Check if ids fit in model
-		if len(text_ids) <= size:
-			truncated_ids.append(text_ids)
-			continue
-
-		# Calculate beginning index of tail
-		tail_idx = len(text_ids) - size + head_size
-
-		# Truncate the middle and concatenate head and tail
-		truncated = np.concatenate([
-			text_ids[:head_size],
-			text_ids[tail_idx:]
-		])
-		truncated_ids.append(truncated)
-	
-	# Pad sentences and create attention mask
-	padded_ids = tokenizer.pad({
-		"input_ids": truncated_ids
-		}, return_tensors="pt")
-
-	return padded_ids
