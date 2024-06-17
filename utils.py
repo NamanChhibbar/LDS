@@ -5,7 +5,7 @@ import torch
 
 class TextPreprocessor:
 
-	def __init__(self, stop_words=None):
+	def __init__(self, stop_words=None, remove_nums=False):
 		# Match non-ASCII quotes
 		self.single_quote = re.compile(r"‘|’")
 		self.double_quote = re.compile(r"“|”")
@@ -20,7 +20,7 @@ class TextPreprocessor:
 		# Match HTML tags
 		self.html = re.compile(r"<[^\n>]+>")
 		# Match numbers
-		self.number = re.compile(r"[+?\d+-?]+")
+		self.number = re.compile(r"[+?\d+-?]+") if remove_nums else None
 		# Match stop words
 		self.stop_words = re.compile(r"|".join([
 			rf"\W?{word}(\W)" for word in stop_words
@@ -32,14 +32,14 @@ class TextPreprocessor:
 		# Match multiple newlines
 		self.newlines = re.compile(r"\n{3,}")
 
-	def __call__(self, texts: list[str], remove_numbers=False):
+	def __call__(self, texts: list[str]):
 		if isinstance(texts, str):
 			texts = [texts]
 		for i, text in enumerate(texts):
-			texts[i] = self.preprocess(text, remove_numbers)
+			texts[i] = self.preprocess(text)
 		return texts
 
-	def preprocess(self, text: str, remove_numbers=False):
+	def preprocess(self, text: str):
 		# Convert non-ASCII quotes to ASCII quotes
 		text = self.single_quote.sub("'", text)
 		text = self.double_quote.sub('"', text)
@@ -54,7 +54,7 @@ class TextPreprocessor:
 		# Remove HTML tags
 		text = self.html.sub("", text)
 		# Remove numbers
-		if remove_numbers:
+		if self.number:
 			text = self.number.sub("", text)
 		# Remove stop words
 		if self.stop_words:
@@ -82,27 +82,43 @@ class TextPostprocessor:
 		return texts
 
 
-class UniformSampler:
+class SummarizationPipeline:
+
+	def __init__(self, text_preprocessor, text_postprocessor):
+		self.preprocessor = text_preprocessor
+		self.postprocessor = text_postprocessor
+
+	def __call__(self, texts: list[str]):
+		if isinstance(texts, str):
+			texts = [texts]
+		preprocessed = self.preprocessor(texts)
+		summaries = self.summarize(preprocessed)
+		postprocessed = self.postprocessor(summaries)
+		return postprocessed
+	
+	def summarize(self, texts: list[str]):
+		...
+
+
+class UniformSampler(SummarizationPipeline):
 
 	def __init__(
 			self, text_preprocessor, text_postprocessor,  sent_tokenizer, tokenizer,
-			summarizer, summarizer_context_size, max_output_tokens
+			summarizer, summarizer_context_size, max_output_tokens, device="cpu"
 		):
-		self.preprocessor = text_preprocessor
-		self.postprocessor = text_postprocessor
+		super().__init__(text_preprocessor, text_postprocessor)
 		self.sent_tokenizer = sent_tokenizer
 		self.tokenizer = tokenizer
-		self.summarizer = summarizer
+		self.summarizer = summarizer.to(device)
 		self.context_size = summarizer_context_size
 		self.max_tokens = max_output_tokens
-
-	def __call__(self, texts: list[str]):
-		texts = self.preprocessor(texts)
-		inputs = self.pick_sents(texts)
+		self.device = device
+	
+	def summarize(self, texts: list[str]):
+		inputs = self.pick_sents(texts).to(self.device)
 		outputs = self.summarizer.generate(**inputs, max_length=self.max_tokens)
 		summaries = [self.tokenizer.decode(out) for out in outputs]
-		processed_summaries = self.postprocessor(summaries)
-		return processed_summaries
+		return summaries
 
 	def pick_sents(self, texts):
 		sent_tokenizer = self.sent_tokenizer
