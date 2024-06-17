@@ -1,6 +1,7 @@
 import re
 import numpy as np
 import torch
+from abc import ABC, abstractmethod
 
 
 def get_device():
@@ -114,7 +115,7 @@ class TextPostprocessor:
 		return texts
 
 
-class SummarizationPipeline:
+class SummarizationPipeline(ABC):
 
 	def __init__(
 			self, text_preprocessor, text_postprocessor, tokenizer, summarizer,
@@ -137,6 +138,7 @@ class SummarizationPipeline:
 		postprocessed = self.postprocessor(summaries)
 		return postprocessed
 	
+	@abstractmethod
 	def generate_ids(self, texts: list[str]):
 		...
 
