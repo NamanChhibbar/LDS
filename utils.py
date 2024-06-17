@@ -3,18 +3,6 @@ import numpy as np
 import torch
 
 
-def get_device():
-	if torch.cuda.is_available():
-		return "cuda"
-	if torch.backends.mps.is_available():
-		return "mps"
-	return "cpu"
-
-
-def count_words(text):
-	return len(text.split())
-
-
 class TextPreprocessor:
 
 	def __init__(self, stop_words=None):
@@ -82,6 +70,101 @@ class TextPreprocessor:
 		return text
 
 
+class TextPostprocessor:
+
+	def __init__(self, special_tokens: list[str]):
+		self.special_tokens = re.compile(r"|".join(special_tokens))
+	
+	def __call__(self, texts: list[str]):
+		if isinstance(texts, str):
+			texts = [texts]
+		texts = [self.special_tokens.sub("", text) for text in texts]
+		return texts
+
+
+class UniformSampler:
+
+	def __init__(
+			self, text_preprocessor, text_postprocessor,  sent_tokenizer, tokenizer,
+			summarizer, summarizer_context_size, max_output_tokens
+		):
+		self.preprocessor = text_preprocessor
+		self.postprocessor = text_postprocessor
+		self.sent_tokenizer = sent_tokenizer
+		self.tokenizer = tokenizer
+		self.summarizer = summarizer
+		self.context_size = summarizer_context_size
+		self.max_tokens = max_output_tokens
+
+	def __call__(self, texts: list[str]):
+		texts = self.preprocessor(texts)
+		inputs = self.pick_sents(texts)
+		outputs = self.summarizer.generate(**inputs, max_length=self.max_tokens)
+		summaries = [self.tokenizer.decode(out) for out in outputs]
+		processed_summaries = self.postprocessor(summaries)
+		return processed_summaries
+
+	def pick_sents(self, texts):
+		sent_tokenizer = self.sent_tokenizer
+		tokenizer = self.tokenizer
+		context_size = self.context_size
+
+		processed_texts = []
+		for text in texts:
+			# Extract and encode sentences
+			sents = sent_tokenizer(text)
+			sents = tokenizer(sents)["input_ids"]
+			sents = np.array(sents, dtype=list)
+
+			# Mean length of sentences
+			mean_length = np.mean([
+				len(sent) for sent in sents
+			])
+
+			# Approximate number of sentences needed
+			num_samples = int(context_size / mean_length)
+
+			# Check if there are enough sentences
+			if len(sents) <= num_samples:
+				flattened = [elm for lis in sents for elm in lis]
+				processed_texts.append(flattened)
+				continue
+
+			# Sample until sentences fit in model
+			while True:
+				sampled = np.random.choice(sents, size=num_samples, replace=False)
+				flattened = [elm for lis in sampled for elm in lis]
+				if len(flattened) <= context_size:
+					processed_texts.append(flattened)
+					break
+
+		# Pad sentences and create attention mask
+		padded_ids = tokenizer.pad({
+			"input_ids": processed_texts
+		}, return_tensors="pt")
+
+		return padded_ids
+
+
+def get_device():
+	if torch.cuda.is_available():
+		return "cuda"
+	if torch.backends.mps.is_available():
+		return "mps"
+	return "cpu"
+
+
+def max_lengths(model):
+	model_configs = model.config.to_dict()
+	max_input = model_configs["max_position_embeddings"]
+	max_output = model_configs["max_length"]
+	return max_input, max_output
+
+
+def count_words(text):
+	return len(text.split())
+
+
 def combine_subsections(sections):
 	text = ""
 	for sec in sections:
@@ -93,48 +176,6 @@ def combine_subsections(sections):
 			sub_text = combine_subsections(sec["subsections"])
 			text = f"{text}\n\n{sub_text}" if text else sub_text
 	return text
-
-
-def max_lengths(model):
-	model_configs = model.config.to_dict()
-	max_input = model_configs["max_position_embeddings"]
-	max_output = model_configs["max_length"]
-	return max_input, max_output
-
-
-def pick_sents(texts, sent_tokenizer, tokenizer, context_size):
-	processed_texts = []
-
-	for text in texts:
-		# Extract and encode sentences
-		sents = sent_tokenizer(text)
-		sents = tokenizer(sents)["input_ids"]
-		sents = np.array(sents, dtype=object)
-
-		# Mean length of sentences
-		mean_length = np.mean([
-			len(sent) for sent in sents
-		])
-
-		# Approximate number of sentences needed
-		num_samples = int(context_size / mean_length)
-
-		# Sample until sentences fit in model
-		while True:
-			sampled = np.random.choice(sents, size=num_samples, replace=False)
-			flattened = [
-				elm for lis in sampled for elm in lis
-			]
-			if len(flattened) <= context_size:
-				processed_texts.append(flattened)
-				break
-
-	# Pad sentences and create attention mask
-	padded_ids = tokenizer.pad({
-		"input_ids": processed_texts
-	}, return_tensors="pt")
-
-	return padded_ids
 
 
 def truncate_middle(texts, tokenizer, size, head_size=.5):
