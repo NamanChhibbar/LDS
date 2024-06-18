@@ -4,28 +4,38 @@ import torch
 from sklearn.metrics.pairwise import cosine_similarity
 
 
+def get_device():
+	if torch.cuda.is_available():
+		return "cuda"
+	if torch.backends.mps.is_available():
+		return "mps"
+	return "cpu"
+
+
 class SummarizationPipeline(ABC):
 
 	def __init__(
-			self, preprocessor, postprocessor, tokenizer, summarizer,
-			max_tokens: int, device: str|torch.device
+			self, summarizer, tokenizer, max_tokens: int, preprocessor=None,
+			postprocessor=None, device: str|torch.device="cpu"
 		):
+		self.summarizer = summarizer.to(device)
+		self.tokenizer = tokenizer
+		self.max_tokens = max_tokens
 		self.preprocessor = preprocessor
 		self.postprocessor = postprocessor
-		self.tokenizer = tokenizer
-		self.summarizer = summarizer.to(device)
-		self.max_tokens = max_tokens
 		self.device = device
 
 	def __call__(self, texts: list[str]):
 		if isinstance(texts, str):
 			texts = [texts]
-		preprocessed = self.preprocessor(texts)
-		inputs = self.generate_ids(preprocessed).to(self.device)
+		if self.preprocessor:
+			texts = self.preprocessor(texts)
+		inputs = self.generate_ids(texts).to(self.device)
 		outputs = self.summarizer.generate(**inputs, max_length=self.max_tokens)
 		summaries = [self.tokenizer.decode(out) for out in outputs]
-		postprocessed = self.postprocessor(summaries)
-		return postprocessed
+		if self.postprocessor:
+			summaries = self.postprocessor(summaries)
+		return summaries
 	
 	@abstractmethod
 	def generate_ids(self, texts: list[str]):
@@ -35,13 +45,13 @@ class SummarizationPipeline(ABC):
 class TruncateMiddle(SummarizationPipeline):
 
 	def __init__(
-			self, preprocessor, postprocessor, tokenizer, summarizer,
-			max_tokens: int, context_size: int, head_size: float=.5,
+			self, summarizer, tokenizer, max_tokens: int, context_size: int,
+			preprocessor=None, postprocessor=None, head_size: float=.5,
 			device: str|torch.device="cpu"
 		):
 		super().__init__(
-			preprocessor, postprocessor, tokenizer, summarizer,
-			max_tokens, device
+			summarizer, tokenizer, max_tokens, preprocessor,
+			postprocessor, device
 		)
 		self.context_size = context_size
 		self.head_size = head_size
@@ -81,13 +91,13 @@ class TruncateMiddle(SummarizationPipeline):
 class UniformSampler(SummarizationPipeline):
 
 	def __init__(
-			self, preprocessor, postprocessor, tokenizer, summarizer,
-			max_tokens: int, context_size: int, sent_tokenizer,
-			device: str|torch.device="cpu", seed: int=None
+			self, summarizer, tokenizer, max_tokens: int, context_size: int,
+			sent_tokenizer, preprocessor=None, postprocessor=None,
+			device: str|torch.device="cpu", seed: int|None=None
 		):
 		super().__init__(
-			preprocessor, postprocessor, tokenizer, summarizer,
-			max_tokens, device
+			summarizer, tokenizer, max_tokens, preprocessor,
+			postprocessor, device
 		)
 		self.sent_tokenizer = sent_tokenizer
 		self.context_size = context_size
@@ -137,13 +147,13 @@ class UniformSampler(SummarizationPipeline):
 class SentenceSampler(SummarizationPipeline):
 
 	def __init__(
-			self, preprocessor, postprocessor, tokenizer, summarizer,
-			max_tokens: int, context_size: int, sent_tokenizer, sent_encoder,
-			threshold: int=.7, device: str|torch.device="cpu", seed: int=None
+			self, summarizer, tokenizer, max_tokens: int, context_size: int,
+			sent_tokenizer, sent_encoder, preprocessor=None, postprocessor=None,
+			threshold: float=.7, device: str|torch.device="cpu", seed: int|None=None
 		):
 		super().__init__(
-			preprocessor, postprocessor, tokenizer, summarizer,
-			max_tokens, device
+			summarizer, tokenizer, max_tokens, preprocessor,
+			postprocessor, device
 		)
 		self.context_size = context_size
 		self.sent_tokenizer = sent_tokenizer
@@ -206,13 +216,13 @@ class SentenceSampler(SummarizationPipeline):
 class RemoveRedundancy(SummarizationPipeline):
 
 	def __init__(
-			self, preprocessor, postprocessor, tokenizer, summarizer,
-			max_tokens: int, context_size: int, sent_tokenizer, sent_encoder,
-			threshold: int=.7, device: str|torch.device="cpu", seed: int=None
+			self, summarizer, tokenizer, max_tokens: int, context_size: int,
+			sent_tokenizer, sent_encoder, preprocessor=None, postprocessor=None,
+			threshold: float=.7, device: str|torch.device="cpu", seed: int|None=None
 		):
 		super().__init__(
-			preprocessor, postprocessor, tokenizer, summarizer,
-			max_tokens, device
+			summarizer, tokenizer, max_tokens, preprocessor,
+			postprocessor, device
 		)
 		self.context_size = context_size
 		self.sent_tokenizer = sent_tokenizer
