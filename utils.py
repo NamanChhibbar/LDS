@@ -2,6 +2,62 @@ import re
 import torch
 
 
+class TextProcessor:
+
+	preprocessing_pats_subs = [
+		# Non-ASCII quotes
+		(r"‘|’", "'"),
+		(r"“|”", '"'),
+		# Non-ASCII characters
+		(r"[^\x00-\x7f]+", ""),
+		# Emails
+		(r"[^\s]+@[^\s]+\.com", ""),
+		# Hyperlinks
+		(r"[^\s]*://[^\s]*", ""),
+		# Hashtags
+		(r"#[^\s]+", ""),
+		# HTML tags
+		(r"<[^\n>]+>", "")
+	]
+
+	# Numbers
+	_number_pat_sub = (r"[+?\d+-?]+", "")
+
+	_whitespace_pats_subs = [
+		# Multiple spaces and tabs
+		(r"([ \t]){2,}", r"\1"),
+		# Spaces and tabs before newline
+		(r"[ \t]\n", "\n"),
+		# Multiple newlines
+		(r"\n{3,}", "\n\n"),
+	]
+
+	def __init__(
+			self, pats_subs: list[tuple[str]]=[], ignore_tokens: list[str]=[],
+			remove_nums: bool=False
+		):
+		if remove_nums:
+			pats_subs.append(TextProcessor._number_pat_sub)
+		if ignore_tokens:
+			pats_subs.append((re.compile(r"|".join(ignore_tokens)), ""))
+		pats_subs.extend(TextProcessor._whitespace_pats_subs)
+		self.pats_subs = [
+			(re.compile(pat), sub) for pat, sub in pats_subs
+		]
+	
+	def __call__(self, texts: list[str]):
+		if isinstance(texts, str):
+			texts = [texts]
+		texts = [self.process(text) for text in texts]
+		return texts
+		
+	def process(self, text: str):
+		for pat, sub in self.pats_subs:
+			text = pat.sub(sub, text)
+		text = text.strip()
+		return text
+
+
 def get_device():
 	if torch.cuda.is_available():
 		return "cuda"
@@ -32,82 +88,3 @@ def combine_subsections(sections):
 			sub_text = combine_subsections(sec["subsections"])
 			text = f"{text}\n\n{sub_text}" if text else sub_text
 	return text
-
-
-class TextPreprocessor:
-
-	def __init__(self, stop_words=None, remove_nums=False):
-		# Match non-ASCII quotes
-		self.single_quote = re.compile(r"‘|’")
-		self.double_quote = re.compile(r"“|”")
-		# Match non-ASCII characters
-		self.non_ascii = re.compile(r"[^\x00-\x7f]+")
-		# Match emails
-		self.email = re.compile(r"[^\s]+@[^\s]+\.com")
-		# Match hyperlinks
-		self.hyperlink = re.compile(r"[^\s]*://[^\s]*")
-		# Match hashtags
-		self.hashtag = re.compile(r"#[^\s]+")
-		# Match HTML tags
-		self.html = re.compile(r"<[^\n>]+>")
-		# Match numbers
-		self.number = re.compile(r"[+?\d+-?]+") if remove_nums else None
-		# Match stop words
-		self.stop_words = re.compile(r"|".join([
-			rf"\W?{word}(\W)" for word in stop_words
-		])) if stop_words else None
-		# Match multiple spaces and tabs
-		self.spaces_tabs = re.compile(r"([ \t]){2,}")
-		# Match spaces and tabs before newline
-		self.space_before_newline = re.compile(r"[ \t]\n")
-		# Match multiple newlines
-		self.newlines = re.compile(r"\n{3,}")
-
-	def __call__(self, texts: list[str]):
-		if isinstance(texts, str):
-			texts = [texts]
-		for i, text in enumerate(texts):
-			texts[i] = self.preprocess(text)
-		return texts
-
-	def preprocess(self, text: str):
-		# Convert non-ASCII quotes to ASCII quotes
-		text = self.single_quote.sub("'", text)
-		text = self.double_quote.sub('"', text)
-		# Remove non-ASCII characters
-		text = self.non_ascii.sub("", text)
-		# Remove emails
-		text = self.email.sub("", text)
-		# Remove hyperlinks
-		text = self.hyperlink.sub("", text)
-		# Remove hashtags
-		text = self.hashtag.sub("", text)
-		# Remove HTML tags
-		text = self.html.sub("", text)
-		# Remove numbers
-		if self.number:
-			text = self.number.sub("", text)
-		# Remove stop words
-		if self.stop_words:
-			text = self.stop_words.sub(r"\1", text)
-		# Concatenate multiple spaces and tabs
-		text = self.spaces_tabs.sub(r"\1", text)
-		# Remove spaces and tabs before newline
-		text = self.space_before_newline.sub("\n", text)
-		# Concatenate multiple newlines
-		text = self.newlines.sub("\n\n", text)
-		# Remove trailing and leading spaces
-		text = text.strip()
-		return text
-
-
-class TextPostprocessor:
-
-	def __init__(self, special_tokens: list[str]):
-		self.special_tokens = re.compile(r"|".join(special_tokens))
-	
-	def __call__(self, texts: list[str]):
-		if isinstance(texts, str):
-			texts = [texts]
-		texts = [self.special_tokens.sub("", text) for text in texts]
-		return texts
