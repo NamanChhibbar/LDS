@@ -1,18 +1,18 @@
-import numpy as np
 from abc import ABC, abstractmethod
+import numpy as np
 
 
 class SummarizationPipeline(ABC):
 
 	def __init__(
 			self, text_preprocessor, text_postprocessor, tokenizer, summarizer,
-			max_output_tokens: int, device="cpu"
+			max_tokens: int, device="cpu"
 		):
 		self.preprocessor = text_preprocessor
 		self.postprocessor = text_postprocessor
 		self.tokenizer = tokenizer
 		self.summarizer = summarizer.to(device)
-		self.max_tokens = max_output_tokens
+		self.max_tokens = max_tokens
 		self.device = device
 
 	def __call__(self, texts: list[str]):
@@ -34,12 +34,12 @@ class TruncateMiddle(SummarizationPipeline):
 
 	def __init__(
 			self, text_preprocessor, text_postprocessor, tokenizer, summarizer,
-			context_size: int, max_output_tokens: int, head_size: float=.5,
+			max_tokens: int, context_size: int, head_size: float=.5,
 			device="cpu"
 		):
 		super().__init__(
 			text_preprocessor, text_postprocessor, tokenizer, summarizer,
-			max_output_tokens, device
+			max_tokens, device
 		)
 		self.context_size = context_size
 		self.head_size = head_size
@@ -79,16 +79,16 @@ class TruncateMiddle(SummarizationPipeline):
 class UniformSampler(SummarizationPipeline):
 
 	def __init__(
-			self, text_preprocessor, text_postprocessor,  sent_tokenizer, tokenizer,
-			summarizer, summarizer_context_size: int, max_output_tokens: int,
+			self, text_preprocessor, text_postprocessor, tokenizer, summarizer,
+			max_tokens: int, sent_tokenizer, context_size: int,
 			device="cpu"
 		):
 		super().__init__(
 			text_preprocessor, text_postprocessor, tokenizer, summarizer,
-			max_output_tokens, device
+			max_tokens, device
 		)
 		self.sent_tokenizer = sent_tokenizer
-		self.context_size = summarizer_context_size
+		self.context_size = context_size
 
 	def generate_ids(self, texts: list[str]):
 		sent_tokenizer = self.sent_tokenizer
@@ -102,27 +102,24 @@ class UniformSampler(SummarizationPipeline):
 			sents = tokenizer(sents)["input_ids"]
 			sents = np.array(sents, dtype=list)
 
-			# Mean length of sentences
-			mean_length = np.mean([
+			# Sum of length of sentences
+			total_length = np.sum([
 				len(sent) for sent in sents
 			])
 
-			# Approximate number of sentences needed
-			num_samples = int(context_size / mean_length)
-
-			# Check if there are enough sentences
-			if len(sents) <= num_samples:
-				flattened = [elm for lis in sents for elm in lis]
-				processed_texts.append(flattened)
-				continue
+			# Approximate probability of picking a sentence
+			p = context_size / total_length
 
 			# Sample until sentences fit in model
 			while True:
-				sampled = np.random.choice(sents, size=num_samples, replace=False)
+				sent_mask = (np.random.rand(len(sents)) < p)
+				sampled = sents[sent_mask]
 				flattened = [elm for lis in sampled for elm in lis]
 				if len(flattened) <= context_size:
-					processed_texts.append(flattened)
 					break
+
+			# Add sampled sentences to processed texts
+			processed_texts.append(flattened)
 
 		# Pad sentences and create attention mask
 		padded_ids = tokenizer.pad({
