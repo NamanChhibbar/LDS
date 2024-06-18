@@ -1,15 +1,17 @@
 from abc import ABC, abstractmethod
 import numpy as np
+import torch
+from sklearn.metrics.pairwise import cosine_similarity
 
 
 class SummarizationPipeline(ABC):
 
 	def __init__(
-			self, text_preprocessor, text_postprocessor, tokenizer, summarizer,
-			max_tokens: int, device="cpu"
+			self, preprocessor, postprocessor, tokenizer, summarizer,
+			max_tokens: int, device: str|torch.device
 		):
-		self.preprocessor = text_preprocessor
-		self.postprocessor = text_postprocessor
+		self.preprocessor = preprocessor
+		self.postprocessor = postprocessor
 		self.tokenizer = tokenizer
 		self.summarizer = summarizer.to(device)
 		self.max_tokens = max_tokens
@@ -33,12 +35,12 @@ class SummarizationPipeline(ABC):
 class TruncateMiddle(SummarizationPipeline):
 
 	def __init__(
-			self, text_preprocessor, text_postprocessor, tokenizer, summarizer,
+			self, preprocessor, postprocessor, tokenizer, summarizer,
 			max_tokens: int, context_size: int, head_size: float=.5,
-			device="cpu"
+			device: str|torch.device="cpu"
 		):
 		super().__init__(
-			text_preprocessor, text_postprocessor, tokenizer, summarizer,
+			preprocessor, postprocessor, tokenizer, summarizer,
 			max_tokens, device
 		)
 		self.context_size = context_size
@@ -79,16 +81,77 @@ class TruncateMiddle(SummarizationPipeline):
 class UniformSampler(SummarizationPipeline):
 
 	def __init__(
-			self, text_preprocessor, text_postprocessor, tokenizer, summarizer,
-			max_tokens: int, sent_tokenizer, context_size: int,
-			device="cpu"
+			self, preprocessor, postprocessor, tokenizer, summarizer,
+			max_tokens: int, context_size: int, sent_tokenizer,
+			device: str|torch.device="cpu", seed: int=None
 		):
 		super().__init__(
-			text_preprocessor, text_postprocessor, tokenizer, summarizer,
+			preprocessor, postprocessor, tokenizer, summarizer,
 			max_tokens, device
 		)
 		self.sent_tokenizer = sent_tokenizer
 		self.context_size = context_size
+		self.seed = seed
+		np.random.seed(seed)
+
+	def generate_ids(self, texts: list[str]):
+		processed_texts = []
+
+		for text in texts:
+			# Extract and tokenize sentences
+			sents = self.sent_tokenizer(text)
+			sents = self.tokenizer(sents)["input_ids"]
+			sents = np.array(sents, dtype=list)
+
+			# Sum of length of sentences
+			total_length = sum([
+				len(sent) for sent in sents
+			])
+
+			# Approximate probability of picking a sentence
+			p = self.context_size / total_length
+
+			# Sample until sentences fit in model
+			while True:
+
+				sent_mask = np.random.rand(len(sents)) <= p
+				sampled = sents[sent_mask]
+
+				# Flatten sentences
+				sampled = [elm for lis in sampled for elm in lis]
+
+				if len(sampled) <= self.context_size:
+					break
+
+			# Add sampled sentences to processed texts
+			processed_texts.append(sampled)
+
+		# Pad sentences and create attention mask
+		padded_ids = self.tokenizer.pad({
+			"input_ids": processed_texts
+		}, return_tensors="pt")
+
+		return padded_ids
+	
+
+class SentenceSampler(SummarizationPipeline):
+
+	def __init__(
+			self, preprocessor, postprocessor, tokenizer, summarizer,
+			max_tokens: int, context_size: int, sent_tokenizer, sent_encoder,
+			threshold: int=.7, device: str|torch.device="cpu", seed: int=None
+		):
+		super().__init__(
+			preprocessor, postprocessor, tokenizer, summarizer,
+			max_tokens, device
+		)
+		self.context_size = context_size
+		self.sent_tokenizer = sent_tokenizer
+		self.sent_encoder = sent_encoder
+		self.sent_embedding_dim = sent_encoder.get_sentence_embedding_dimension()
+		self.threshold = threshold
+		self.seed = seed
+		np.random.seed(seed)
 
 	def generate_ids(self, texts: list[str]):
 		sent_tokenizer = self.sent_tokenizer
@@ -97,10 +160,9 @@ class UniformSampler(SummarizationPipeline):
 
 		processed_texts = []
 		for text in texts:
-			# Extract and encode sentences
+			# Extract and tokenize sentences
 			sents = sent_tokenizer(text)
 			sents = tokenizer(sents)["input_ids"]
-			sents = np.array(sents, dtype=list)
 
 			# Sum of length of sentences
 			total_length = np.sum([
@@ -112,14 +174,26 @@ class UniformSampler(SummarizationPipeline):
 
 			# Sample until sentences fit in model
 			while True:
-				sent_mask = (np.random.rand(len(sents)) < p)
-				sampled = sents[sent_mask]
-				flattened = [elm for lis in sampled for elm in lis]
-				if len(flattened) <= context_size:
+				sampled = []
+				sampled_embedding = np.zeros((1, self.sent_embedding_dim))
+				num_sampled = 0
+				for sent in sents:
+					if np.random.rand() > p:
+						continue
+					sent_embedding = self.sent_encoder.encode([sent])
+					similarity = cosine_similarity(sampled_embedding, sent_embedding)
+					if self.threshold < similarity:
+						continue
+					sampled.extend(sent)
+					sampled_embedding = (
+						(num_sampled * sampled_embedding + sent_embedding) /
+						(num_sampled := num_sampled + 1)
+					)
+				if len(sampled) <= context_size:
 					break
 
 			# Add sampled sentences to processed texts
-			processed_texts.append(flattened)
+			processed_texts.append(sampled)
 
 		# Pad sentences and create attention mask
 		padded_ids = tokenizer.pad({
@@ -127,3 +201,83 @@ class UniformSampler(SummarizationPipeline):
 		}, return_tensors="pt")
 
 		return padded_ids
+	
+
+class RemoveRedundancy(SummarizationPipeline):
+
+	def __init__(
+			self, preprocessor, postprocessor, tokenizer, summarizer,
+			max_tokens: int, context_size: int, sent_tokenizer, sent_encoder,
+			threshold: int=.7, device: str|torch.device="cpu", seed: int=None
+		):
+		super().__init__(
+			preprocessor, postprocessor, tokenizer, summarizer,
+			max_tokens, device
+		)
+		self.context_size = context_size
+		self.sent_tokenizer = sent_tokenizer
+		self.sent_encoder = sent_encoder
+		self.sent_embedding_dim = sent_encoder.get_sentence_embedding_dimension()
+		self.threshold = threshold
+		self.seed = seed
+		np.random.seed(seed)
+
+	def generate_ids(self, texts: list[str]):
+		processed_texts = []
+
+		for text in texts:
+			# Extract sentences
+			sents = self.sent_tokenizer(text)
+
+			# Remove redundant sentences
+			sents = self.remove_redundancy(sents)
+
+			# Tokenize sentences
+			sents = self.tokenizer(sents)["input_ids"]
+			sents = np.array(sents, dtype=list)
+
+			# Sum of length of sentences
+			total_length = sum([
+				len(sent) for sent in sents
+			])
+
+			# Approximate probability of picking a sentence
+			p = self.context_size / total_length
+
+			# Sample until sentences fit in model
+			while True:
+
+				sent_mask = np.random.rand(len(sents)) <= p
+				sampled = sents[sent_mask]
+
+				# Flatten sentences
+				sampled = [elm for lis in sampled for elm in lis]
+
+				if len(sampled) <= self.context_size:
+					break
+
+			# Add sampled sentences to processed texts
+			processed_texts.append(sampled)
+
+		# Pad sentences and create attention mask
+		padded_ids = self.tokenizer.pad({
+			"input_ids": processed_texts
+		}, return_tensors="pt")
+
+		return padded_ids
+	
+	def remove_redundancy(self, sents):
+		selected_sents = []
+		selected_embedding = np.zeros((1, self.sent_embedding_dim))
+		num_sents = 0
+		for sent in sents:
+			sent_embedding = self.sent_encoder.encode([sent])
+			similarity = cosine_similarity(selected_embedding, sent_embedding)
+			if self.threshold < similarity:
+				continue
+			selected_sents.append(sent)
+			selected_embedding = (
+				(num_sents * selected_embedding + sent_embedding) /
+				(num_sents := num_sents + 1)
+			)
+		return selected_sents
