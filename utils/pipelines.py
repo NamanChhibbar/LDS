@@ -78,7 +78,7 @@ class TruncateMiddle(SummarizationPipeline):
 				text_ids[:head_size],
 				text_ids[tail_idx:]
 			])
-			truncated_ids.append(truncated)
+			truncated_ids.append(truncated.astype(int))
 		
 		# Pad sentences and create attention mask
 		padded_ids = self.tokenizer.pad({
