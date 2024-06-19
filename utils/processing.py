@@ -32,9 +32,11 @@ class TextProcessor:
 	]
 
 	def __init__(
-			self, pats_subs: list[tuple[str]]=[], ignore_tokens: list[str]=[],
+			self, pats_subs: list[tuple[str]]=None, ignore_tokens: list[str]=None,
 			remove_nums: bool=False
 		):
+		if pats_subs is None:
+			pats_subs = []
 		if remove_nums:
 			pats_subs.append(TextProcessor._number_pat_sub)
 		if ignore_tokens:
