@@ -59,13 +59,6 @@ class TextProcessor:
 		return text
 
 
-def max_lengths(model):
-	model_configs = model.config.to_dict()
-	max_input = model_configs["max_position_embeddings"]
-	max_output = model_configs["max_length"]
-	return max_input, max_output
-
-
 def count_words(text):
 	return len(text.split())
 
