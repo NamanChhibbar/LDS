@@ -16,7 +16,7 @@ class SummarizationPipeline(ABC):
 
 	def __init__(
 			self, summarizer, tokenizer, max_tokens: int, preprocessor=None,
-			postprocessor=None, device: str|torch.device="cpu"
+			postprocessor=None, device: str|torch.device|None=None
 		):
 		self.summarizer = summarizer.to(device)
 		self.tokenizer = tokenizer
@@ -30,7 +30,7 @@ class SummarizationPipeline(ABC):
 			texts = [texts]
 		if self.preprocessor:
 			texts = self.preprocessor(texts)
-		inputs = self.generate_ids(texts).to(self.device)
+		inputs = self.generate_inputs(texts).to(self.device)
 		outputs = self.summarizer.generate(**inputs, max_length=self.max_tokens)
 		summaries = [self.tokenizer.decode(out) for out in outputs]
 		if self.postprocessor:
@@ -38,7 +38,7 @@ class SummarizationPipeline(ABC):
 		return summaries
 	
 	@abstractmethod
-	def generate_ids(self, texts: list[str]):
+	def generate_inputs(self, texts: list[str]):
 		...
 	
 
@@ -47,7 +47,7 @@ class TruncateMiddle(SummarizationPipeline):
 	def __init__(
 			self, summarizer, tokenizer, max_tokens: int, context_size: int,
 			preprocessor=None, postprocessor=None, head_size: float=.5,
-			device: str|torch.device="cpu"
+			device: str|torch.device|None=None
 		):
 		super().__init__(
 			summarizer, tokenizer, max_tokens, preprocessor,
@@ -56,7 +56,7 @@ class TruncateMiddle(SummarizationPipeline):
 		self.context_size = context_size
 		self.head_size = head_size
 
-	def generate_ids(self, texts: list[str]):
+	def generate_inputs(self, texts: list[str]):
 		# Constant head size
 		head_size = int((size := self.context_size) * self.head_size)
 		truncated_ids = []
@@ -93,7 +93,7 @@ class UniformSampler(SummarizationPipeline):
 	def __init__(
 			self, summarizer, tokenizer, max_tokens: int, context_size: int,
 			sent_tokenizer, preprocessor=None, postprocessor=None,
-			device: str|torch.device="cpu", seed: int|None=None
+			device: str|torch.device|None=None, seed: int|None=None
 		):
 		super().__init__(
 			summarizer, tokenizer, max_tokens, preprocessor,
@@ -104,7 +104,7 @@ class UniformSampler(SummarizationPipeline):
 		self.seed = seed
 		np.random.seed(seed)
 
-	def generate_ids(self, texts: list[str]):
+	def generate_inputs(self, texts: list[str]):
 		processed_texts = []
 
 		for text in texts:
@@ -149,7 +149,8 @@ class SentenceSampler(SummarizationPipeline):
 	def __init__(
 			self, summarizer, tokenizer, max_tokens: int, context_size: int,
 			sent_tokenizer, sent_encoder, preprocessor=None, postprocessor=None,
-			threshold: float=.7, device: str|torch.device="cpu", seed: int|None=None
+			threshold: float=.7, device: str|torch.device|None=None,
+			seed: int|None=None
 		):
 		super().__init__(
 			summarizer, tokenizer, max_tokens, preprocessor,
@@ -157,13 +158,13 @@ class SentenceSampler(SummarizationPipeline):
 		)
 		self.context_size = context_size
 		self.sent_tokenizer = sent_tokenizer
-		self.sent_encoder = sent_encoder
+		self.sent_encoder = sent_encoder.to(device)
 		self.sent_embedding_dim = sent_encoder.get_sentence_embedding_dimension()
 		self.threshold = threshold
 		self.seed = seed
 		np.random.seed(seed)
 
-	def generate_ids(self, texts: list[str]):
+	def generate_inputs(self, texts: list[str]):
 		sent_tokenizer = self.sent_tokenizer
 		tokenizer = self.tokenizer
 		context_size = self.context_size
@@ -218,7 +219,8 @@ class RemoveRedundancy(SummarizationPipeline):
 	def __init__(
 			self, summarizer, tokenizer, max_tokens: int, context_size: int,
 			sent_tokenizer, sent_encoder, preprocessor=None, postprocessor=None,
-			threshold: float=.7, device: str|torch.device="cpu", seed: int|None=None
+			threshold: float=.7, device: str|torch.device|None=None,
+			seed: int|None=None
 		):
 		super().__init__(
 			summarizer, tokenizer, max_tokens, preprocessor,
@@ -226,13 +228,13 @@ class RemoveRedundancy(SummarizationPipeline):
 		)
 		self.context_size = context_size
 		self.sent_tokenizer = sent_tokenizer
-		self.sent_encoder = sent_encoder
+		self.sent_encoder = sent_encoder.to(device)
 		self.sent_embedding_dim = sent_encoder.get_sentence_embedding_dimension()
 		self.threshold = threshold
 		self.seed = seed
 		np.random.seed(seed)
 
-	def generate_ids(self, texts: list[str]):
+	def generate_inputs(self, texts: list[str]):
 		processed_texts = []
 
 		for text in texts:
