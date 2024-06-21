@@ -8,11 +8,11 @@ class Evaluator:
 			self, pipelines, texts: str|list[str], summaries: str|list[str],
 			device: str|torch.device|None=None
 		):
-		if len(texts) != len(summaries):
-			raise ValueError("Number of texts and summaries differ")
 		self.pipelines = pipelines
 		self.texts = texts if isinstance(texts, list) else [texts]
 		self.summaries = summaries if isinstance(summaries, list) else [summaries]
+		if len(self.texts) != len(self.summaries):
+			raise ValueError("Number of texts and summaries differ")
 		self.bert_scorer = BERTScorer(lang="en", device=device)
 		self.generated_summaries = []
 	
