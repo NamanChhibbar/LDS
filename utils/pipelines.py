@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
 import numpy as np
 import torch
+from transformers.tokenization_utils_base import BatchEncoding
 from sklearn.metrics.pairwise import cosine_similarity
 
 
-def get_device():
+def get_device() -> str:
 	if torch.cuda.is_available():
 		return "cuda"
 	if torch.backends.mps.is_available():
@@ -17,7 +18,7 @@ class SummarizationPipeline(ABC):
 	def __init__(
 			self, summarizer, tokenizer, max_tokens: int, preprocessor=None,
 			postprocessor=None, device: str|torch.device|None=None
-		):
+		) -> None:
 		self.summarizer = summarizer.to(device)
 		self.tokenizer = tokenizer
 		self.max_tokens = max_tokens
@@ -25,7 +26,7 @@ class SummarizationPipeline(ABC):
 		self.postprocessor = postprocessor
 		self.device = device
 
-	def __call__(self, texts: str|list[str]):
+	def __call__(self, texts: str|list[str]) -> list[str]:
 		if isinstance(texts, str):
 			texts = [texts]
 		if self.preprocessor:
@@ -38,7 +39,7 @@ class SummarizationPipeline(ABC):
 		return summaries
 	
 	@abstractmethod
-	def generate_inputs(self, texts: list[str]):
+	def generate_inputs(self, texts: list[str]) -> BatchEncoding:
 		...
 	
 
@@ -48,7 +49,7 @@ class TruncateMiddle(SummarizationPipeline):
 			self, summarizer, tokenizer, max_tokens: int, context_size: int,
 			preprocessor=None, postprocessor=None, head_size: float=.5,
 			device: str|torch.device|None=None
-		):
+		) -> None:
 		super().__init__(
 			summarizer, tokenizer, max_tokens, preprocessor,
 			postprocessor, device
@@ -56,7 +57,7 @@ class TruncateMiddle(SummarizationPipeline):
 		self.context_size = context_size
 		self.head_size = head_size
 
-	def generate_inputs(self, texts: list[str]):
+	def generate_inputs(self, texts: list[str]) -> BatchEncoding:
 		# Constant head size
 		size = self.context_size
 		head_size = int(size * self.head_size)
@@ -95,7 +96,7 @@ class UniformSampler(SummarizationPipeline):
 			self, summarizer, tokenizer, max_tokens: int, context_size: int,
 			sent_tokenizer, preprocessor=None, postprocessor=None,
 			device: str|torch.device|None=None, seed: int|None=None
-		):
+		) -> None:
 		super().__init__(
 			summarizer, tokenizer, max_tokens, preprocessor,
 			postprocessor, device
@@ -105,7 +106,7 @@ class UniformSampler(SummarizationPipeline):
 		self.seed = seed
 		np.random.seed(seed)
 
-	def generate_inputs(self, texts: list[str]):
+	def generate_inputs(self, texts: list[str]) -> BatchEncoding:
 		processed_texts = []
 
 		for text in texts:
@@ -152,7 +153,7 @@ class SentenceSampler(SummarizationPipeline):
 			sent_tokenizer, sent_encoder, preprocessor=None, postprocessor=None,
 			threshold: float=.7, device: str|torch.device|None=None,
 			seed: int|None=None
-		):
+		) -> None:
 		super().__init__(
 			summarizer, tokenizer, max_tokens, preprocessor,
 			postprocessor, device
@@ -165,7 +166,7 @@ class SentenceSampler(SummarizationPipeline):
 		self.seed = seed
 		np.random.seed(seed)
 
-	def generate_inputs(self, texts: list[str]):
+	def generate_inputs(self, texts: list[str]) -> BatchEncoding:
 		sent_tokenizer = self.sent_tokenizer
 		tokenizer = self.tokenizer
 		context_size = self.context_size
@@ -222,7 +223,7 @@ class RemoveRedundancy(SummarizationPipeline):
 			sent_tokenizer, sent_encoder, preprocessor=None, postprocessor=None,
 			threshold: float=.7, device: str|torch.device|None=None,
 			seed: int|None=None
-		):
+		) -> None:
 		super().__init__(
 			summarizer, tokenizer, max_tokens, preprocessor,
 			postprocessor, device
@@ -235,7 +236,7 @@ class RemoveRedundancy(SummarizationPipeline):
 		self.seed = seed
 		np.random.seed(seed)
 
-	def generate_inputs(self, texts: list[str]):
+	def generate_inputs(self, texts: list[str]) -> BatchEncoding:
 		processed_texts = []
 
 		for text in texts:
@@ -279,7 +280,7 @@ class RemoveRedundancy(SummarizationPipeline):
 
 		return padded_ids
 	
-	def remove_redundancy(self, sents):
+	def remove_redundancy(self, sents: list[str]) -> list[str]:
 		selected_sents = []
 		selected_embedding = np.zeros((1, self.sent_embedding_dim))
 		num_sents = 0

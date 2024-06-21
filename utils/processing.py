@@ -34,7 +34,7 @@ class TextProcessor:
 	def __init__(
 			self, pats_subs: list[tuple[str]]=None, ignore_tokens: list[str]=None,
 			remove_nums: bool=False
-		):
+		) -> None:
 		if pats_subs is None:
 			pats_subs = []
 		if remove_nums:
@@ -46,20 +46,20 @@ class TextProcessor:
 			(re.compile(pat), sub) for pat, sub in pats_subs
 		]
 	
-	def __call__(self, texts: list[str]):
+	def __call__(self, texts: str|list[str]) -> list[str]:
 		if isinstance(texts, str):
 			texts = [texts]
 		texts = [self.process(text) for text in texts]
 		return texts
 		
-	def process(self, text: str):
+	def process(self, text: str) -> str:
 		for pat, sub in self.pats_subs:
 			text = pat.sub(sub, text)
 		text = text.strip()
 		return text
 
 
-def count_words(text):
+def count_words(text: str):
 	return len(text.split())
 
 

@@ -5,24 +5,24 @@ from bert_score import BERTScorer
 class Evaluator:
 
 	def __init__(
-			self, pipelines, texts: str|list[str], summaries: str|list[str],
+			self, pipelines, texts_summaries: tuple[str]|list[tuple[str]],
 			device: str|torch.device|None=None
-		):
+		) -> None:
+		if not isinstance(texts_summaries, list):
+			texts_summaries = [texts_summaries]
 		self.pipelines = pipelines
-		self.texts = texts if isinstance(texts, list) else [texts]
-		self.summaries = summaries if isinstance(summaries, list) else [summaries]
-		if len(self.texts) != len(self.summaries):
-			raise ValueError("Number of texts and summaries differ")
+		self.texts = [pair[0] for pair in texts_summaries]
+		self.summaries = [pair[1] for pair in texts_summaries]
 		self.bert_scorer = BERTScorer(lang="en", device=device)
 		self.generated_summaries = []
 	
-	def generate_summaries(self):
+	def generate_summaries(self) -> None:
 		summaries = self.generated_summaries
 		for pipeline in self.pipelines:
 			summary = pipeline(self.texts)
 			summaries.extend(summary)
 
-	def get_bertscore(self):
+	def get_bertscore(self) -> list[torch.Tensor]:
 		if not self.generated_summaries:
 			print("Generating summaries")
 			self.generate_summaries()
