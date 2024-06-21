@@ -25,7 +25,7 @@ class SummarizationPipeline(ABC):
 		self.postprocessor = postprocessor
 		self.device = device
 
-	def __call__(self, texts: list[str]):
+	def __call__(self, texts: str|list[str]):
 		if isinstance(texts, str):
 			texts = [texts]
 		if self.preprocessor:
@@ -58,7 +58,8 @@ class TruncateMiddle(SummarizationPipeline):
 
 	def generate_inputs(self, texts: list[str]):
 		# Constant head size
-		head_size = int((size := self.context_size) * self.head_size)
+		size = self.context_size
+		head_size = int(size * self.head_size)
 		truncated_ids = []
 
 		for text in texts:
