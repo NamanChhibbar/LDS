@@ -1,3 +1,4 @@
+from time import perf_counter
 import torch
 from bert_score import BERTScorer
 
@@ -16,11 +17,16 @@ class Evaluator:
 		self.bert_scorer = BERTScorer(lang="en", device=device)
 		self.generated_summaries = []
 	
-	def generate_summaries(self) -> None:
+	def generate_summaries(self) -> list[int]:
 		summaries = self.generated_summaries
+		time_taken = []
 		for pipeline in self.pipelines:
+			start = perf_counter()
 			summary = pipeline(self.texts)
+			time = (perf_counter() - start) * 1000
 			summaries.extend(summary)
+			time_taken.append(time)
+		return time_taken
 
 	def get_bertscore(self) -> list[torch.Tensor]:
 		if not self.generated_summaries:
