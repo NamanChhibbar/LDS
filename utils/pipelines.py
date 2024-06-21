@@ -5,59 +5,58 @@ from transformers.tokenization_utils_base import BatchEncoding
 from sklearn.metrics.pairwise import cosine_similarity
 
 
-def get_device() -> str:
-	if torch.cuda.is_available():
-		return "cuda"
-	if torch.backends.mps.is_available():
-		return "mps"
-	return "cpu"
+class Encoder(ABC):
 
-
-class SummarizationPipeline(ABC):
-
-	def __init__(
-			self, summarizer, tokenizer, max_tokens: int, preprocessor=None,
-			postprocessor=None, device: str|torch.device|None=None
-		) -> None:
-		self.summarizer = summarizer.to(device)
+	def __init__(self, tokenizer, preprocessor=None) -> None:
+		super().__init__()
 		self.tokenizer = tokenizer
-		self.max_tokens = max_tokens
 		self.preprocessor = preprocessor
-		self.postprocessor = postprocessor
-		self.device = device
 
-	def __call__(self, texts: str|list[str]) -> list[str]:
+	def __call__(self, texts: str|list[str]) -> BatchEncoding:
 		if isinstance(texts, str):
 			texts = [texts]
 		if self.preprocessor:
 			texts = self.preprocessor(texts)
-		inputs = self.generate_inputs(texts).to(self.device)
-		outputs = self.summarizer.generate(**inputs, max_length=self.max_tokens)
-		summaries = [self.tokenizer.decode(out) for out in outputs]
+		encodings = self.generate_encodings(texts)
+		return encodings
+	
+	@abstractmethod
+	def generate_encodings(self, texts: list[str]) -> BatchEncoding:
+		...
+
+
+class SummarizationPipeline:
+
+	def __init__(
+			self, summarizer, encoder: Encoder, max_tokens: int, postprocessor=None,
+			device: str|torch.device|None=None
+		) -> None:
+		self.summarizer = summarizer.to(device)
+		self.encoder = encoder
+		self.max_tokens = max_tokens
+		self.postprocessor = postprocessor
+		self.device = device
+
+	def __call__(self, texts: str|list[str]) -> list[str]:
+		encoder = self.encoder
+		encodings = encoder(texts).to(self.device)
+		outputs = self.summarizer.generate(**encodings, max_length=self.max_tokens)
+		summaries = [encoder.tokenizer.decode(out) for out in outputs]
 		if self.postprocessor:
 			summaries = self.postprocessor(summaries)
 		return summaries
 	
-	@abstractmethod
-	def generate_inputs(self, texts: list[str]) -> BatchEncoding:
-		...
-	
 
-class TruncateMiddle(SummarizationPipeline):
+class TruncateMiddle(Encoder):
 
 	def __init__(
-			self, summarizer, tokenizer, max_tokens: int, context_size: int,
-			preprocessor=None, postprocessor=None, head_size: float=.5,
-			device: str|torch.device|None=None
+			self, tokenizer, context_size:int, head_size: float=.5, preprocessor=None
 		) -> None:
-		super().__init__(
-			summarizer, tokenizer, max_tokens, preprocessor,
-			postprocessor, device
-		)
+		super().__init__(tokenizer, preprocessor)
 		self.context_size = context_size
 		self.head_size = head_size
 
-	def generate_inputs(self, texts: list[str]) -> BatchEncoding:
+	def generate_encodings(self, texts: list[str]) -> BatchEncoding:
 		# Constant head size
 		size = self.context_size
 		head_size = int(size * self.head_size)
@@ -90,23 +89,19 @@ class TruncateMiddle(SummarizationPipeline):
 		return padded_ids
 
 
-class UniformSampler(SummarizationPipeline):
+class UniformSampler(Encoder):
 
 	def __init__(
-			self, summarizer, tokenizer, max_tokens: int, context_size: int,
-			sent_tokenizer, preprocessor=None, postprocessor=None,
-			device: str|torch.device|None=None, seed: int|None=None
+			self, tokenizer, context_size: int, sent_tokenizer, preprocessor=None,
+			seed: int|None=None
 		) -> None:
-		super().__init__(
-			summarizer, tokenizer, max_tokens, preprocessor,
-			postprocessor, device
-		)
-		self.sent_tokenizer = sent_tokenizer
+		super().__init__(tokenizer, preprocessor)
 		self.context_size = context_size
+		self.sent_tokenizer = sent_tokenizer
 		self.seed = seed
 		np.random.seed(seed)
 
-	def generate_inputs(self, texts: list[str]) -> BatchEncoding:
+	def generate_encodings(self, texts: list[str]) -> BatchEncoding:
 		processed_texts = []
 
 		for text in texts:
@@ -146,27 +141,24 @@ class UniformSampler(SummarizationPipeline):
 		return padded_ids
 	
 
-class SentenceSampler(SummarizationPipeline):
+class SentenceSampler(Encoder):
 
 	def __init__(
-			self, summarizer, tokenizer, max_tokens: int, context_size: int,
-			sent_tokenizer, sent_encoder, preprocessor=None, postprocessor=None,
-			threshold: float=.7, device: str|torch.device|None=None,
+			self, tokenizer, context_size: int, sent_tokenizer, sent_encoder,
+			threshold: float=.7, preprocessor=None, device: str|torch.device|None=None,
 			seed: int|None=None
 		) -> None:
-		super().__init__(
-			summarizer, tokenizer, max_tokens, preprocessor,
-			postprocessor, device
-		)
+		super().__init__(tokenizer, preprocessor)
 		self.context_size = context_size
 		self.sent_tokenizer = sent_tokenizer
 		self.sent_encoder = sent_encoder.to(device)
 		self.sent_embedding_dim = sent_encoder.get_sentence_embedding_dimension()
 		self.threshold = threshold
+		self.device = device
 		self.seed = seed
 		np.random.seed(seed)
 
-	def generate_inputs(self, texts: list[str]) -> BatchEncoding:
+	def generate_encodings(self, texts: list[str]) -> BatchEncoding:
 		sent_tokenizer = self.sent_tokenizer
 		tokenizer = self.tokenizer
 		context_size = self.context_size
@@ -216,27 +208,24 @@ class SentenceSampler(SummarizationPipeline):
 		return padded_ids
 	
 
-class RemoveRedundancy(SummarizationPipeline):
+class RemoveRedundancy(Encoder):
 
 	def __init__(
-			self, summarizer, tokenizer, max_tokens: int, context_size: int,
-			sent_tokenizer, sent_encoder, preprocessor=None, postprocessor=None,
-			threshold: float=.7, device: str|torch.device|None=None,
+			self, tokenizer, context_size: int, sent_tokenizer, sent_encoder,
+			threshold: float=.7, preprocessor=None, device: str|torch.device|None=None,
 			seed: int|None=None
 		) -> None:
-		super().__init__(
-			summarizer, tokenizer, max_tokens, preprocessor,
-			postprocessor, device
-		)
+		super().__init__(tokenizer, preprocessor)
 		self.context_size = context_size
 		self.sent_tokenizer = sent_tokenizer
 		self.sent_encoder = sent_encoder.to(device)
 		self.sent_embedding_dim = sent_encoder.get_sentence_embedding_dimension()
 		self.threshold = threshold
+		self.device = device
 		self.seed = seed
 		np.random.seed(seed)
 
-	def generate_inputs(self, texts: list[str]) -> BatchEncoding:
+	def generate_encodings(self, texts: list[str]) -> BatchEncoding:
 		processed_texts = []
 
 		for text in texts:
