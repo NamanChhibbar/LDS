@@ -35,7 +35,7 @@ def get_device() -> str:
 
 class TextProcessor:
 
-	preprocessing_pats_subs = [
+	_preprocessing_pats_subs = [
 		# Non-ASCII quotes
 		(r"‘|’", "'"),
 		(r"“|”", '"'),
@@ -64,11 +64,12 @@ class TextProcessor:
 	]
 
 	def __init__(
-			self, pats_subs: list[tuple[str]]=None, ignore_tokens: list[str]=None,
-			remove_nums: bool=False
+			self, preprocessing: bool=False, remove_nums: bool=False,
+			ignore_tokens: list[str]=None
 		) -> None:
-		if pats_subs is None:
-			pats_subs = []
+		pats_subs = []
+		if preprocessing:
+			pats_subs.extend(TextProcessor._preprocessing_pats_subs)
 		if remove_nums:
 			pats_subs.append(TextProcessor._number_pat_sub)
 		if ignore_tokens:
@@ -94,44 +95,50 @@ class TextProcessor:
 class SummarizationDataset:
 
 	def __init__(
-			self, texts_summaries: list[tuple[str]], encoder: Encoder, batch_size: int,
-			shuffle: bool=False, device: str|torch.device|None=None, seed: int|None=None
+			self, texts_summaries: list[tuple[str]], encoder: Encoder,
+			batch_size: int, shuffle: bool=False, seed: int|None=None
 		) -> None:
-		tokenizer = encoder.tokenizer
 		texts_summaries = sorted(texts_summaries, key=lambda x: count_words(x[0]))
-		self.batches = batches = []
-		for i in range(0, len(texts_summaries), batch_size):
-			batch = texts_summaries[i:i+batch_size]
-			texts = [pair[0] for pair in batch]
-			summaries = [pair[1] for pair in batch]
-			encodings = encoder(texts)
-			summ_encodings = tokenizer(
-				summaries, return_tensors="pt", padding=True
-			)["input_ids"]
-			summ_encodings[summ_encodings == tokenizer.pad_token_id] = -100
-			batches.append(
-				BatchEncoding({**encodings, "labels": summ_encodings})
-			)
+		self.text_batches = np.array([
+			texts_summaries[i:i+batch_size]
+			for i in range(0, len(texts_summaries), batch_size)
+		], dtype=object)
+		self.num_batches = len(self.text_batches)
+		self.cached = np.zeros(self.num_batches, dtype=object)
+		self.encoder = encoder
+		self.batch_size = batch_size
 		self.shuffle = shuffle
-		self.device = device
 		self.seed = seed
 		np.random.seed(seed)
-		self.num_batches = len(batches)
-		self.index = None
+		self.it = None
 	
 	def __iter__(self):
-		self.index = -1
+		self.it = -1
 		if self.shuffle:
-			self.batches = np.random.permutation(self.batches)
+			permutation = np.random.permutation(self.num_batches)
+			self.text_batches = self.text_batches[permutation]
+			self.cached = self.cached[permutation]
 		return self
 	
 	def __next__(self) -> BatchEncoding:
-		index = self.index
-		if index is None or index + 1 == self.num_batches:
+		if self.it is None or self.it + 1 == self.num_batches:
 			raise StopIteration()
-		self.index += 1
-		encodings = self.batches[self.index]
-		return encodings.to(self.device)
+		self.it += 1
+		it = self.it
+		if self.cached[it]:
+			return self.cached[it]
+		tokenizer = self.encoder.tokenizer
+		texts_summaries = self.text_batches[it]
+		texts = [pair[0] for pair in texts_summaries]
+		summaries = [pair[1] for pair in texts_summaries]
+		text_encodings = self.encoder(texts)
+		summ_encodings = tokenizer(
+			summaries, padding=True, return_tensors="pt"
+		)["input_ids"]
+		summ_encodings[summ_encodings == tokenizer.pad_token_id] = -100
+		batch_encodings = BatchEncoding({**text_encodings, "labels": summ_encodings})
+		self.cached[it] = batch_encodings
+		return batch_encodings
 	
 	def __len__(self) -> int:
 		return self.num_batches
@@ -175,3 +182,54 @@ class Evaluator:
 			for metric in metrics
 		]
 		return metrics
+
+
+def train_model(
+	model, dataset: SummarizationDataset, epochs: int, optimizer,
+	scheduler=None, device: str|torch.device|None=None
+) -> list[int]:
+	model = model.to(device)
+	epoch_losses = []
+	num_batches = len(dataset)
+
+	for epoch in range(epochs):
+		epoch_time = 0
+		epoch_loss = 0
+
+		for batch, inputs in enumerate(dataset):
+			inputs = inputs.to(device)
+
+			start = perf_counter()
+			outputs = model(**inputs)
+			time = (perf_counter() - start) * 1000
+			loss = outputs.loss
+
+			print(
+				"\r"
+				f"Epoch {epoch+1}/{epochs} "
+				f"Batch {batch+1}/{num_batches} "
+				f"Time {time} ms/batch "
+				f"Loss {loss.item()}",
+				end="\t"
+			)
+
+			epoch_time += time
+			epoch_loss += loss.item()
+			
+			optimizer.zero_grad()
+			loss.backward()
+			optimizer.step()
+
+		epoch_time = epoch_time / num_batches
+		epoch_loss = epoch_loss / num_batches
+		epoch_losses.append(epoch_loss)
+
+		if scheduler:
+			scheduler.step(epoch_loss)
+
+		print(
+			f"\rEpoch {epoch+1}/{epochs} "
+			f"Avergage time {epoch_time} ms/batch "
+			f"Average loss {epoch_loss}"
+		)
+	return epoch_losses
