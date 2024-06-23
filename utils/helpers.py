@@ -96,17 +96,24 @@ class SummarizationDataset:
 
 	def __init__(
 			self, texts_summaries: list[tuple[str]], encoder: Encoder,
-			batch_size: int, shuffle: bool=False, seed: int|None=None
+			batch_size: int, context_size: int, use_cache: bool=False,
+			shuffle: bool=False, seed: int|None=None
 		) -> None:
-		texts_summaries = sorted(texts_summaries, key=lambda x: count_words(x[0]))
-		self.text_batches = np.array([
-			texts_summaries[i:i+batch_size]
-			for i in range(0, len(texts_summaries), batch_size)
-		], dtype=object)
-		self.num_batches = len(self.text_batches)
-		self.cached = np.zeros(self.num_batches, dtype=object)
+		texts_summaries = sorted(
+			texts_summaries, key=lambda x: count_words(x[0])
+		)
+		num_texts = len(texts_summaries)
+		self.num_batches = num_texts // batch_size
+		self.text_batches = np.zeros(self.num_batches, dtype=object)
+		for i in range(self.num_batches):
+			batch = texts_summaries[i*batch_size:(i+1)*batch_size]
+			self.text_batches[i] = batch
+		self.cached = np.zeros(
+			self.num_batches, dtype=object
+		) if use_cache else None
 		self.encoder = encoder
 		self.batch_size = batch_size
+		self.context_size = context_size
 		self.shuffle = shuffle
 		self.seed = seed
 		np.random.seed(seed)
@@ -117,7 +124,8 @@ class SummarizationDataset:
 		if self.shuffle:
 			permutation = np.random.permutation(self.num_batches)
 			self.text_batches = self.text_batches[permutation]
-			self.cached = self.cached[permutation]
+			if self.cached is not None:
+				self.cached = self.cached[permutation]
 		return self
 	
 	def __next__(self) -> BatchEncoding:
@@ -125,19 +133,26 @@ class SummarizationDataset:
 			raise StopIteration()
 		self.it += 1
 		it = self.it
-		if self.cached[it]:
-			return self.cached[it]
+		cached = self.cached
+		if cached is not None and cached[it]:
+			return cached[it]
 		tokenizer = self.encoder.tokenizer
 		texts_summaries = self.text_batches[it]
 		texts = [pair[0] for pair in texts_summaries]
 		summaries = [pair[1] for pair in texts_summaries]
 		text_encodings = self.encoder(texts)
 		summ_encodings = tokenizer(
-			summaries, padding=True, return_tensors="pt"
+			summaries, padding=True, max_length=self.context_size,
+			truncation=True, return_tensors="pt"
 		)["input_ids"]
-		summ_encodings[summ_encodings == tokenizer.pad_token_id] = -100
-		batch_encodings = BatchEncoding({**text_encodings, "labels": summ_encodings})
-		self.cached[it] = batch_encodings
+		filt = summ_encodings == tokenizer.pad_token_id
+		summ_encodings[filt] = -100
+		batch_encodings = BatchEncoding({
+			**text_encodings, "labels": summ_encodings
+		})
+		if cached is not None:
+			cached[it] = batch_encodings
+			self.text_batches[it] = 0
 		return batch_encodings
 	
 	def __len__(self) -> int:
@@ -186,12 +201,13 @@ class Evaluator:
 
 def train_model(
 	model, dataset: SummarizationDataset, epochs: int, optimizer,
-	scheduler=None, device: str|torch.device|None=None
+	scheduler=None, device: str|torch.device|None=None, flt_prec: int=4
 ) -> list[int]:
 	model = model.to(device)
 	epoch_losses = []
 	num_batches = len(dataset)
 
+	model.train(True)
 	for epoch in range(epochs):
 		epoch_time = 0
 		epoch_loss = 0
@@ -200,25 +216,31 @@ def train_model(
 			inputs = inputs.to(device)
 
 			start = perf_counter()
-			outputs = model(**inputs)
-			time = (perf_counter() - start) * 1000
-			loss = outputs.loss
-
-			print(
-				"\r"
-				f"Epoch {epoch+1}/{epochs} "
-				f"Batch {batch+1}/{num_batches} "
-				f"Time {time} ms/batch "
-				f"Loss {loss.item()}",
-				end="\t"
-			)
-
-			epoch_time += time
-			epoch_loss += loss.item()
-			
+			loss = model(**inputs).loss
 			optimizer.zero_grad()
 			loss.backward()
 			optimizer.step()
+			time = (perf_counter() - start) * 1000
+
+			epoch_time += time
+			epoch_loss += loss.item()
+
+			time_remaining = (
+				epoch_time * (num_batches * (epochs - epoch) / (batch + 1) - 1)
+			) // 1000
+			seconds = time_remaining % 60
+			minutes = (time_remaining // 60) % 60
+			hours = time_remaining // 3600
+
+			print(
+				"\r"
+				f"Epoch: {epoch+1}/{epochs} "
+				f"Batch: {batch+1}/{num_batches} "
+				f"Time: {round(time, flt_prec)} ms/batch "
+				f"Loss: {round(loss.item(), flt_prec)} "
+				f"Time remaining: {hours}h {minutes}m {seconds}s",
+				end=""
+			)
 
 		epoch_time = epoch_time / num_batches
 		epoch_loss = epoch_loss / num_batches
