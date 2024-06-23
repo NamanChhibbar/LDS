@@ -1,13 +1,12 @@
 import re
 from time import perf_counter
+from abc import ABC, abstractmethod
 import numpy as np
 import torch
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LRScheduler
 from transformers.tokenization_utils_base import BatchEncoding
 from bert_score import BERTScorer
-
-from .pipelines import Encoder
 
 
 def count_words(text: str):
@@ -79,6 +78,44 @@ class TextProcessor:
 			text = pat.sub(sub, text)
 		text = text.strip()
 		return text
+
+
+class Encoder(ABC):
+	"""
+	Base class for encoders
+	"""
+	def __init__(
+			self, tokenizer, preprocessor: TextProcessor=None
+		) -> None:
+		"""
+		## Parameters
+		`tokenizer`: Hugging Face tokenizer
+		`preprocessor`: Text preprocessor
+		"""
+		super().__init__()
+		self.tokenizer = tokenizer
+		self.preprocessor = preprocessor
+
+	def __call__(self, texts: str|list[str]) -> BatchEncoding:
+		"""
+		Encode texts
+
+		## Parameters
+		`texts`: Texts (or text) to encode
+
+		## Returns
+		`encodings`: Text encodings of type BatchEncoding
+		"""
+		if isinstance(texts, str):
+			texts = [texts]
+		if self.preprocessor:
+			texts = self.preprocessor(texts)
+		encodings = self.generate_encodings(texts)
+		return encodings
+	
+	@abstractmethod
+	def generate_encodings(self, texts: list[str]) -> BatchEncoding:
+		...
 
 
 class SummarizationDataset:
@@ -161,6 +198,9 @@ class SummarizationDataset:
 			self.text_batches[it] = 0
 
 		return batch_encodings
+	
+	def __len__(self):
+		return self.num_batches
 
 
 class Evaluator:
@@ -208,6 +248,8 @@ def train_model(
 	optimizer: Optimizer, scheduler: LRScheduler=None,
 	device: str|torch.device|None=None, flt_prec: int=4
 ) -> list[int]:
+	SPACES = 100
+
 	model = model.to(device)
 	epoch_losses = []
 	num_batches = len(dataset)
@@ -238,7 +280,7 @@ def train_model(
 			hours = time_remaining // 3600
 
 			print(
-				"\r"
+				f"\r{" " * SPACES}\r"
 				f"Epoch: {epoch+1}/{epochs} "
 				f"Batch: {batch+1}/{num_batches} "
 				f"Time: {round(time, flt_prec)} ms/batch "
@@ -255,8 +297,9 @@ def train_model(
 			scheduler.step(epoch_loss)
 
 		print(
-			f"\rEpoch {epoch+1}/{epochs} "
-			f"Avergage time {epoch_time} ms/batch "
-			f"Average loss {epoch_loss}"
+			f"\r{" " * SPACES}\r"
+			f"\rEpoch: {epoch+1}/{epochs} "
+			f"Avergage time: {epoch_time} ms/batch "
+			f"Average loss: {epoch_loss}"
 		)
 	return epoch_losses

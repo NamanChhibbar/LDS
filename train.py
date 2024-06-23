@@ -75,14 +75,6 @@ def main() -> None:
 		use_cache, shuffle, seed
 	)
 
-	# num = 0
-	# for inputs in dataset:
-	# 	a, b, c = inputs.values()
-	# 	print(a.shape, b.shape, c.shape)
-	# 	if num == 14:
-	# 		return
-	# 	num += 1
-
 	optimizer = AdamW(model.parameters(), lr)
 	scheduler = ReduceLROnPlateau(
 		optimizer, mode="min", factor=factor, patience=patience
@@ -90,16 +82,19 @@ def main() -> None:
 
 	print(f"Using device {device}")
 	print("Starting training...\n")
-	loss_history = train_model(
-		model, dataset, epochs, optimizer, scheduler, device, flt_prec
-	)
-	print("\nTraining completed")
-	model.save_pretrained(save_dir)
-	print("Model saved")
-
-	with open(train_history_path, "wb") as fp:
-		pickle.dump(loss_history, fp)
-	print(f"Training history saved in {train_history_path}")
+	try:
+		loss_history = train_model(
+			model, dataset, epochs, optimizer, scheduler, device, flt_prec
+		)
+		print("\nTraining completed")
+	except Exception as e:
+		print(f"Encountered exception of type {type(e)}: {e}")
+	finally:
+		model.save_pretrained(save_dir)
+		print("Model saved")
+		with open(train_history_path, "wb") as fp:
+			pickle.dump(loss_history, fp)
+		print(f"Training history saved in {train_history_path}")
 
 def get_arguments() -> Namespace:
 	parser = ArgumentParser(description="")

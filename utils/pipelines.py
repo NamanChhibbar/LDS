@@ -1,48 +1,9 @@
-from abc import ABC, abstractmethod
 import numpy as np
 import torch
 from transformers.tokenization_utils_base import BatchEncoding
 from sklearn.metrics.pairwise import cosine_similarity
 
-from .helpers import TextProcessor
-
-
-class Encoder(ABC):
-	"""
-	Base class for encoders
-	"""
-	def __init__(
-			self, tokenizer, preprocessor: TextProcessor=None
-		) -> None:
-		"""
-		## Parameters
-		`tokenizer`: Hugging Face tokenizer
-		`preprocessor`: Text preprocessor
-		"""
-		super().__init__()
-		self.tokenizer = tokenizer
-		self.preprocessor = preprocessor
-
-	def __call__(self, texts: str|list[str]) -> BatchEncoding:
-		"""
-		Encode texts
-
-		## Parameters
-		`texts`: Texts (or text) to encode
-
-		## Returns
-		`encodings`: Text encodings of type BatchEncoding
-		"""
-		if isinstance(texts, str):
-			texts = [texts]
-		if self.preprocessor:
-			texts = self.preprocessor(texts)
-		encodings = self.generate_encodings(texts)
-		return encodings
-	
-	@abstractmethod
-	def generate_encodings(self, texts: list[str]) -> BatchEncoding:
-		...
+from .helpers import Encoder
 
 
 class SummarizationPipeline:
