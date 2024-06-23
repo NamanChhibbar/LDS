@@ -4,15 +4,35 @@ import torch
 from transformers.tokenization_utils_base import BatchEncoding
 from sklearn.metrics.pairwise import cosine_similarity
 
+from .helpers import TextProcessor
+
 
 class Encoder(ABC):
-
-	def __init__(self, tokenizer, preprocessor=None) -> None:
+	"""
+	Base class for encoders
+	"""
+	def __init__(
+			self, tokenizer, preprocessor: TextProcessor=None
+		) -> None:
+		"""
+		## Parameters
+		`tokenizer`: Hugging Face tokenizer
+		`preprocessor`: Text preprocessor
+		"""
 		super().__init__()
 		self.tokenizer = tokenizer
 		self.preprocessor = preprocessor
 
 	def __call__(self, texts: str|list[str]) -> BatchEncoding:
+		"""
+		Encode texts
+
+		## Parameters
+		`texts`: Texts (or text) to encode
+
+		## Returns
+		`encodings`: Text encodings of type BatchEncoding
+		"""
 		if isinstance(texts, str):
 			texts = [texts]
 		if self.preprocessor:
@@ -28,8 +48,8 @@ class Encoder(ABC):
 class SummarizationPipeline:
 
 	def __init__(
-			self, summarizer, encoder: Encoder, max_tokens: int, postprocessor=None,
-			device: str|torch.device|None=None
+			self, summarizer, encoder: Encoder, max_tokens: int,
+			postprocessor=None, device: str|torch.device|None=None
 		) -> None:
 		self.summarizer = summarizer.to(device)
 		self.encoder = encoder
@@ -50,7 +70,8 @@ class SummarizationPipeline:
 class TruncateMiddle(Encoder):
 
 	def __init__(
-			self, tokenizer, context_size:int, head_size: float=.5, preprocessor=None
+			self, tokenizer, context_size:int, head_size: float=.5,
+			preprocessor=None
 		) -> None:
 		super().__init__(tokenizer, preprocessor)
 		self.context_size = context_size
@@ -92,8 +113,8 @@ class TruncateMiddle(Encoder):
 class UniformSampler(Encoder):
 
 	def __init__(
-			self, tokenizer, context_size: int, sent_tokenizer, preprocessor=None,
-			seed: int|None=None
+			self, tokenizer, context_size: int, sent_tokenizer,
+			preprocessor=None, seed: int|None=None
 		) -> None:
 		super().__init__(tokenizer, preprocessor)
 		self.context_size = context_size
@@ -144,9 +165,9 @@ class UniformSampler(Encoder):
 class SentenceSampler(Encoder):
 
 	def __init__(
-			self, tokenizer, context_size: int, sent_tokenizer, sent_encoder,
-			threshold: float=.7, preprocessor=None, device: str|torch.device|None=None,
-			seed: int|None=None
+			self, tokenizer, context_size: int, sent_tokenizer,
+			sent_encoder, threshold: float=.7, preprocessor=None,
+			device: str|torch.device|None=None, seed: int|None=None
 		) -> None:
 		super().__init__(tokenizer, preprocessor)
 		self.context_size = context_size
@@ -186,7 +207,9 @@ class SentenceSampler(Encoder):
 					if np.random.rand() > p:
 						continue
 					sent_embedding = self.sent_encoder.encode([sent])
-					similarity = cosine_similarity(sampled_embedding, sent_embedding)
+					similarity = cosine_similarity(
+						sampled_embedding, sent_embedding
+					)
 					if self.threshold < similarity:
 						continue
 					sampled.extend(sent)
@@ -211,9 +234,9 @@ class SentenceSampler(Encoder):
 class RemoveRedundancy(Encoder):
 
 	def __init__(
-			self, tokenizer, context_size: int, sent_tokenizer, sent_encoder,
-			threshold: float=.7, preprocessor=None, device: str|torch.device|None=None,
-			seed: int|None=None
+			self, tokenizer, context_size: int, sent_tokenizer,
+			sent_encoder, threshold: float=.7, preprocessor=None,
+			device: str|torch.device|None=None, seed: int|None=None
 		) -> None:
 		super().__init__(tokenizer, preprocessor)
 		self.context_size = context_size
@@ -271,14 +294,27 @@ class RemoveRedundancy(Encoder):
 	
 	def remove_redundancy(self, sents: list[str]) -> list[str]:
 		selected_sents = []
+
+		# Average embedding of selected sentences
 		selected_embedding = np.zeros((1, self.sent_embedding_dim))
+
 		num_sents = 0
 		for sent in sents:
 			sent_embedding = self.sent_encoder.encode([sent])
-			similarity = cosine_similarity(selected_embedding, sent_embedding)
+
+			# Calculate similarity between current sentence and chosen sentences
+			similarity = cosine_similarity(
+				selected_embedding, sent_embedding
+			)
+
+			# Discard current sentence and contnue if it is similar
 			if self.threshold < similarity:
 				continue
+
+			# Otherwise select it
 			selected_sents.append(sent)
+
+			# Update selected sentences embedding
 			selected_embedding = (
 				(num_sents * selected_embedding + sent_embedding) /
 				(num_sents := num_sents + 1)

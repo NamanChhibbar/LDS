@@ -2,6 +2,8 @@ import re
 from time import perf_counter
 import numpy as np
 import torch
+from torch.optim import Optimizer
+from torch.optim.lr_scheduler import LRScheduler
 from transformers.tokenization_utils_base import BatchEncoding
 from bert_score import BERTScorer
 
@@ -10,19 +12,6 @@ from .pipelines import Encoder
 
 def count_words(text: str):
 	return len(text.split())
-
-
-def combine_subsections(sections):
-	text = ""
-	for sec in sections:
-		sec_text = "\n\n".join(sec["paragraphs"])
-		if sec["section_title"]:
-			sec_text = f"Section {sec["section_title"]}:\n\n{sec_text}"
-		text = f"{text}\n\n{sec_text}" if text else sec_text
-		if sec["subsections"]:
-			sub_text = combine_subsections(sec["subsections"])
-			text = f"{text}\n\n{sub_text}" if text else sub_text
-	return text
 
 
 def get_device() -> str:
@@ -99,18 +88,24 @@ class SummarizationDataset:
 			batch_size: int, context_size: int, use_cache: bool=False,
 			shuffle: bool=False, seed: int|None=None
 		) -> None:
+		# This enables dynamic batching
 		texts_summaries = sorted(
 			texts_summaries, key=lambda x: count_words(x[0])
 		)
 		num_texts = len(texts_summaries)
 		self.num_batches = num_texts // batch_size
+
+		# Storing batches of (text, summary) in a numpy array
 		self.text_batches = np.zeros(self.num_batches, dtype=object)
 		for i in range(self.num_batches):
 			batch = texts_summaries[i*batch_size:(i+1)*batch_size]
 			self.text_batches[i] = batch
+
+		# Using cache as a numpy array, if specified
 		self.cached = np.zeros(
 			self.num_batches, dtype=object
 		) if use_cache else None
+
 		self.encoder = encoder
 		self.batch_size = batch_size
 		self.context_size = context_size
@@ -120,7 +115,7 @@ class SummarizationDataset:
 		self.it = None
 	
 	def __iter__(self):
-		self.it = -1
+		self.it = 0
 		if self.shuffle:
 			permutation = np.random.permutation(self.num_batches)
 			self.text_batches = self.text_batches[permutation]
@@ -129,13 +124,18 @@ class SummarizationDataset:
 		return self
 	
 	def __next__(self) -> BatchEncoding:
-		if self.it is None or self.it + 1 == self.num_batches:
+		# Check if iterator is not implemented or if iterations are completed
+		if self.it is None or self.it == self.num_batches:
 			raise StopIteration()
-		self.it += 1
 		it = self.it
+		self.it += 1
+
+		# Check if input is cached
 		cached = self.cached
 		if cached is not None and cached[it]:
 			return cached[it]
+		
+		# Encode texts using encoder and summaries using tokenizer
 		tokenizer = self.encoder.tokenizer
 		texts_summaries = self.text_batches[it]
 		texts = [pair[0] for pair in texts_summaries]
@@ -145,18 +145,22 @@ class SummarizationDataset:
 			summaries, padding=True, max_length=self.context_size,
 			truncation=True, return_tensors="pt"
 		)["input_ids"]
+
+		# Set padding token ids to -100 (ignored id in attention)
 		filt = summ_encodings == tokenizer.pad_token_id
 		summ_encodings[filt] = -100
+
+		# Create batch encoding
 		batch_encodings = BatchEncoding({
 			**text_encodings, "labels": summ_encodings
 		})
+
+		# Save to cache and delete text bacth if using cache
 		if cached is not None:
 			cached[it] = batch_encodings
 			self.text_batches[it] = 0
+
 		return batch_encodings
-	
-	def __len__(self) -> int:
-		return self.num_batches
 
 
 class Evaluator:
@@ -200,8 +204,9 @@ class Evaluator:
 
 
 def train_model(
-	model, dataset: SummarizationDataset, epochs: int, optimizer,
-	scheduler=None, device: str|torch.device|None=None, flt_prec: int=4
+	model, dataset: SummarizationDataset, epochs: int,
+	optimizer: Optimizer, scheduler: LRScheduler=None,
+	device: str|torch.device|None=None, flt_prec: int=4
 ) -> list[int]:
 	model = model.to(device)
 	epoch_losses = []
