@@ -150,7 +150,10 @@ class SummarizationDataset:
 		self.seed = seed
 		np.random.seed(seed)
 		self.it = None
-	
+
+	def __len__(self):
+		return self.num_batches
+
 	def __iter__(self):
 		self.it = 0
 		if self.shuffle:
@@ -198,9 +201,6 @@ class SummarizationDataset:
 			self.text_batches[it] = 0
 
 		return batch_encodings
-	
-	def __len__(self):
-		return self.num_batches
 
 
 class Evaluator:
@@ -248,7 +248,7 @@ def train_model(
 	optimizer: Optimizer, scheduler: LRScheduler=None,
 	device: str|torch.device|None=None, flt_prec: int=4
 ) -> list[int]:
-	SPACES = 100
+	SPACES = 120
 
 	model = model.to(device)
 	epoch_losses = []
@@ -260,24 +260,39 @@ def train_model(
 		epoch_loss = 0
 
 		for batch, inputs in enumerate(dataset):
-			inputs = inputs.to(device)
+			try:
+				inputs = inputs.to(device)
 
-			start = perf_counter()
-			loss = model(**inputs).loss
-			optimizer.zero_grad()
-			loss.backward()
-			optimizer.step()
-			time = (perf_counter() - start) * 1000
+				start = perf_counter()
+				loss = model(**inputs).loss
+				optimizer.zero_grad()
+				loss.backward()
+				optimizer.step()
+				time = (perf_counter() - start) * 1000
+			except Exception as e:
+				print(
+					f"Encountered exception of type {type(e)}: {e}\n"
+					"Training terminated"
+				)
+				return epoch_losses
 
 			epoch_time += time
 			epoch_loss += loss.item()
 
-			time_remaining = (
+			seconds = (
 				epoch_time * (num_batches * (epochs - epoch) / (batch + 1) - 1)
 			) // 1000
-			seconds = time_remaining % 60
-			minutes = (time_remaining // 60) % 60
-			hours = time_remaining // 3600
+			minutes = seconds // 60
+			hours = minutes // 60
+			days = hours // 24
+
+			time_remaining = f"{seconds % 60}s"
+			if minutes:
+				time_remaining = f"{minutes % 60}m {time_remaining}"
+			if hours:
+				time_remaining = f"{hours % 24}h {time_remaining}"
+			if days:
+				time_remaining = f"{days}d {time_remaining}"
 
 			print(
 				f"\r{" " * SPACES}\r"
@@ -285,7 +300,7 @@ def train_model(
 				f"Batch: {batch+1}/{num_batches} "
 				f"Time: {round(time, flt_prec)} ms/batch "
 				f"Loss: {round(loss.item(), flt_prec)} "
-				f"Time remaining: {hours}h {minutes}m {seconds}s",
+				f"Time remaining: {time_remaining}",
 				end=""
 			)
 

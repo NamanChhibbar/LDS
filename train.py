@@ -63,7 +63,7 @@ def main() -> None:
 	# 	texts_summaries, key=lambda x: count_words(x[0])
 	# )[-4:]
 
-	print("Processing dataset...")
+	print("Creating dataset...")
 	preprocessor = TextProcessor(preprocessing=True)
 	sent_encoder = SentenceTransformer(sent_dir)
 	encoder = SentenceSampler(
@@ -82,19 +82,14 @@ def main() -> None:
 
 	print(f"Using device {device}")
 	print("Starting training...\n")
-	try:
-		loss_history = train_model(
-			model, dataset, epochs, optimizer, scheduler, device, flt_prec
-		)
-		print("\nTraining completed")
-	except Exception as e:
-		print(f"Encountered exception of type {type(e)}: {e}")
-	finally:
-		model.save_pretrained(save_dir)
-		print("Model saved")
-		with open(train_history_path, "wb") as fp:
-			pickle.dump(loss_history, fp)
-		print(f"Training history saved in {train_history_path}")
+	loss_history = train_model(
+		model, dataset, epochs, optimizer, scheduler, device, flt_prec
+	)
+	print("\nSaving model...")
+	model.save_pretrained(save_dir)
+	print(f"Saving training history in {train_history_path}...")
+	with open(train_history_path, "wb") as fp:
+		pickle.dump(loss_history, fp)
 
 def get_arguments() -> Namespace:
 	parser = ArgumentParser(description="")
