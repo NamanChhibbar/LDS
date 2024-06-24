@@ -7,11 +7,11 @@ from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LRScheduler
 from transformers.tokenization_utils_base import BatchEncoding
 from bert_score import BERTScorer
+from rouge import Rouge
 
 
 def count_words(text: str):
 	return len(text.split())
-
 
 def get_device() -> str:
 	if torch.cuda.is_available():
@@ -19,6 +19,13 @@ def get_device() -> str:
 	if torch.backends.mps.is_available():
 		return "mps"
 	return "cpu"
+
+def extract_special_tokens(token_list):
+	all_tokens = []
+	for token in token_list:
+		all_tokens += token if isinstance(token, list) else [token]
+	return all_tokens
+
 
 
 class TextProcessor:
@@ -80,6 +87,7 @@ class TextProcessor:
 		return text
 
 
+
 class Encoder(ABC):
 	"""
 	Base class for encoders
@@ -116,6 +124,7 @@ class Encoder(ABC):
 	@abstractmethod
 	def generate_encodings(self, texts: list[str]) -> BatchEncoding:
 		...
+
 
 
 class SummarizationDataset:
@@ -203,22 +212,47 @@ class SummarizationDataset:
 		return batch_encodings
 
 
+
 class Evaluator:
 
 	def __init__(
 			self, pipelines, texts_summaries: tuple[str]|list[tuple[str]],
-			device: str|torch.device|None=None
+			rouge_metrics: list[str]|None=None, rougen_max_n: int=2,
+			rougew_weight_factor: int=1.2, device: str|torch.device|None=None
 		) -> None:
 		if not isinstance(texts_summaries, list):
 			texts_summaries = [texts_summaries]
+
+		# Initialize pipelines, texts, and summaries
 		self.pipelines = pipelines
 		self.texts = [pair[0] for pair in texts_summaries]
 		self.summaries = [pair[1] for pair in texts_summaries]
+
+		# Initialise ROUGE scorer
+		if not rouge_metrics:
+			rouge_metrics = ["rouge-n", "rouge-l", "rouge-w"]
+		self.rouge_scorer = Rouge(
+			metrics=rouge_metrics, max_n=rougen_max_n, limit_length=False,
+			weight_factor=rougew_weight_factor
+		)
+		if "rouge-n" in rouge_metrics:
+			rouge_metrics.remove("rouge-n")
+			self.rouge_metrics = [
+				f"rouge-{i+1}" for i in range(rougen_max_n)
+			]
+			self.rouge_metrics.extend(rouge_metrics)
+		else:
+			self.rouge_metrics = rouge_metrics
+		self.rougen_max_n = rougen_max_n
+		self.rougew_weight_factor = rougew_weight_factor
+
+		# Initialize BERT scorer
 		self.bert_scorer = BERTScorer(lang="en", device=device)
+		self.device = device
 		self.generated_summaries = []
 	
 	def generate_summaries(self) -> list[int]:
-		summaries = self.generated_summaries
+		summaries = self.generated_summaries = []
 		time_taken = []
 		for pipeline in self.pipelines:
 			start = perf_counter()
@@ -227,15 +261,41 @@ class Evaluator:
 			summaries.extend(summary)
 			time_taken.append(time)
 		return time_taken
-
-	def get_bertscore(self) -> list[torch.Tensor]:
+	
+	# F, P, R
+	def get_rouge_score(self) -> list[dict[str, np.ndarray]]:
 		if not self.generated_summaries:
 			print("Generating summaries")
 			self.generate_summaries()
+		generated_summaries = self.generated_summaries
+		num_generated_summaries = len(generated_summaries)
 		summaries = self.summaries
+		num_summaries = len(summaries)
+		scores = []
+		for i in range(0, num_generated_summaries, num_summaries):
+			pipeline_summaries = generated_summaries[i:i+num_summaries]
+			mean_score = {
+				metric: np.array([0., 0, 0])
+				for metric in self.rouge_metrics
+			}
+			for cand, ref in zip(pipeline_summaries, summaries):
+				score = self.rouge_scorer.get_scores(cand, ref)
+				for metric, values in score.items():
+					mean_score[metric] += list(values.values())
+			for metric, values in mean_score.items():
+				mean_score[metric] = values / num_summaries
+			scores.append(mean_score)
+		return scores
+
+	# P, R, F
+	def get_bert_score(self) -> list[torch.Tensor]:
+		if not self.generated_summaries:
+			print("Generating summaries")
+			self.generate_summaries()
+		generated_summaries = self.generated_summaries
 		num_pipelines = len(self.pipelines)
-		summaries *= num_pipelines
-		metrics = self.bert_scorer.score(self.generated_summaries, summaries)
+		summaries = num_pipelines * self.summaries
+		metrics = self.bert_scorer.score(generated_summaries, summaries)
 		metrics = [
 			metric.reshape((num_pipelines, -1)).mean(dim=1)
 			for metric in metrics
@@ -243,12 +303,13 @@ class Evaluator:
 		return metrics
 
 
+
 def train_model(
 	model, dataset: SummarizationDataset, epochs: int,
 	optimizer: Optimizer, scheduler: LRScheduler=None,
 	device: str|torch.device|None=None, flt_prec: int=4
 ) -> list[int]:
-	SPACES = 120
+	SPACES = 110
 
 	model = model.to(device)
 	epoch_losses = []
@@ -296,10 +357,10 @@ def train_model(
 
 			print(
 				f"\r{" " * SPACES}\r"
-				f"Epoch: {epoch+1}/{epochs} "
-				f"Batch: {batch+1}/{num_batches} "
-				f"Time: {round(time, flt_prec)} ms/batch "
-				f"Loss: {round(loss.item(), flt_prec)} "
+				f"Epoch: {epoch+1}/{epochs}\t"
+				f"Batch: {batch+1}/{num_batches}\t"
+				f"Time: {round(time, flt_prec)} ms/batch\t"
+				f"Loss: {round(loss.item(), flt_prec)}\t"
 				f"Time remaining: {time_remaining}",
 				end=""
 			)

@@ -6,6 +6,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from .helpers import Encoder
 
 
+
 class SummarizationPipeline:
 
 	def __init__(
@@ -27,6 +28,7 @@ class SummarizationPipeline:
 			summaries = self.postprocessor(summaries)
 		return summaries
 	
+
 
 class TruncateMiddle(Encoder):
 
@@ -69,6 +71,7 @@ class TruncateMiddle(Encoder):
 			}, return_tensors="pt")
 
 		return padded_ids
+
 
 
 class UniformSampler(Encoder):
@@ -122,6 +125,7 @@ class UniformSampler(Encoder):
 
 		return padded_ids
 	
+
 
 class SentenceSampler(Encoder):
 
@@ -191,6 +195,7 @@ class SentenceSampler(Encoder):
 
 		return padded_ids
 	
+
 
 class RemoveRedundancy(Encoder):
 
