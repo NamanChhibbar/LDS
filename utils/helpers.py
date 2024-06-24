@@ -130,24 +130,23 @@ class Encoder(ABC):
 class SummarizationDataset:
 
 	def __init__(
-			self, texts_summaries: list[tuple[str]], encoder: Encoder,
-			batch_size: int, context_size: int, use_cache: bool=False,
-			shuffle: bool=False, seed: int|None=None
-		) -> None:
+		self, texts_summaries: list[tuple[str]], encoder: Encoder,
+		batch_size: int, context_size: int, use_cache: bool=True,
+		shuffle: bool=True, seed: int|None=None
+	) -> None:
 		# This enables dynamic batching
 		texts_summaries = sorted(
 			texts_summaries, key=lambda x: count_words(x[0])
 		)
-		num_texts = len(texts_summaries)
-		self.num_batches = num_texts // batch_size
+		self.num_batches = len(texts_summaries) // batch_size
 
-		# Storing batches of (text, summary) in a numpy array
+		# Store batches of (text, summary) in a numpy array
 		self.text_batches = np.zeros(self.num_batches, dtype=object)
 		for i in range(self.num_batches):
 			batch = texts_summaries[i*batch_size:(i+1)*batch_size]
 			self.text_batches[i] = batch
 
-		# Using cache as a numpy array, if specified
+		# Use cache as a numpy array, if specified
 		self.cached = np.zeros(
 			self.num_batches, dtype=object
 		) if use_cache else None
