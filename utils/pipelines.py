@@ -3,7 +3,7 @@ import torch
 from transformers.tokenization_utils_base import BatchEncoding
 from sklearn.metrics.pairwise import cosine_similarity
 
-from .helpers import Encoder
+from .helpers import TextProcessor, Encoder, SummarizationDataset
 
 
 
@@ -11,7 +11,8 @@ class SummarizationPipeline:
 
 	def __init__(
 			self, summarizer, encoder: Encoder, max_tokens: int,
-			postprocessor=None, device: str|torch.device|None=None
+			postprocessor:TextProcessor|None=None,
+			device: str|torch.device|None=None
 		) -> None:
 		self.summarizer = summarizer.to(device)
 		self.encoder = encoder
@@ -19,12 +20,25 @@ class SummarizationPipeline:
 		self.postprocessor = postprocessor
 		self.device = device
 
-	def __call__(self, texts: str|list[str]) -> list[str]:
+	def __call__(
+			self, texts: str|list[str], batch_size: int|None=None
+		) -> list[str]:
+		if isinstance(texts, str):
+			texts = [texts]
+		if batch_size is None:
+			batch_size = len(texts)
 		encoder = self.encoder
-		encodings = encoder(texts).to(self.device)
-		outputs = self.summarizer.generate(**encodings, max_length=self.max_tokens)
-		summaries = [encoder.tokenizer.decode(out) for out in outputs]
-		if self.postprocessor:
+		dataset = SummarizationDataset(texts, encoder, batch_size)
+		summaries = []
+		for encodings in dataset:
+			encodings = encodings.to(self.device)
+			outputs = self.summarizer.generate(
+				**encodings, max_length=self.max_tokens
+			)
+			summaries.extend(
+				[encoder.tokenizer.decode(out) for out in outputs]
+			)
+		if self.postprocessor is not None:
 			summaries = self.postprocessor(summaries)
 		return summaries
 	
@@ -34,7 +48,7 @@ class TruncateMiddle(Encoder):
 
 	def __init__(
 			self, tokenizer, context_size:int, head_size: float=.5,
-			preprocessor=None
+			preprocessor: TextProcessor|None=None
 		) -> None:
 		super().__init__(tokenizer, preprocessor)
 		self.context_size = context_size
@@ -77,12 +91,15 @@ class TruncateMiddle(Encoder):
 class UniformSampler(Encoder):
 
 	def __init__(
-			self, tokenizer, context_size: int, sent_tokenizer,
-			preprocessor=None, seed: int|None=None
+			self, tokenizer, context_size: int,
+			sent_tokenizer, bos_id: int, eos_id: int,
+			preprocessor: TextProcessor|None=None, seed: int|None=None
 		) -> None:
 		super().__init__(tokenizer, preprocessor)
 		self.context_size = context_size
 		self.sent_tokenizer = sent_tokenizer
+		self.bos_id = bos_id
+		self.eos_id = eos_id
 		self.seed = seed
 		np.random.seed(seed)
 
@@ -91,13 +108,15 @@ class UniformSampler(Encoder):
 
 		for text in texts:
 			# Extract and tokenize sentences
-			sents = self.sent_tokenizer(text)
-			sents = self.tokenizer(sents)["input_ids"]
-			sents = np.array(sents, dtype=list)
+			sentences = self.sent_tokenizer(text)
+			sentences = self.tokenizer(
+				sentences, add_special_tokens=False
+			)["input_ids"]
+			sentences = np.array(sentences, dtype=object)
 
 			# Sum of length of sentences
 			total_length = sum([
-				len(sent) for sent in sents
+				len(sent) for sent in sentences
 			])
 
 			# Approximate probability of picking a sentence
@@ -105,15 +124,17 @@ class UniformSampler(Encoder):
 
 			# Sample until sentences fit in model
 			while True:
-
-				sent_mask = np.random.rand(len(sents)) <= p
-				sampled = sents[sent_mask]
+				sent_mask = np.random.rand(len(sentences)) <= p
+				sampled = sentences[sent_mask]
 
 				# Flatten sentences
 				sampled = [elm for lis in sampled for elm in lis]
 
 				if len(sampled) <= self.context_size:
 					break
+
+			# Add BOS and EOS tokens
+			sampled = [self.bos_id] + sampled + [self.eos_id]
 
 			# Add sampled sentences to processed texts
 			processed_texts.append(sampled)
@@ -131,13 +152,16 @@ class SentenceSampler(Encoder):
 
 	def __init__(
 			self, tokenizer, context_size: int, sent_tokenizer,
-			sent_encoder, threshold: float=.7, preprocessor=None,
+			sent_encoder, bos_id: int, eos_id: int, threshold: float=.7,
+			preprocessor: TextProcessor|None=None,
 			device: str|torch.device|None=None, seed: int|None=None
 		) -> None:
 		super().__init__(tokenizer, preprocessor)
 		self.context_size = context_size
 		self.sent_tokenizer = sent_tokenizer
 		self.sent_encoder = sent_encoder.to(device)
+		self.bos_id = bos_id
+		self.eos_id = eos_id
 		self.sent_embedding_dim = sent_encoder.get_sentence_embedding_dimension()
 		self.threshold = threshold
 		self.device = device
@@ -153,7 +177,9 @@ class SentenceSampler(Encoder):
 		for text in texts:
 			# Extract and tokenize sentences
 			sents = sent_tokenizer(text)
-			sents = tokenizer(sents)["input_ids"]
+			sents = tokenizer(
+				sents, add_special_tokens=False
+			)["input_ids"]
 
 			# Sum of length of sentences
 			total_length = np.sum([
@@ -184,6 +210,9 @@ class SentenceSampler(Encoder):
 					)
 				if len(sampled) <= context_size:
 					break
+			
+			# Add BOS and EOS tokens
+			sampled = [self.bos_id] + sampled + [self.eos_id]
 
 			# Add sampled sentences to processed texts
 			processed_texts.append(sampled)
@@ -201,13 +230,16 @@ class RemoveRedundancy(Encoder):
 
 	def __init__(
 			self, tokenizer, context_size: int, sent_tokenizer,
-			sent_encoder, threshold: float=.7, preprocessor=None,
+			sent_encoder, bos_id, eos_id, threshold: float=.7,
+			preprocessor: TextProcessor|None=None,
 			device: str|torch.device|None=None, seed: int|None=None
 		) -> None:
 		super().__init__(tokenizer, preprocessor)
 		self.context_size = context_size
 		self.sent_tokenizer = sent_tokenizer
 		self.sent_encoder = sent_encoder.to(device)
+		self.bos_id = bos_id
+		self.eos_id = eos_id
 		self.sent_embedding_dim = sent_encoder.get_sentence_embedding_dimension()
 		self.threshold = threshold
 		self.device = device
@@ -225,7 +257,9 @@ class RemoveRedundancy(Encoder):
 			sents = self.remove_redundancy(sents)
 
 			# Tokenize sentences
-			sents = self.tokenizer(sents)["input_ids"]
+			sents = self.tokenizer(
+				sents, add_special_tokens=False
+			)["input_ids"]
 			sents = np.array(sents, dtype=list)
 
 			# Sum of length of sentences
@@ -247,6 +281,9 @@ class RemoveRedundancy(Encoder):
 
 				if len(sampled) <= self.context_size:
 					break
+
+			# Add BOS and EOS tokens
+			sampled = [self.bos_id] + sampled + [self.eos_id]
 
 			# Add sampled sentences to processed texts
 			processed_texts.append(sampled)

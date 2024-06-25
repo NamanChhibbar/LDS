@@ -1,3 +1,4 @@
+from math import ceil
 import re
 from time import perf_counter
 from abc import ABC, abstractmethod
@@ -60,14 +61,14 @@ class TextProcessor:
 
 	def __init__(
 			self, preprocessing: bool=False, remove_nums: bool=False,
-			ignore_tokens: list[str]=None
+			ignore_tokens: list[str]|None=None
 		) -> None:
 		pats_subs = []
 		if preprocessing:
 			pats_subs.extend(TextProcessor._preprocessing_pats_subs)
 		if remove_nums:
 			pats_subs.append(TextProcessor._number_pat_sub)
-		if ignore_tokens:
+		if ignore_tokens is not None:
 			pats_subs.append((re.compile(r"|".join(ignore_tokens)), ""))
 		pats_subs.extend(TextProcessor._whitespace_pats_subs)
 		self.pats_subs = [
@@ -116,7 +117,7 @@ class Encoder(ABC):
 		"""
 		if isinstance(texts, str):
 			texts = [texts]
-		if self.preprocessor:
+		if self.preprocessor is not None:
 			texts = self.preprocessor(texts)
 		encodings = self.generate_encodings(texts)
 		return encodings
@@ -130,21 +131,28 @@ class Encoder(ABC):
 class SummarizationDataset:
 
 	def __init__(
-		self, texts_summaries: list[tuple[str]], encoder: Encoder,
-		batch_size: int, context_size: int, use_cache: bool=True,
-		shuffle: bool=True, seed: int|None=None
+		self, texts: list[str], encoder: Encoder, batch_size: int,
+		summaries: list[str]|None=None, context_size: int|None=None,
+		use_cache: bool=False, shuffle: bool=False, seed: int|None=None
 	) -> None:
-		# This enables dynamic batching
-		texts_summaries = sorted(
-			texts_summaries, key=lambda x: count_words(x[0])
-		)
-		self.num_batches = len(texts_summaries) // batch_size
 
-		# Store batches of (text, summary) in a numpy array
-		self.text_batches = np.zeros(self.num_batches, dtype=object)
+		# This enables dynamic batching
+		perm = np.argsort([count_words(text) for text in texts])
+		texts = np.array(texts)[perm]
+		if summaries is not None:
+			summaries = np.array(summaries)[perm]
+
+		# Store batches of texts and summaries in a numpy array
+		num_batches = self.num_batches = ceil(len(texts) / batch_size)
+		self.text_batches = np.zeros(num_batches, dtype=object)
+		self.summary_batches = None if summaries is None else \
+			np.zeros(num_batches, dtype=object)
 		for i in range(self.num_batches):
-			batch = texts_summaries[i*batch_size:(i+1)*batch_size]
-			self.text_batches[i] = batch
+			text_batch = texts[i*batch_size:(i+1)*batch_size]
+			self.text_batches[i] = text_batch
+			if summaries is not None:
+				summary_batch = summaries[i*batch_size:(i+1)*batch_size]
+				self.summary_batches[i] = summary_batch
 
 		# Use cache as a numpy array, if specified
 		self.cached = np.zeros(
@@ -167,6 +175,8 @@ class SummarizationDataset:
 		if self.shuffle:
 			permutation = np.random.permutation(self.num_batches)
 			self.text_batches = self.text_batches[permutation]
+			if self.summary_batches is not None:
+				self.summary_batches = self.summary_batches[permutation]
 			if self.cached is not None:
 				self.cached = self.cached[permutation]
 		return self
@@ -185,28 +195,31 @@ class SummarizationDataset:
 		
 		# Encode texts using encoder and summaries using tokenizer
 		tokenizer = self.encoder.tokenizer
-		texts_summaries = self.text_batches[it]
-		texts = [pair[0] for pair in texts_summaries]
-		summaries = [pair[1] for pair in texts_summaries]
-		text_encodings = self.encoder(texts)
-		summ_encodings = tokenizer(
-			summaries, padding=True, max_length=self.context_size,
-			truncation=True, return_tensors="pt"
-		)["input_ids"]
+		text_batches = self.text_batches
+		summary_batches = self.summary_batches
+		texts = text_batches[it]
+		encodings = self.encoder(texts)
+		if summary_batches is not None:
+			summaries = summary_batches[it]
+			summ_encodings = tokenizer(
+				summaries, padding=True, max_length=self.context_size,
+				truncation=True, return_tensors="pt"
+			)["input_ids"]
 
-		# Set padding token ids to -100 (ignored id in attention)
-		filt = summ_encodings == tokenizer.pad_token_id
-		summ_encodings[filt] = -100
+			# Set padding token ids to -100 (ignored id in attention)
+			filt = summ_encodings == tokenizer.pad_token_id
+			summ_encodings[filt] = -100
+			encodings["labels"] = summ_encodings
 
 		# Create batch encoding
-		batch_encodings = BatchEncoding({
-			**text_encodings, "labels": summ_encodings
-		})
+		batch_encodings = BatchEncoding(encodings)
 
 		# Save to cache and delete text bacth if using cache
 		if cached is not None:
 			cached[it] = batch_encodings
-			self.text_batches[it] = 0
+			text_batches[it] = 0
+			if summary_batches is not None:
+				summary_batches[it] = 0
 
 		return batch_encodings
 
@@ -228,7 +241,7 @@ class Evaluator:
 		self.summaries = [pair[1] for pair in texts_summaries]
 
 		# Initialise ROUGE scorer
-		if not rouge_metrics:
+		if rouge_metrics is None:
 			rouge_metrics = ["rouge-n", "rouge-l", "rouge-w"]
 		self.rouge_scorer = Rouge(
 			metrics=rouge_metrics, max_n=rougen_max_n, limit_length=False,
@@ -248,7 +261,7 @@ class Evaluator:
 		# Initialize BERT scorer
 		self.bert_scorer = BERTScorer(lang="en", device=device)
 		self.device = device
-		self.generated_summaries = []
+		self.generated_summaries = None
 	
 	def generate_summaries(self) -> list[int]:
 		summaries = self.generated_summaries = []
@@ -263,7 +276,7 @@ class Evaluator:
 	
 	# F, P, R
 	def get_rouge_score(self) -> list[dict[str, np.ndarray]]:
-		if not self.generated_summaries:
+		if self.generated_summaries is None:
 			print("Generating summaries")
 			self.generate_summaries()
 		generated_summaries = self.generated_summaries
@@ -288,7 +301,7 @@ class Evaluator:
 
 	# P, R, F
 	def get_bert_score(self) -> list[torch.Tensor]:
-		if not self.generated_summaries:
+		if self.generated_summaries is None:
 			print("Generating summaries")
 			self.generate_summaries()
 		generated_summaries = self.generated_summaries
@@ -305,10 +318,10 @@ class Evaluator:
 
 def train_model(
 	model, dataset: SummarizationDataset, epochs: int,
-	optimizer: Optimizer, scheduler: LRScheduler=None,
+	optimizer: Optimizer, scheduler: LRScheduler|None=None,
 	device: str|torch.device|None=None, flt_prec: int=4
 ) -> list[int]:
-	SPACES = 110
+	SPACES = 120
 
 	model = model.to(device)
 	epoch_losses = []
@@ -368,7 +381,7 @@ def train_model(
 		epoch_loss = epoch_loss / num_batches
 		epoch_losses.append(epoch_loss)
 
-		if scheduler:
+		if scheduler is not None:
 			scheduler.step(epoch_loss)
 
 		print(

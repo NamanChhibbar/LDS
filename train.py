@@ -25,24 +25,24 @@ def main() -> None:
 	crs_dir = f"{data_dir}/GovReport/crs-processed"
 	crs_files = os.listdir(crs_dir)
 	sent_dir = f"{data_dir}/Models/Sent-Transformer"
-	# t5_dir = f"{data_dir}/Models/T5"
 	bart_dir = f"{data_dir}/Models/BART"
 	save_dir = f"{data_dir}/Models/BART-GovReport-SentenceSampler"
+	# t5_dir = f"{data_dir}/Models/T5"
 	# save_dir = f"{data_dir}/Models/T5-GovReport-SentenceSampler"
-	train_history_path = f"{data_dir}/train-history/t5-history.pkl"
+	train_history_path = f"{data_dir}/train-history/bart-history.pkl"
 
-	max_words = args.max_words if args.max_words else float("inf")
+	max_words = float("inf") if args.max_words is None else args.max_words
 	shuffle = args.no_shuffle
 	batch_size = args.batch_size
 	use_cache = args.no_cache
-	threshold = args.threshold if args.threshold else .7
-	lr = args.learning_rate if args.learning_rate else 1e-3
-	factor = args.factor if args.factor else .1
-	patience = args.patience if args.patience else 5
+	threshold = .7 if args.threshold is None else args.threshold
+	lr = 1e-3 if args.learning_rate is None else args.learning_rate
+	factor = .1 if args.factor is None else args.factor
+	patience = 5 if args.patience is None else args.patience
 	epochs = args.epochs
 	device = get_device() if args.use_gpu else "cpu"
 	seed = args.seed
-	flt_prec = args.float_precision if args.float_precision else 4
+	flt_prec = 4 if args.float_precision is None else args.float_precision
 
 	print("Loading tokenizer and model...")
 	tokenizer = BartTokenizer.from_pretrained(bart_dir)
@@ -53,15 +53,13 @@ def main() -> None:
 	# context_size = model.config.n_positions
 
 	print("Loading data...")
-	texts_summaries = []
+	texts, summaries = [], []
 	for file in crs_files:
 		with open(f"{crs_dir}/{file}") as fp:
 			data = json.load(fp)
 		if count_words(data["text"]) < max_words:
-			texts_summaries.append((data["text"], data["summary"]))
-	# texts_summaries = sorted(
-	# 	texts_summaries, key=lambda x: count_words(x[0])
-	# )[-4:]
+			texts.append(data["text"])
+			summaries.append(data["summary"])
 
 	print("Creating dataset...")
 	preprocessor = TextProcessor(preprocessing=True)
@@ -71,8 +69,8 @@ def main() -> None:
 		threshold, preprocessor, device, seed
 	)
 	dataset = SummarizationDataset(
-		texts_summaries, encoder, batch_size, context_size,
-		use_cache, shuffle, seed
+		texts, encoder, batch_size, summaries,
+		context_size, use_cache, shuffle, seed
 	)
 
 	optimizer = AdamW(model.parameters(), lr)
@@ -92,8 +90,16 @@ def main() -> None:
 		pickle.dump(loss_history, fp)
 
 def get_arguments() -> Namespace:
-	parser = ArgumentParser(description="")
+	parser = ArgumentParser(description="Training script")
 
+	parser.add_argument(
+		"--batch-size", action="store", type=int, required=True,
+		help="Maximum size of a batch"
+	)
+	parser.add_argument(
+		"--epochs", action="store", type=int, required=True,
+		help="Number of epochs"
+	)
 	parser.add_argument(
 		"--max-words", action="store", type=int,
 		help="Maximum words in text"
@@ -101,10 +107,6 @@ def get_arguments() -> Namespace:
 	parser.add_argument(
 		"--no-shuffle", action="store_false",
 		help="Specify to not shuffle data"
-	)
-	parser.add_argument(
-		"--batch-size", action="store", type=int, required=True,
-		help="Maximum size of a batch"
 	)
 	parser.add_argument(
 		"--no-cache", action="store_false",
@@ -125,10 +127,6 @@ def get_arguments() -> Namespace:
 	parser.add_argument(
 		"--patience", action="store", type=int,
 		help="Patience for ReduceLROnPlateau scheduler"
-	)
-	parser.add_argument(
-		"--epochs", action="store", type=int, required=True,
-		help="Number of epochs"
 	)
 	parser.add_argument(
 		"--use-gpu", action="store_true",
