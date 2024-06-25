@@ -18,7 +18,6 @@ from utils.helpers import (
 from utils.pipelines import SentenceSampler
 
 def main() -> None:
-
 	args = get_arguments()
 
 	data_dir = "/home/nchibbar/Data"
