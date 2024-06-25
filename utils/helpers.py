@@ -228,17 +228,19 @@ class SummarizationDataset:
 class Evaluator:
 
 	def __init__(
-			self, pipelines, texts_summaries: tuple[str]|list[tuple[str]],
+			self, pipelines, texts: str|list[str], summaries: str|list[str],
 			rouge_metrics: list[str]|None=None, rougen_max_n: int=2,
 			rougew_weight_factor: int=1.2, device: str|torch.device|None=None
 		) -> None:
-		if not isinstance(texts_summaries, list):
-			texts_summaries = [texts_summaries]
+		if isinstance(texts, str):
+			texts = [texts]
+		if isinstance(summaries, str):
+			summaries = [summaries]
 
 		# Initialize pipelines, texts, and summaries
 		self.pipelines = pipelines
-		self.texts = [pair[0] for pair in texts_summaries]
-		self.summaries = [pair[1] for pair in texts_summaries]
+		self.texts = texts
+		self.summaries = summaries
 
 		# Initialise ROUGE scorer
 		if rouge_metrics is None:
@@ -263,12 +265,14 @@ class Evaluator:
 		self.device = device
 		self.generated_summaries = None
 	
-	def generate_summaries(self) -> list[int]:
+	def generate_summaries(
+		self, batch_size: int|None=None
+	) -> list[int]:
 		summaries = self.generated_summaries = []
 		time_taken = []
 		for pipeline in self.pipelines:
 			start = perf_counter()
-			summary = pipeline(self.texts)
+			summary = pipeline(self.texts, batch_size)
 			time = (perf_counter() - start) * 1000
 			summaries.extend(summary)
 			time_taken.append(time)
@@ -276,10 +280,8 @@ class Evaluator:
 	
 	# F, P, R
 	def get_rouge_score(self) -> list[dict[str, np.ndarray]]:
-		if self.generated_summaries is None:
-			print("Generating summaries")
-			self.generate_summaries()
 		generated_summaries = self.generated_summaries
+		assert generated_summaries is not None, "Summaries not generated"
 		num_generated_summaries = len(generated_summaries)
 		summaries = self.summaries
 		num_summaries = len(summaries)
@@ -301,10 +303,8 @@ class Evaluator:
 
 	# P, R, F
 	def get_bert_score(self) -> list[torch.Tensor]:
-		if self.generated_summaries is None:
-			print("Generating summaries")
-			self.generate_summaries()
 		generated_summaries = self.generated_summaries
+		assert generated_summaries is not None, "Summaries not generated"
 		num_pipelines = len(self.pipelines)
 		summaries = num_pipelines * self.summaries
 		metrics = self.bert_scorer.score(generated_summaries, summaries)

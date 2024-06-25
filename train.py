@@ -75,17 +75,6 @@ def main() -> None:
 		context_size, use_cache, shuffle, seed
 	)
 
-	# it = iter(dataset)
-	# for _ in range(32):
-	# 	next(it)
-	# inps = next(it)
-	# print(
-	# 	inps["input_ids"].shape, inps["attention_mask"].shape,
-	# 	inps["labels"].shape
-	# )
-	# model(**inps)
-	# exit(0)
-
 	optimizer = AdamW(model.parameters(), lr)
 	scheduler = ReduceLROnPlateau(
 		optimizer, mode="min", factor=factor, patience=patience
