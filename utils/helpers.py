@@ -352,7 +352,7 @@ def train_model(
 			epoch_time += time
 			epoch_loss += loss.item()
 
-			seconds = (
+			seconds = int(
 				epoch_time * (num_batches * (epochs - epoch) / (batch + 1) - 1)
 			) // 1000
 			minutes = seconds // 60
