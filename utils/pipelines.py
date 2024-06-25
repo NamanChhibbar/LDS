@@ -104,8 +104,9 @@ class UniformSampler(Encoder):
 		np.random.seed(seed)
 
 	def generate_encodings(self, texts: list[str]) -> BatchEncoding:
-		processed_texts = []
+		context_size = self.context_size - 2
 
+		processed_texts = []
 		for text in texts:
 			# Extract and tokenize sentences
 			sentences = self.sent_tokenizer(text)
@@ -120,7 +121,7 @@ class UniformSampler(Encoder):
 			])
 
 			# Approximate probability of picking a sentence
-			p = self.context_size / total_length
+			p = context_size / total_length
 
 			# Sample until sentences fit in model
 			while True:
@@ -130,7 +131,7 @@ class UniformSampler(Encoder):
 				# Flatten sentences
 				sampled = [elm for lis in sampled for elm in lis]
 
-				if len(sampled) <= self.context_size:
+				if len(sampled) <= context_size:
 					break
 
 			# Add BOS and EOS tokens
@@ -152,8 +153,8 @@ class SentenceSampler(Encoder):
 
 	def __init__(
 			self, tokenizer, context_size: int, sent_tokenizer,
-			sent_encoder, bos_id: int, eos_id: int, threshold: float=.7,
-			preprocessor: TextProcessor|None=None,
+			sent_encoder, bos_id: int, eos_id: int,
+			preprocessor: TextProcessor|None=None,  threshold: float=.7,
 			device: str|torch.device|None=None, seed: int|None=None
 		) -> None:
 		super().__init__(tokenizer, preprocessor)
@@ -171,19 +172,19 @@ class SentenceSampler(Encoder):
 	def generate_encodings(self, texts: list[str]) -> BatchEncoding:
 		sent_tokenizer = self.sent_tokenizer
 		tokenizer = self.tokenizer
-		context_size = self.context_size
+		context_size = self.context_size - 2
 
 		processed_texts = []
 		for text in texts:
 			# Extract and tokenize sentences
-			sents = sent_tokenizer(text)
-			sents = tokenizer(
-				sents, add_special_tokens=False
+			sentences = sent_tokenizer(text)
+			sentences = tokenizer(
+				sentences, add_special_tokens=False
 			)["input_ids"]
 
 			# Sum of length of sentences
 			total_length = np.sum([
-				len(sent) for sent in sents
+				len(sent) for sent in sentences
 			])
 
 			# Approximate probability of picking a sentence
@@ -194,16 +195,17 @@ class SentenceSampler(Encoder):
 				sampled = []
 				sampled_embedding = np.zeros((1, self.sent_embedding_dim))
 				num_sampled = 0
-				for sent in sents:
+				for sent_encoding in sentences:
 					if np.random.rand() > p:
 						continue
+					sent = tokenizer.decode(sent_encoding)
 					sent_embedding = self.sent_encoder.encode([sent])
 					similarity = cosine_similarity(
 						sampled_embedding, sent_embedding
 					)
 					if self.threshold < similarity:
 						continue
-					sampled.extend(sent)
+					sampled.extend(sent_encoding)
 					sampled_embedding = (
 						(num_sampled * sampled_embedding + sent_embedding) /
 						(num_sampled := num_sampled + 1)
@@ -230,8 +232,8 @@ class RemoveRedundancy(Encoder):
 
 	def __init__(
 			self, tokenizer, context_size: int, sent_tokenizer,
-			sent_encoder, bos_id, eos_id, threshold: float=.7,
-			preprocessor: TextProcessor|None=None,
+			sent_encoder, bos_id: int, eos_id: int,
+			preprocessor: TextProcessor|None=None,  threshold: float=.7,
 			device: str|torch.device|None=None, seed: int|None=None
 		) -> None:
 		super().__init__(tokenizer, preprocessor)
@@ -247,39 +249,40 @@ class RemoveRedundancy(Encoder):
 		np.random.seed(seed)
 
 	def generate_encodings(self, texts: list[str]) -> BatchEncoding:
-		processed_texts = []
+		context_size = self.context_size - 2
 
+		processed_texts = []
 		for text in texts:
 			# Extract sentences
-			sents = self.sent_tokenizer(text)
+			sentences = self.sent_tokenizer(text)
 
 			# Remove redundant sentences
-			sents = self.remove_redundancy(sents)
+			sentences = self.remove_redundancy(sentences)
 
 			# Tokenize sentences
-			sents = self.tokenizer(
-				sents, add_special_tokens=False
+			sentences = self.tokenizer(
+				sentences, add_special_tokens=False
 			)["input_ids"]
-			sents = np.array(sents, dtype=list)
+			sentences = np.array(sentences, dtype=list)
 
 			# Sum of length of sentences
 			total_length = sum([
-				len(sent) for sent in sents
+				len(sent) for sent in sentences
 			])
 
 			# Approximate probability of picking a sentence
-			p = self.context_size / total_length
+			p = context_size / total_length
 
 			# Sample until sentences fit in model
 			while True:
 
-				sent_mask = np.random.rand(len(sents)) <= p
-				sampled = sents[sent_mask]
+				sent_mask = np.random.rand(len(sentences)) <= p
+				sampled = sentences[sent_mask]
 
 				# Flatten sentences
 				sampled = [elm for lis in sampled for elm in lis]
 
-				if len(sampled) <= self.context_size:
+				if len(sampled) <= context_size:
 					break
 
 			# Add BOS and EOS tokens

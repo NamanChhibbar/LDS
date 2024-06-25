@@ -47,10 +47,12 @@ def main() -> None:
 	print("Loading tokenizer and model...")
 	tokenizer = BartTokenizer.from_pretrained(bart_dir)
 	model = BartForConditionalGeneration.from_pretrained(bart_dir)
+	context_size = model.config.max_position_embeddings
 	# tokenizer = T5Tokenizer.from_pretrained(t5_dir)
 	# model = T5ForConditionalGeneration.from_pretrained(t5_dir)
-	context_size = model.config.max_position_embeddings
 	# context_size = model.config.n_positions
+	bos_id = tokenizer.bos_token_id
+	eos_id = tokenizer.eos_token_id
 
 	print("Loading data...")
 	texts, summaries = [], []
@@ -66,12 +68,23 @@ def main() -> None:
 	sent_encoder = SentenceTransformer(sent_dir)
 	encoder = SentenceSampler(
 		tokenizer, context_size, sent_tokenize, sent_encoder,
-		threshold, preprocessor, device, seed
+		bos_id, eos_id, preprocessor, threshold, device, seed
 	)
 	dataset = SummarizationDataset(
 		texts, encoder, batch_size, summaries,
 		context_size, use_cache, shuffle, seed
 	)
+
+	# it = iter(dataset)
+	# for _ in range(32):
+	# 	next(it)
+	# inps = next(it)
+	# print(
+	# 	inps["input_ids"].shape, inps["attention_mask"].shape,
+	# 	inps["labels"].shape
+	# )
+	# model(**inps)
+	# exit(0)
 
 	optimizer = AdamW(model.parameters(), lr)
 	scheduler = ReduceLROnPlateau(
