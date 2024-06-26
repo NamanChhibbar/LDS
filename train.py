@@ -17,6 +17,9 @@ from utils.helpers import (
 )
 from utils.pipelines import SentenceSampler
 
+
+
+
 def main() -> None:
 	# Get command line arguments
 	args = get_arguments()
@@ -32,7 +35,7 @@ def main() -> None:
 	train_history_path = f"{data_dir}/train-history/bart-history.pkl"
 
 	# Use the command line arguments
-	# See get_arguments() for description
+	# See function get_arguments for description
 	max_words = float("inf") if args.max_words is None else args.max_words
 	shuffle = args.no_shuffle
 	batch_size = args.batch_size
@@ -47,17 +50,16 @@ def main() -> None:
 	flt_prec = 4 if args.float_precision is None else args.float_precision
 
 	print("Loading tokenizer and model...")
+
+	# BART
 	tokenizer = BartTokenizer.from_pretrained(bart_dir)
 	model = BartForConditionalGeneration.from_pretrained(bart_dir)
-	# Verify tokenizer and model alignment
-	assert tokenizer.vocab_size == model.config.vocab_size, \
-		"Tokenizer and model have different vocabulary sizes"
 	context_size = model.config.max_position_embeddings
+
+	# T5
 	# tokenizer = T5Tokenizer.from_pretrained(t5_dir)
 	# model = T5ForConditionalGeneration.from_pretrained(t5_dir)
 	# context_size = model.config.n_positions
-	bos_id = tokenizer.bos_token_id
-	eos_id = tokenizer.eos_token_id
 
 	print("Loading data...")
 	crs_files = os.listdir(crs_dir)
@@ -74,28 +76,33 @@ def main() -> None:
 	sent_encoder = SentenceTransformer(sent_dir)
 	encoder = SentenceSampler(
 		tokenizer, context_size, sent_tokenize, sent_encoder,
-		bos_id, eos_id, preprocessor, threshold, device, seed
+		preprocessor, threshold, device, seed
 	)
 	dataset = SummarizationDataset(
 		texts, encoder, batch_size, summaries,
 		context_size, use_cache, shuffle, seed
 	)
 
+	# Adam optimizer with weight decay
 	optimizer = AdamW(model.parameters(), lr)
+	# Reduces LR when a tracked metric stops improving
 	scheduler = ReduceLROnPlateau(
 		optimizer, mode="min", factor=factor, patience=patience
 	)
 
 	print(f"Using device {device}")
 	print("Starting training...\n")
-	loss_history = train_model(
+	train_history = train_model(
 		model, dataset, epochs, optimizer, scheduler, device, flt_prec
 	)
 	print("\nSaving model...")
 	model.save_pretrained(save_dir)
 	print(f"Saving training history in {train_history_path}...")
 	with open(train_history_path, "wb") as fp:
-		pickle.dump(loss_history, fp)
+		pickle.dump(train_history, fp)
+
+
+
 
 def get_arguments() -> Namespace:
 	parser = ArgumentParser(description="Training script")
@@ -150,6 +157,7 @@ def get_arguments() -> Namespace:
 		help="Number of decimal places to show in floating points"
 	)
 	return parser.parse_args()
+
 
 
 if __name__ == "__main__":
