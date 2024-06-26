@@ -44,7 +44,16 @@ class TextProcessor:
 		# Hashtags
 		(r"#[^\s]+", ""),
 		# HTML tags
-		(r"<[^\n>]+>", "")
+		(r"<[^\n>]+>", ""),
+		# Remove hanging periods
+		(r"(\s)+\.(\s)+", r"\1\2"),
+		# Remove unecessary periods
+		(r"\.\s*([;:\?-])", r"\1"),
+		# Remove ending period of abbreviations
+		# (due to difficulties in sentence segmentation)
+		(r"(\w+.\w+)\.", r"\1"),
+		# Remove unecessary decimal points
+		(r"(\d+)\.(\s)", r"\1\2")
 	]
 
 	# Numbers
@@ -94,7 +103,8 @@ class Encoder(ABC):
 	Base class for encoders
 	"""
 	def __init__(
-			self, tokenizer, preprocessor: TextProcessor=None
+			self, tokenizer, preprocessor: TextProcessor|None=None,
+			bos_id: int|None=None, eos_id: int|None=None
 		) -> None:
 		"""
 		## Parameters
@@ -104,6 +114,8 @@ class Encoder(ABC):
 		super().__init__()
 		self.tokenizer = tokenizer
 		self.preprocessor = preprocessor
+		self.bos_id = bos_id
+		self.eos_id = eos_id
 
 	def __call__(self, texts: str|list[str]) -> BatchEncoding:
 		"""
@@ -125,6 +137,15 @@ class Encoder(ABC):
 	@abstractmethod
 	def generate_encodings(self, texts: list[str]) -> BatchEncoding:
 		...
+	
+	def add_special_tokens(self, encodings: list[int]):
+		bos_id = self.bos_id
+		eos_id = self.eos_id
+		if bos_id is not None:
+			text_ids = [bos_id] + encodings
+		if eos_id is not None:
+			text_ids = text_ids + [eos_id]
+		return text_ids
 
 
 
@@ -321,6 +342,7 @@ def train_model(
 	optimizer: Optimizer, scheduler: LRScheduler|None=None,
 	device: str|torch.device|None=None, flt_prec: int=4
 ) -> list[int]:
+	# For clearing output
 	SPACES = 120
 
 	model = model.to(device)
@@ -329,13 +351,13 @@ def train_model(
 
 	model.train(True)
 	for epoch in range(epochs):
+		# Track total epoch time and loss
 		epoch_time = 0
 		epoch_loss = 0
 
 		for batch, inputs in enumerate(dataset):
 			try:
 				inputs = inputs.to(device)
-
 				start = perf_counter()
 				loss = model(**inputs).loss
 				optimizer.zero_grad()
@@ -352,6 +374,7 @@ def train_model(
 			epoch_time += time
 			epoch_loss += loss.item()
 
+			# Calculate remaining time
 			seconds = int(
 				epoch_time * (num_batches * (epochs - epoch) / (batch + 1) - 1)
 			) // 1000
@@ -367,6 +390,7 @@ def train_model(
 			if days:
 				time_remaining = f"{days}d {time_remaining}"
 
+			
 			print(
 				f"\r{" " * SPACES}\r"
 				f"Epoch: {epoch+1}/{epochs}\t"
@@ -387,7 +411,7 @@ def train_model(
 		print(
 			f"\r{" " * SPACES}\r"
 			f"\rEpoch: {epoch+1}/{epochs} "
-			f"Avergage time: {epoch_time} ms/batch "
-			f"Average loss: {epoch_loss}"
+			f"Avergage time: {round(epoch_time, flt_prec)} ms/batch "
+			f"Average loss: {round(epoch_loss, flt_prec)}"
 		)
 	return epoch_losses

@@ -18,11 +18,12 @@ from utils.helpers import (
 from utils.pipelines import SentenceSampler
 
 def main() -> None:
+	# Get command line arguments
 	args = get_arguments()
 
+	# All paths that are needed to be hard coded
 	data_dir = "/home/nchibbar/Data"
 	crs_dir = f"{data_dir}/GovReport/crs-processed"
-	crs_files = os.listdir(crs_dir)
 	sent_dir = f"{data_dir}/Models/Sent-Transformer"
 	bart_dir = f"{data_dir}/Models/BART"
 	save_dir = f"{data_dir}/Models/BART-GovReport-SentenceSampler"
@@ -30,10 +31,12 @@ def main() -> None:
 	# save_dir = f"{data_dir}/Models/T5-GovReport-SentenceSampler"
 	train_history_path = f"{data_dir}/train-history/bart-history.pkl"
 
+	# Use the command line arguments
+	# See get_arguments() for description
 	max_words = float("inf") if args.max_words is None else args.max_words
 	shuffle = args.no_shuffle
 	batch_size = args.batch_size
-	use_cache = args.no_cache
+	use_cache = args.no_use_cache
 	threshold = .7 if args.threshold is None else args.threshold
 	lr = 1e-3 if args.learning_rate is None else args.learning_rate
 	factor = .1 if args.factor is None else args.factor
@@ -46,6 +49,9 @@ def main() -> None:
 	print("Loading tokenizer and model...")
 	tokenizer = BartTokenizer.from_pretrained(bart_dir)
 	model = BartForConditionalGeneration.from_pretrained(bart_dir)
+	# Verify tokenizer and model alignment
+	assert tokenizer.vocab_size == model.config.vocab_size, \
+		"Tokenizer and model have different vocabulary sizes"
 	context_size = model.config.max_position_embeddings
 	# tokenizer = T5Tokenizer.from_pretrained(t5_dir)
 	# model = T5ForConditionalGeneration.from_pretrained(t5_dir)
@@ -54,6 +60,7 @@ def main() -> None:
 	eos_id = tokenizer.eos_token_id
 
 	print("Loading data...")
+	crs_files = os.listdir(crs_dir)
 	texts, summaries = [], []
 	for file in crs_files:
 		with open(f"{crs_dir}/{file}") as fp:
@@ -99,35 +106,36 @@ def get_arguments() -> Namespace:
 	)
 	parser.add_argument(
 		"--epochs", action="store", type=int, required=True,
-		help="Number of epochs"
+		help="Number of epochs to train for"
 	)
 	parser.add_argument(
 		"--max-words", action="store", type=int,
-		help="Maximum words in text"
+		help="Maximum words allowed in text"
 	)
 	parser.add_argument(
 		"--no-shuffle", action="store_false",
-		help="Specify to not shuffle data"
+		help="Specify to not shuffle data in the dataset"
 	)
 	parser.add_argument(
-		"--no-cache", action="store_false",
-		help="Specify to not use cache"
+		"--no-use-cache", action="store_false",
+		help="Specify to not use cache to store processed inputs"
 	)
 	parser.add_argument(
 		"--threshold", action="store", type=float,
-		help="Threshold for encoder"
+		help="Maximum similarity threshold to pick sentences in "
+		"sentence sampling pipelines"
 	)
 	parser.add_argument(
 		"--learning-rate", action="store", type=float,
-		help="Learning rate for optimizer"
+		help="Initial learning rate in optimizer"
 	)
 	parser.add_argument(
 		"--factor", action="store", type=float,
-		help="Factor for ReduceLROnPlateau scheduler"
+		help="Factor parameter for ReduceLROnPlateau scheduler"
 	)
 	parser.add_argument(
 		"--patience", action="store", type=int,
-		help="Patience for ReduceLROnPlateau scheduler"
+		help="Patience parameter for ReduceLROnPlateau scheduler"
 	)
 	parser.add_argument(
 		"--use-gpu", action="store_true",
@@ -135,7 +143,7 @@ def get_arguments() -> Namespace:
 	)
 	parser.add_argument(
 		"--seed", action="store", type=int,
-		help="Seed to use"
+		help="Use a manual seed for output reproducibility"
 	)
 	parser.add_argument(
 		"--float-precision", action="store", type=int,

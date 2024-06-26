@@ -5,7 +5,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 from .helpers import TextProcessor, Encoder, SummarizationDataset
 
-
+SENT_SEP = "\n"
 
 class SummarizationPipeline:
 
@@ -35,9 +35,10 @@ class SummarizationPipeline:
 			outputs = self.summarizer.generate(
 				**encodings, max_length=self.max_tokens
 			)
-			summaries.extend(
-				[encoder.tokenizer.decode(out) for out in outputs]
-			)
+			summaries.extend([
+				encoder.tokenizer.decode(out, skip_special_tokens=True)
+				for out in outputs
+			])
 		if self.postprocessor is not None:
 			summaries = self.postprocessor(summaries)
 		return summaries
@@ -50,34 +51,39 @@ class TruncateMiddle(Encoder):
 			self, tokenizer, context_size:int, head_size: float=.5,
 			preprocessor: TextProcessor|None=None
 		) -> None:
-		super().__init__(tokenizer, preprocessor)
+		super().__init__(
+			tokenizer, preprocessor,
+			tokenizer.bos_token_id, tokenizer.eos_token_id
+		)
 		self.context_size = context_size
 		self.head_size = head_size
 
 	def generate_encodings(self, texts: list[str]) -> BatchEncoding:
 		# Constant head size
-		size = self.context_size
-		head_size = int(size * self.head_size)
+		context_size = self.context_size - 2
+		head_size = int(context_size * self.head_size)
 		truncated_ids = []
 
 		for text in texts:
 			# Encode the text
-			text_ids = self.tokenizer.encode(text)
+			encodings = self.tokenizer.encode(
+				text, add_special_tokens=False
+			)
 
-			# Check if ids fit in model
-			if len(text_ids) <= size:
-				truncated_ids.append(text_ids)
-				continue
+			# If the encodings dont fit in the model
+			if len(encodings) > context_size:
+				# Calculate beginning index of tail
+				tail_idx = len(encodings) - context_size + head_size
 
-			# Calculate beginning index of tail
-			tail_idx = len(text_ids) - size + head_size
+				# Truncate the middle and concatenate head and tail
+				encodings = np.concatenate([
+					encodings[:head_size],
+					encodings[tail_idx:]
+				]).tolist()
 
-			# Truncate the middle and concatenate head and tail
-			truncated = np.concatenate([
-				text_ids[:head_size],
-				text_ids[tail_idx:]
-			])
-			truncated_ids.append(truncated.astype(int))
+			# Add BOS and EOS tokens
+			encodings = self.add_special_tokens(encodings)
+			truncated_ids.append(encodings)
 		
 		# Pad sentences and create attention mask
 		padded_ids = self.tokenizer.pad({
@@ -92,25 +98,36 @@ class UniformSampler(Encoder):
 
 	def __init__(
 			self, tokenizer, context_size: int,
-			sent_tokenizer, bos_id: int, eos_id: int,
-			preprocessor: TextProcessor|None=None, seed: int|None=None
+			sent_tokenizer, preprocessor: TextProcessor|None=None,
+			seed: int|None=None
 		) -> None:
-		super().__init__(tokenizer, preprocessor)
+		super().__init__(
+			tokenizer, preprocessor,
+			tokenizer.bos_token_id, tokenizer.eos_token_id
+		)
 		self.context_size = context_size
 		self.sent_tokenizer = sent_tokenizer
-		self.bos_id = bos_id
-		self.eos_id = eos_id
 		self.seed = seed
 		np.random.seed(seed)
+		self.sent_sep_id = tokenizer.encode(SENT_SEP)[1]
 
 	def generate_encodings(self, texts: list[str]) -> BatchEncoding:
+		tokenizer = self.tokenizer
 		context_size = self.context_size - 2
 
 		processed_texts = []
 		for text in texts:
+			# Check if encodings fit in the model
+			encodings = tokenizer.encode(
+				text, add_special_tokens=False
+			)
+			if len(encodings) <= context_size:
+				processed_texts.append(encodings)
+				continue
+
 			# Extract and tokenize sentences
 			sentences = self.sent_tokenizer(text)
-			sentences = self.tokenizer(
+			sentences = tokenizer(
 				sentences, add_special_tokens=False
 			)["input_ids"]
 			sentences = np.array(sentences, dtype=object)
@@ -129,19 +146,22 @@ class UniformSampler(Encoder):
 				sampled = sentences[sent_mask]
 
 				# Flatten sentences
-				sampled = [elm for lis in sampled for elm in lis]
+				sampled = [
+					elm for lis in sampled
+					for elm in lis + [self.sent_sep_id]
+				]
 
 				if len(sampled) <= context_size:
 					break
 
 			# Add BOS and EOS tokens
-			sampled = [self.bos_id] + sampled + [self.eos_id]
+			sampled = self.add_special_tokens(sampled)
 
 			# Add sampled sentences to processed texts
 			processed_texts.append(sampled)
 
 		# Pad sentences and create attention mask
-		padded_ids = self.tokenizer.pad({
+		padded_ids = tokenizer.pad({
 			"input_ids": processed_texts
 		}, return_tensors="pt")
 
@@ -153,21 +173,23 @@ class SentenceSampler(Encoder):
 
 	def __init__(
 			self, tokenizer, context_size: int, sent_tokenizer,
-			sent_encoder, bos_id: int, eos_id: int,
-			preprocessor: TextProcessor|None=None,  threshold: float=.7,
-			device: str|torch.device|None=None, seed: int|None=None
+			sent_encoder, preprocessor: TextProcessor|None=None,
+			threshold: float=.7, device: str|torch.device|None=None,
+			seed: int|None=None
 		) -> None:
-		super().__init__(tokenizer, preprocessor)
+		super().__init__(
+			tokenizer, preprocessor,
+			tokenizer.bos_token_id, tokenizer.eos_token_id
+		)
 		self.context_size = context_size
 		self.sent_tokenizer = sent_tokenizer
 		self.sent_encoder = sent_encoder.to(device)
-		self.bos_id = bos_id
-		self.eos_id = eos_id
 		self.sent_embedding_dim = sent_encoder.get_sentence_embedding_dimension()
 		self.threshold = threshold
 		self.device = device
 		self.seed = seed
 		np.random.seed(seed)
+		self.sent_sep_id = tokenizer.encode(SENT_SEP)[1]
 
 	def generate_encodings(self, texts: list[str]) -> BatchEncoding:
 		sent_tokenizer = self.sent_tokenizer
@@ -176,6 +198,14 @@ class SentenceSampler(Encoder):
 
 		processed_texts = []
 		for text in texts:
+			# Check if encodings fit in the model
+			encodings = tokenizer.encode(
+				text, add_special_tokens=False
+			)
+			if len(encodings) <= context_size:
+				processed_texts.append(encodings)
+				continue
+
 			# Extract and tokenize sentences
 			sentences = sent_tokenizer(text)
 			sentences = tokenizer(
@@ -205,6 +235,7 @@ class SentenceSampler(Encoder):
 					)
 					if self.threshold < similarity:
 						continue
+					sent_encoding += [self.sent_sep_id]
 					sampled.extend(sent_encoding)
 					sampled_embedding = (
 						(num_sampled * sampled_embedding + sent_embedding) /
@@ -214,7 +245,7 @@ class SentenceSampler(Encoder):
 					break
 			
 			# Add BOS and EOS tokens
-			sampled = [self.bos_id] + sampled + [self.eos_id]
+			sampled = self.add_special_tokens(sampled)
 
 			# Add sampled sentences to processed texts
 			processed_texts.append(sampled)
@@ -232,27 +263,38 @@ class RemoveRedundancy(Encoder):
 
 	def __init__(
 			self, tokenizer, context_size: int, sent_tokenizer,
-			sent_encoder, bos_id: int, eos_id: int,
-			preprocessor: TextProcessor|None=None,  threshold: float=.7,
-			device: str|torch.device|None=None, seed: int|None=None
+			sent_encoder, preprocessor: TextProcessor|None=None,
+			threshold: float=.7, device: str|torch.device|None=None,
+			seed: int|None=None
 		) -> None:
-		super().__init__(tokenizer, preprocessor)
+		super().__init__(
+			tokenizer, preprocessor,
+			tokenizer.bos_token_id, tokenizer.eos_token_id
+		)
 		self.context_size = context_size
 		self.sent_tokenizer = sent_tokenizer
 		self.sent_encoder = sent_encoder.to(device)
-		self.bos_id = bos_id
-		self.eos_id = eos_id
 		self.sent_embedding_dim = sent_encoder.get_sentence_embedding_dimension()
 		self.threshold = threshold
 		self.device = device
 		self.seed = seed
 		np.random.seed(seed)
+		self.sent_sep_id = tokenizer.encode(SENT_SEP)[1]
 
 	def generate_encodings(self, texts: list[str]) -> BatchEncoding:
+		tokenizer = self.tokenizer
 		context_size = self.context_size - 2
 
 		processed_texts = []
 		for text in texts:
+			# Check if encodings fit in the model
+			encodings = tokenizer.encode(
+				text, add_special_tokens=False
+			)
+			if len(encodings) <= context_size:
+				processed_texts.append(encodings)
+				continue
+
 			# Extract sentences
 			sentences = self.sent_tokenizer(text)
 
@@ -260,7 +302,7 @@ class RemoveRedundancy(Encoder):
 			sentences = self.remove_redundancy(sentences)
 
 			# Tokenize sentences
-			sentences = self.tokenizer(
+			sentences = tokenizer(
 				sentences, add_special_tokens=False
 			)["input_ids"]
 			sentences = np.array(sentences, dtype=list)
@@ -280,19 +322,22 @@ class RemoveRedundancy(Encoder):
 				sampled = sentences[sent_mask]
 
 				# Flatten sentences
-				sampled = [elm for lis in sampled for elm in lis]
+				sampled = [
+					elm for lis in sampled
+					for elm in lis + [self.sent_sep_id]
+				]
 
 				if len(sampled) <= context_size:
 					break
 
 			# Add BOS and EOS tokens
-			sampled = [self.bos_id] + sampled + [self.eos_id]
+			sampled = self.add_special_tokens(sampled)
 
 			# Add sampled sentences to processed texts
 			processed_texts.append(sampled)
 
 		# Pad sentences and create attention mask
-		padded_ids = self.tokenizer.pad({
+		padded_ids = tokenizer.pad({
 			"input_ids": processed_texts
 		}, return_tensors="pt")
 
