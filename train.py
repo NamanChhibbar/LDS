@@ -1,7 +1,8 @@
-from argparse import ArgumentParser, Namespace
 import os
 import json
 import pickle
+from argparse import ArgumentParser, Namespace
+
 from nltk import sent_tokenize
 from transformers import (
 	BartTokenizer, BartForConditionalGeneration,
