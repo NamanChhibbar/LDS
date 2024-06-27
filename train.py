@@ -20,7 +20,6 @@ from utils.pipelines import SentenceSampler
 
 
 
-
 def main() -> None:
 	# Get command line arguments
 	args = get_arguments()
@@ -36,7 +35,7 @@ def main() -> None:
 	train_history_path = f"{data_dir}/train-history/bart-history.pkl"
 
 	# Use the command line arguments
-	# See function get_arguments for description
+	# See function get_arguments for descriptions
 	max_words = float("inf") if args.max_words is None else args.max_words
 	shuffle = args.no_shuffle
 	batch_size = args.batch_size
@@ -97,10 +96,12 @@ def main() -> None:
 	)
 	print("\nSaving model...")
 	model.save_pretrained(save_dir)
+	dirs, _ = os.path.split(train_history)
 	print(f"Saving training history in {train_history_path}...")
+	if not os.path.exists(dirs):
+		os.makedirs(dirs)
 	with open(train_history_path, "wb") as fp:
 		pickle.dump(train_history, fp)
-
 
 
 
@@ -116,8 +117,8 @@ def get_arguments() -> Namespace:
 		help="Number of epochs to train for"
 	)
 	parser.add_argument(
-		"--max-words", action="store", type=int,
-		help="Maximum words allowed in text"
+		"--use-gpu", action="store_true",
+		help="Specify to use GPU, if available"
 	)
 	parser.add_argument(
 		"--no-shuffle", action="store_false",
@@ -128,9 +129,13 @@ def get_arguments() -> Namespace:
 		help="Specify to not use cache to store processed inputs"
 	)
 	parser.add_argument(
+		"--max-words", action="store", type=int,
+		help="Maximum words allowed in text"
+	)
+	parser.add_argument(
 		"--threshold", action="store", type=float,
 		help="Maximum similarity threshold to pick sentences in "
-		"sentence sampling pipelines"
+		"SentenceSampler pipeline"
 	)
 	parser.add_argument(
 		"--learning-rate", action="store", type=float,
@@ -145,10 +150,6 @@ def get_arguments() -> Namespace:
 		help="Patience parameter for ReduceLROnPlateau scheduler"
 	)
 	parser.add_argument(
-		"--use-gpu", action="store_true",
-		help="Specify to use GPU, if available"
-	)
-	parser.add_argument(
 		"--seed", action="store", type=int,
 		help="Use a manual seed for output reproducibility"
 	)
@@ -156,7 +157,8 @@ def get_arguments() -> Namespace:
 		"--float-precision", action="store", type=int,
 		help="Number of decimal places to show in floating points"
 	)
-	return parser.parse_args()
+	args = parser.parse_args()
+	return args
 
 
 

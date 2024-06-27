@@ -13,7 +13,7 @@ from transformers.tokenization_utils_base import BatchEncoding
 from bert_score import BERTScorer
 from rouge import Rouge
 
-CPU_CORES = cpu_count()
+
 
 def count_words(text: str):
 	return len(text.split())
@@ -294,15 +294,18 @@ class Evaluator:
 		self.generated_summaries = None
 	
 	def generate_summaries(
-		self, batch_size: int|None=None
+		self, batch_size: int|None=None, num_workers: int|None=None
 	) -> list[int]:
 		summaries = self.generated_summaries = []
 		time_taken = []
-		with ProcessPoolExecutor(max_workers=CPU_CORES) as executor:
-			inputs = [
-				(i, batch_size) for i in range(self.num_pipelines)
-			]
-			results = executor.map(self._generate_summaries, inputs)
+		inputs = [
+			(i, batch_size) for i in range(self.num_pipelines)
+		]
+		if num_workers is not None and num_workers > 1:
+			with ProcessPoolExecutor(max_workers=num_workers) as executor:
+				results = executor.map(self._generate_summaries, inputs)
+		else:
+			results = map(self._generate_summaries, inputs)
 		for summary, time in results:
 			summaries.extend(summary)
 			time_taken.append(time)
@@ -327,7 +330,7 @@ class Evaluator:
 				for metric, values in score.items():
 					mean_score[metric] += list(values.values())
 			for metric, values in mean_score.items():
-				mean_score[metric] = values / num_summaries
+				mean_score[metric] = (values / num_summaries).tolist()
 			scores.append(mean_score)
 		return scores
 
@@ -338,10 +341,12 @@ class Evaluator:
 		num_pipelines = self.num_pipelines
 		summaries = num_pipelines * self.summaries
 		metrics = self.bert_scorer.score(generated_summaries, summaries)
-		metrics = [
+		metrics = np.array([
 			metric.reshape((num_pipelines, -1)).mean(dim=1)
 			for metric in metrics
-		]
+		])
+		order = [2, 0, 1]
+		metrics = metrics.T[:, order].tolist()
 		return metrics
 	
 	def _generate_summaries(self, args):
@@ -349,8 +354,9 @@ class Evaluator:
 		pipeline = self.pipelines[ind]
 		start = perf_counter()
 		summaries = pipeline(self.texts, batch_size)
-		time = (perf_counter() - start) * 1000
-		return summaries, time
+		time_taken = (perf_counter() - start)
+		print(f"Generated summary for pipeline {ind} in {time_taken}s")
+		return summaries, time_taken
 
 
 
