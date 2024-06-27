@@ -235,8 +235,8 @@ class SentenceSampler(Encoder):
 					)
 					if self.threshold < similarity:
 						continue
-					sent_encoding += [self.sent_sep_id]
 					sampled.extend(sent_encoding)
+					sampled.append(self.sent_sep_id)
 					sampled_embedding = (
 						(num_sampled * sampled_embedding + sent_embedding) /
 						(num_sampled := num_sampled + 1)

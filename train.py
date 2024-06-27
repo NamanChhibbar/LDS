@@ -51,7 +51,6 @@ def main() -> None:
 	flt_prec = 4 if args.float_precision is None else args.float_precision
 
 	print("Loading tokenizer and model...")
-
 	# BART
 	tokenizer = BartTokenizer.from_pretrained(bart_dir)
 	model = BartForConditionalGeneration.from_pretrained(bart_dir)

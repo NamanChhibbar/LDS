@@ -1,5 +1,5 @@
 from math import ceil
-import os
+from os import cpu_count
 import re
 from time import perf_counter
 from abc import ABC, abstractmethod
@@ -13,6 +13,7 @@ from transformers.tokenization_utils_base import BatchEncoding
 from bert_score import BERTScorer
 from rouge import Rouge
 
+CPU_CORES = cpu_count()
 
 def count_words(text: str):
 	return len(text.split())
@@ -193,6 +194,42 @@ class SummarizationDataset:
 
 	def __len__(self):
 		return self.num_batches
+	
+	def __getitem__(self, ind):
+		# Check if input is cached
+		cached = self.cached
+		if cached is not None and cached[ind]:
+			return cached[ind]
+		
+		# Encode texts using encoder and summaries using tokenizer
+		text_batches = self.text_batches
+		summary_batches = self.summary_batches
+		texts = text_batches[ind]
+		encodings = self.encoder(texts)
+		if summary_batches is not None:
+			tokenizer = self.encoder.tokenizer
+			summaries = summary_batches[ind]
+			summ_encodings = tokenizer(
+				summaries, padding=True, max_length=self.context_size,
+				truncation=True, return_tensors="pt"
+			)["input_ids"]
+
+			# Set padding token ids to -100 (ignored id in attention)
+			filt = summ_encodings == tokenizer.pad_token_id
+			summ_encodings[filt] = -100
+			encodings["labels"] = summ_encodings
+
+		# Create batch encoding
+		batch_encodings = BatchEncoding(encodings)
+
+		# Save to cache and delete text batch if using cache
+		if cached is not None:
+			cached[ind] = batch_encodings
+			text_batches[ind] = 0
+			if summary_batches is not None:
+				summary_batches[ind] = 0
+
+		return batch_encodings
 
 	def __iter__(self):
 		self.it = 0
@@ -207,45 +244,11 @@ class SummarizationDataset:
 	
 	def __next__(self) -> BatchEncoding:
 		# Check if iterator is not implemented or if iterations are completed
-		if self.it is None or self.it == self.num_batches:
-			raise StopIteration()
 		it = self.it
+		if it is None or it == self.num_batches:
+			raise StopIteration()
 		self.it += 1
-
-		# Check if input is cached
-		cached = self.cached
-		if cached is not None and cached[it]:
-			return cached[it]
-		
-		# Encode texts using encoder and summaries using tokenizer
-		tokenizer = self.encoder.tokenizer
-		text_batches = self.text_batches
-		summary_batches = self.summary_batches
-		texts = text_batches[it]
-		encodings = self.encoder(texts)
-		if summary_batches is not None:
-			summaries = summary_batches[it]
-			summ_encodings = tokenizer(
-				summaries, padding=True, max_length=self.context_size,
-				truncation=True, return_tensors="pt"
-			)["input_ids"]
-
-			# Set padding token ids to -100 (ignored id in attention)
-			filt = summ_encodings == tokenizer.pad_token_id
-			summ_encodings[filt] = -100
-			encodings["labels"] = summ_encodings
-
-		# Create batch encoding
-		batch_encodings = BatchEncoding(encodings)
-
-		# Save to cache and delete text bacth if using cache
-		if cached is not None:
-			cached[it] = batch_encodings
-			text_batches[it] = 0
-			if summary_batches is not None:
-				summary_batches[it] = 0
-
-		return batch_encodings
+		return self[it]
 
 
 
@@ -263,6 +266,7 @@ class Evaluator:
 
 		# Initialize pipelines, texts, and summaries
 		self.pipelines = pipelines
+		self.num_pipelines = len(pipelines)
 		self.texts = texts
 		self.summaries = summaries
 
@@ -294,10 +298,12 @@ class Evaluator:
 	) -> list[int]:
 		summaries = self.generated_summaries = []
 		time_taken = []
-		for pipeline in self.pipelines:
-			start = perf_counter()
-			summary = pipeline(self.texts, batch_size)
-			time = (perf_counter() - start) * 1000
+		with ProcessPoolExecutor(max_workers=CPU_CORES) as executor:
+			inputs = [
+				(i, batch_size) for i in range(self.num_pipelines)
+			]
+			results = executor.map(self._generate_summaries, inputs)
+		for summary, time in results:
 			summaries.extend(summary)
 			time_taken.append(time)
 		return time_taken
@@ -329,7 +335,7 @@ class Evaluator:
 	def get_bert_score(self) -> list[torch.Tensor]:
 		generated_summaries = self.generated_summaries
 		assert generated_summaries is not None, "Summaries not generated"
-		num_pipelines = len(self.pipelines)
+		num_pipelines = self.num_pipelines
 		summaries = num_pipelines * self.summaries
 		metrics = self.bert_scorer.score(generated_summaries, summaries)
 		metrics = [
@@ -338,8 +344,13 @@ class Evaluator:
 		]
 		return metrics
 	
-	def _generate_summaries(self, pipeline_ind: int):
-		...
+	def _generate_summaries(self, args):
+		ind, batch_size = args
+		pipeline = self.pipelines[ind]
+		start = perf_counter()
+		summaries = pipeline(self.texts, batch_size)
+		time = (perf_counter() - start) * 1000
+		return summaries, time
 
 
 
