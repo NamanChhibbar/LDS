@@ -61,14 +61,15 @@ class TruncateMiddle(Encoder):
 		self.head_size = head_size
 
 	def generate_encodings(self, texts: list[str]) -> BatchEncoding:
-		# Constant head size
 		context_size = self.context_size - 2
+		tokenizer = self.tokenizer
+		# Constant head size
 		head_size = int(context_size * self.head_size)
 		truncated_ids = []
 
 		for text in texts:
 			# Encode the text
-			encodings = self.tokenizer.encode(
+			encodings = tokenizer.encode(
 				text, add_special_tokens=False
 			)
 
@@ -88,7 +89,7 @@ class TruncateMiddle(Encoder):
 			truncated_ids.append(encodings)
 		
 		# Pad sentences and create attention mask
-		padded_ids = self.tokenizer.pad({
+		padded_ids = tokenizer.pad({
 			"input_ids": truncated_ids
 			}, return_tensors="pt")
 
