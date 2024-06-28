@@ -31,6 +31,11 @@ def extract_special_tokens(token_list):
 		all_tokens += token if isinstance(token, list) else [token]
 	return all_tokens
 
+def show_exception(exc: Exception):
+	exc_class = exc.__class__.__name__
+	exc_msg = str(exc)
+	print(f"Encountered exception of type {exc_class}: {exc_msg}")
+
 
 
 class TextProcessor:
@@ -108,7 +113,8 @@ class Encoder(ABC):
 	"""
 	def __init__(
 			self, tokenizer, preprocessor: TextProcessor|None=None,
-			bos_id: int|None=None, eos_id: int|None=None
+			add_special_tokens: bool=True, bos_id: int|None=None,
+			eos_id: int|None=None
 		) -> None:
 		"""
 		## Parameters
@@ -118,6 +124,7 @@ class Encoder(ABC):
 		super().__init__()
 		self.tokenizer = tokenizer
 		self.preprocessor = preprocessor
+		self.add_special_tokens = add_special_tokens
 		self.bos_id = bos_id
 		self.eos_id = eos_id
 
@@ -142,7 +149,7 @@ class Encoder(ABC):
 	def generate_encodings(self, texts: list[str]) -> BatchEncoding:
 		...
 	
-	def add_special_tokens(self, encodings: list[int]):
+	def add_tokens(self, encodings: list[int]):
 		bos_id = self.bos_id
 		eos_id = self.eos_id
 		if bos_id is not None:
@@ -387,10 +394,8 @@ def train_model(
 				loss.backward()
 				optimizer.step()
 			except Exception as e:
-				print(
-					f"Encountered exception of type {type(e)}: {e}\n"
-					"Training terminated"
-				)
+				show_exception(e)
+				print("Training terminated")
 				return epoch_losses
 
 			epoch_loss += loss.item()

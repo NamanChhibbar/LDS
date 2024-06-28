@@ -5,7 +5,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 from .helpers import TextProcessor, Encoder, SummarizationDataset
 
-SENT_SEP = "\n"
+SENT_SEP = " "
 
 
 
@@ -51,10 +51,10 @@ class TruncateMiddle(Encoder):
 
 	def __init__(
 			self, tokenizer, context_size:int, head_size: float=.5,
-			preprocessor: TextProcessor|None=None
+			preprocessor: TextProcessor|None=None, add_special_tokens: bool=True
 		) -> None:
 		super().__init__(
-			tokenizer, preprocessor,
+			tokenizer, preprocessor, add_special_tokens,
 			tokenizer.bos_token_id, tokenizer.eos_token_id
 		)
 		self.context_size = context_size
@@ -85,7 +85,7 @@ class TruncateMiddle(Encoder):
 				]).tolist()
 
 			# Add BOS and EOS tokens
-			encodings = self.add_special_tokens(encodings)
+			encodings = self.add_tokens(encodings)
 			truncated_ids.append(encodings)
 		
 		# Pad sentences and create attention mask
@@ -102,17 +102,19 @@ class UniformSampler(Encoder):
 	def __init__(
 			self, tokenizer, context_size: int,
 			sent_tokenizer, preprocessor: TextProcessor|None=None,
-			seed: int|None=None
+			add_special_tokens: bool=True, seed: int|None=None
 		) -> None:
 		super().__init__(
-			tokenizer, preprocessor,
+			tokenizer, preprocessor, add_special_tokens,
 			tokenizer.bos_token_id, tokenizer.eos_token_id
 		)
 		self.context_size = context_size
 		self.sent_tokenizer = sent_tokenizer
 		self.seed = seed
 		np.random.seed(seed)
-		self.sent_sep_id = tokenizer.encode(SENT_SEP)[1]
+		self.sent_sep_id = tokenizer.encode(
+			SENT_SEP, add_special_tokens=False
+		)[0]
 
 	def generate_encodings(self, texts: list[str]) -> BatchEncoding:
 		tokenizer = self.tokenizer
@@ -157,8 +159,11 @@ class UniformSampler(Encoder):
 				if len(sampled) <= context_size:
 					break
 
+			# Remove last sentence separator token
+			sampled = sampled[:-1]
+
 			# Add BOS and EOS tokens
-			sampled = self.add_special_tokens(sampled)
+			sampled = self.add_tokens(sampled)
 
 			# Add sampled sentences to processed texts
 			processed_texts.append(sampled)
@@ -177,11 +182,11 @@ class SentenceSampler(Encoder):
 	def __init__(
 			self, tokenizer, context_size: int, sent_tokenizer,
 			sent_encoder, preprocessor: TextProcessor|None=None,
-			threshold: float=.7, device: str|torch.device|None=None,
-			seed: int|None=None
+			add_special_tokens: bool=True, threshold: float=.7,
+			device: str|torch.device|None=None, seed: int|None=None
 		) -> None:
 		super().__init__(
-			tokenizer, preprocessor,
+			tokenizer, preprocessor, add_special_tokens,
 			tokenizer.bos_token_id, tokenizer.eos_token_id
 		)
 		self.context_size = context_size
@@ -192,7 +197,9 @@ class SentenceSampler(Encoder):
 		self.device = device
 		self.seed = seed
 		np.random.seed(seed)
-		self.sent_sep_id = tokenizer.encode(SENT_SEP)[1]
+		self.sent_sep_id = tokenizer.encode(
+			SENT_SEP, add_special_tokens=False
+		)[0]
 
 	def generate_encodings(self, texts: list[str]) -> BatchEncoding:
 		sent_tokenizer = self.sent_tokenizer
@@ -246,9 +253,12 @@ class SentenceSampler(Encoder):
 					)
 				if len(sampled) <= context_size:
 					break
+
+			# Remove last sentence separator token
+			sampled = sampled[:-1]
 			
 			# Add BOS and EOS tokens
-			sampled = self.add_special_tokens(sampled)
+			sampled = self.add_tokens(sampled)
 
 			# Add sampled sentences to processed texts
 			processed_texts.append(sampled)
@@ -267,11 +277,11 @@ class RemoveRedundancy(Encoder):
 	def __init__(
 			self, tokenizer, context_size: int, sent_tokenizer,
 			sent_encoder, preprocessor: TextProcessor|None=None,
-			threshold: float=.7, device: str|torch.device|None=None,
-			seed: int|None=None
+			add_special_tokens: bool=True, threshold: float=.7,
+			device: str|torch.device|None=None, seed: int|None=None
 		) -> None:
 		super().__init__(
-			tokenizer, preprocessor,
+			tokenizer, preprocessor, add_special_tokens,
 			tokenizer.bos_token_id, tokenizer.eos_token_id
 		)
 		self.context_size = context_size
@@ -282,7 +292,9 @@ class RemoveRedundancy(Encoder):
 		self.device = device
 		self.seed = seed
 		np.random.seed(seed)
-		self.sent_sep_id = tokenizer.encode(SENT_SEP)[1]
+		self.sent_sep_id = tokenizer.encode(
+			SENT_SEP, add_special_tokens=False
+		)[0]
 
 	def generate_encodings(self, texts: list[str]) -> BatchEncoding:
 		tokenizer = self.tokenizer
@@ -333,8 +345,11 @@ class RemoveRedundancy(Encoder):
 				if len(sampled) <= context_size:
 					break
 
+			# Remove last sentence separator token
+			sampled = sampled[:-1]
+
 			# Add BOS and EOS tokens
-			sampled = self.add_special_tokens(sampled)
+			sampled = self.add_tokens(sampled)
 
 			# Add sampled sentences to processed texts
 			processed_texts.append(sampled)
