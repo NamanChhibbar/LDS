@@ -12,11 +12,9 @@ from torch.optim import AdamW
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from sentence_transformers import SentenceTransformer
 
-from utils.helpers import (
-	SummarizationDataset, TextProcessor, train_model,
-	get_device, count_words
-)
-from utils.pipelines import SentenceSampler
+from utils.helpers import TextProcessor, get_device, count_words
+from utils.encoders import SentenceSampler
+from utils.trainer_utils import SummarizationDataset, train_model
 
 
 

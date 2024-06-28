@@ -10,14 +10,12 @@ from transformers import (
 )
 from sentence_transformers import SentenceTransformer
 
-from utils.helpers import (
-	TextProcessor, Evaluator, get_device, count_words
+from utils.helpers import TextProcessor, get_device, count_words
+from utils.encoders import (
+	TruncateMiddle, UniformSampler, SentenceSampler, RemoveRedundancy
 )
-from utils.pipelines import (
-	SummarizationPipeline, TruncateMiddle, UniformSampler,
-	SentenceSampler, RemoveRedundancy
-)
-
+from utils.pipelines import SummarizationPipeline
+from utils.evaluator_utils import Evaluator
 
 
 
