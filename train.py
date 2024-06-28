@@ -102,6 +102,7 @@ def main() -> None:
 		os.makedirs(dirs)
 	with open(train_history_path, "wb") as fp:
 		pickle.dump(train_history, fp)
+	print("Finished")
 
 
 

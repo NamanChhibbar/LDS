@@ -366,7 +366,7 @@ def train_model(
 	device: str|torch.device|None=None, flt_prec: int=4
 ) -> list[int]:
 	# For clearing output
-	SPACES = 120
+	SPACES = 100
 
 	model = model.to(device)
 	epoch_losses = []
@@ -374,19 +374,18 @@ def train_model(
 
 	model.train(True)
 	for epoch in range(epochs):
-		# Track total epoch time and loss
-		epoch_time = 0
+		# Track total epoch loss and time
 		epoch_loss = 0
+		epoch_time = 0
 
 		for batch, inputs in enumerate(dataset):
+			start = perf_counter()
 			try:
 				inputs = inputs.to(device)
-				start = perf_counter()
 				loss = model(**inputs).loss
 				optimizer.zero_grad()
 				loss.backward()
 				optimizer.step()
-				time = (perf_counter() - start) * 1000
 			except Exception as e:
 				print(
 					f"Encountered exception of type {type(e)}: {e}\n"
@@ -394,8 +393,10 @@ def train_model(
 				)
 				return epoch_losses
 
-			epoch_time += time
 			epoch_loss += loss.item()
+			time = (perf_counter() - start) * 1000
+
+			epoch_time += time
 
 			# Calculate remaining time
 			seconds = int(
@@ -416,16 +417,16 @@ def train_model(
 			
 			print(
 				f"\r{" " * SPACES}\r"
-				f"Epoch: {epoch+1}/{epochs}\t"
-				f"Batch: {batch+1}/{num_batches}\t"
-				f"Time: {round(time, flt_prec)} ms/batch\t"
-				f"Loss: {round(loss.item(), flt_prec)}\t"
-				f"Time remaining: {time_remaining}",
+				f"Epoch [{epoch+1}/{epochs}] "
+				f"Batch [{batch+1}/{num_batches}] "
+				f"Time [{round(time, flt_prec)} ms/batch] "
+				f"Loss [{round(loss.item(), flt_prec)}] "
+				f"Time remaining [{time_remaining}]",
 				end=""
 			)
 
-		epoch_time = epoch_time / num_batches
 		epoch_loss = epoch_loss / num_batches
+		epoch_time = epoch_time / num_batches
 		epoch_losses.append(epoch_loss)
 
 		if scheduler is not None:
@@ -433,8 +434,8 @@ def train_model(
 
 		print(
 			f"\r{" " * SPACES}\r"
-			f"\rEpoch: {epoch+1}/{epochs} "
-			f"Avergage time: {round(epoch_time, flt_prec)} ms/batch "
-			f"Average loss: {round(epoch_loss, flt_prec)}"
+			f"\rEpoch [{epoch+1}/{epochs}] "
+			f"Average loss [{round(epoch_loss, flt_prec)}] "
+			f"Avergage time [{round(epoch_time, flt_prec)} ms/batch]"
 		)
 	return epoch_losses
