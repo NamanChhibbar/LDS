@@ -13,7 +13,7 @@ class SummarizationPipeline:
 
 	def __init__(
 			self, summarizer, encoder: Encoder, max_tokens: int,
-			postprocessor:TextProcessor|None=None,
+			postprocessor: TextProcessor|None=None,
 			device: str|torch.device|None=None
 		) -> None:
 		self.summarizer = summarizer.to(device)
