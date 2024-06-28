@@ -72,8 +72,10 @@ def main() -> None:
 	preprocessor = TextProcessor(preprocessing=True)
 	sent_encoder = SentenceTransformer(sent_dir)
 	encoder = SentenceSampler(
-		tokenizer, context_size, sent_tokenize, sent_encoder,
-		preprocessor, threshold, device, seed
+		tokenizer=tokenizer, max_tokens=context_size,
+		sent_tokenizer=sent_tokenize, sent_encoder=sent_encoder,
+		preprocessor=preprocessor, threshold=threshold,
+		device=device, seed=seed
 	)
 	dataset = SummarizationDataset(
 		texts, encoder, batch_size, summaries,

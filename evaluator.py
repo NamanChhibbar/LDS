@@ -72,19 +72,26 @@ def main() -> None:
 	sent_encoder = SentenceTransformer(sent_dir)
 	encoders = [
 		TruncateMiddle(
-			tokenizer, context_size, head_size, preprocessor
+			tokenizer=tokenizer, max_tokens=context_size,
+			head_size=head_size, preprocessor=preprocessor
 		),
 		UniformSampler(
-			tokenizer, context_size, sent_tokenize, preprocessor, seed
+			tokenizer=tokenizer, max_tokens=context_size,
+			sent_tokenizer=sent_tokenize, preprocessor=preprocessor,
+			seed=seed
 		),
 		SentenceSampler(
-			tokenizer, context_size, sent_tokenize, sent_encoder,
-			preprocessor, threshold, device, seed
+			tokenizer=tokenizer, max_tokens=context_size,
+			sent_tokenizer=sent_tokenize, sent_encoder=sent_encoder,
+			preprocessor=preprocessor, threshold=threshold,
+			device=device, seed=seed
 		),
 		RemoveRedundancy(
-			tokenizer, context_size, sent_tokenize, sent_encoder,
-			preprocessor, threshold, device, seed
-		),
+			tokenizer=tokenizer, max_tokens=context_size,
+			sent_tokenizer=sent_tokenize, sent_encoder=sent_encoder,
+			preprocessor=preprocessor, threshold=threshold,
+			device=device, seed=seed
+		)
 	]
 	pipelines = [
 		SummarizationPipeline(

@@ -1,11 +1,23 @@
 import re
 
+import numpy as np
 import torch
 
 
 
 def count_words(text: str):
 	return len(text.split())
+
+def count_tokens(texts: str|list[str], tokenizer):
+	if isinstance(texts, str):
+		texts = [texts]
+	encodings = tokenizer(
+		texts, add_special_tokens=False
+	)["input_ids"]
+	num_tokens = np.sum([
+		len(encoding) for encoding in encodings
+	])
+	return num_tokens
 
 def get_device() -> str:
 	if torch.cuda.is_available():

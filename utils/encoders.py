@@ -52,11 +52,11 @@ class Encoder(ABC):
 			max_tokens = self.max_tokens
 		if self.preprocessor is not None:
 			texts = self.preprocessor(texts)
-		encodings = self.generate_encodings(texts, max_tokens)
+		encodings = self.encode(texts, max_tokens)
 		return encodings
 	
 	@abstractmethod
-	def generate_encodings(
+	def encode(
 		self, texts: list[str], max_tokens: int
 	) -> BatchEncoding:
 		...
@@ -86,7 +86,7 @@ class TruncateMiddle(Encoder):
 		)
 		self.head_size = head_size
 
-	def generate_encodings(
+	def encode(
 		self, texts: list[str], max_tokens: int
 	) -> BatchEncoding:
 		tokenizer = self.tokenizer
@@ -145,7 +145,7 @@ class UniformSampler(Encoder):
 			SENT_SEP, add_special_tokens=False
 		)[0]
 
-	def generate_encodings(
+	def encode(
 		self, texts: list[str], max_tokens: int
 	) -> BatchEncoding:
 		tokenizer = self.tokenizer
@@ -222,6 +222,7 @@ class SentenceSampler(Encoder):
 			tokenizer.bos_token_id, tokenizer.eos_token_id
 		)
 		self.sent_tokenizer = sent_tokenizer
+		print(device)
 		self.sent_encoder = sent_encoder.to(device)
 		self.sent_embedding_dim = sent_encoder.get_sentence_embedding_dimension()
 		self.threshold = threshold
@@ -232,7 +233,7 @@ class SentenceSampler(Encoder):
 			SENT_SEP, add_special_tokens=False
 		)[0]
 
-	def generate_encodings(
+	def encode(
 		self, texts: list[str], max_tokens: int
 	) -> BatchEncoding:
 		sent_tokenizer = self.sent_tokenizer
@@ -329,7 +330,7 @@ class RemoveRedundancy(Encoder):
 			SENT_SEP, add_special_tokens=False
 		)[0]
 
-	def generate_encodings(
+	def encode(
 		self, texts: list[str], max_tokens: int
 	) -> BatchEncoding:
 		tokenizer = self.tokenizer
