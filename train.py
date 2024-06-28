@@ -96,8 +96,8 @@ def main() -> None:
 	)
 	print("\nSaving model...")
 	model.save_pretrained(save_dir)
-	dirs, _ = os.path.split(train_history)
 	print(f"Saving training history in {train_history_path}...")
+	dirs, _ = os.path.split(train_history_path)
 	if not os.path.exists(dirs):
 		os.makedirs(dirs)
 	with open(train_history_path, "wb") as fp:

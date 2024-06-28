@@ -1,6 +1,6 @@
-# temp*
+temp*
 *.pdf
-booksum-main/
+.env
 
 .DS_Store
 __pycache__/
