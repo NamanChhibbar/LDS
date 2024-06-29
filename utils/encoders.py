@@ -52,7 +52,12 @@ class Encoder(ABC):
 			max_tokens = self.max_tokens
 		if self.preprocessor is not None:
 			texts = self.preprocessor(texts)
-		encodings = self.encode(texts, max_tokens)
+		encodings = []
+		for text in texts:
+			encoded_text = self.encode(text, max_tokens)
+			if self.add_special_tokens:
+				encoded_text = self.add_tokens(encoded_text)
+			encodings.append(encoded_text)
 		batch_encoding = self.tokenizer.pad({
 			"input_ids": encodings
 		}, return_tensors="pt")
@@ -90,38 +95,34 @@ class TruncateMiddle(Encoder):
 		self.head_size = head_size
 
 	def encode(
-		self, texts: list[str], max_tokens: int
-	) -> list[list[int]]:
+		self, text: str, max_tokens: int|None=None
+	) -> list[int]:
 		tokenizer = self.tokenizer
+		if max_tokens is None:
+			max_tokens = self.max_tokens
 		if self.add_special_tokens:
 			max_tokens -= 2
 
-		# Constant head size
-		head_size = int(max_tokens * self.head_size)
-		truncated_ids = []
+		# Encode the text
+		encodings = tokenizer.encode(
+			text, add_special_tokens=False
+		)
 
-		for text in texts:
-			# Encode the text
-			encodings = tokenizer.encode(
-				text, add_special_tokens=False
-			)
+		# Check if encodings fit in the model
+		if len(encodings) <= max_tokens:
+			return encodings
 
-			# If the encodings dont fit in the model
-			if len(encodings) > max_tokens:
-				# Calculate beginning index of tail
-				tail_idx = len(encodings) - max_tokens + head_size
+		# Calculate indices of head and tail
+		head_idx = int(max_tokens * self.head_size)
+		tail_idx = len(encodings) - max_tokens + head_idx
 
-				# Truncate the middle and concatenate head and tail
-				encodings = np.concatenate([
-					encodings[:head_size],
-					encodings[tail_idx:]
-				]).tolist()
+		# Truncate the middle and concatenate head and tail
+		encodings = np.concatenate([
+			encodings[:head_idx],
+			encodings[tail_idx:]
+		]).tolist()
 
-			# Add BOS and EOS tokens
-			encodings = self.add_tokens(encodings)
-			truncated_ids.append(encodings)
-
-		return truncated_ids
+		return encodings
 
 
 
@@ -144,62 +145,53 @@ class UniformSampler(Encoder):
 		)[0]
 
 	def encode(
-		self, texts: list[str], max_tokens: int
-	) -> list[list[int]]:
+		self, text: str, max_tokens: int|None=None
+	) -> list[int]:
 		tokenizer = self.tokenizer
+		if max_tokens is None:
+			max_tokens = self.max_tokens
 		if self.add_special_tokens:
 			max_tokens -= 2
 
-		processed_texts = []
-		for text in texts:
-			# Check if encodings fit in the model
-			encodings = tokenizer.encode(
-				text, add_special_tokens=False
-			)
-			if len(encodings) <= max_tokens:
-				processed_texts.append(encodings)
-				continue
+		# Check if encodings fit in the model
+		encodings = tokenizer.encode(
+			text, add_special_tokens=False
+		)
+		if len(encodings) <= max_tokens:
+			return encodings
 
-			# Extract and tokenize sentences
-			sentences = self.sent_tokenizer(text)
-			sentences = tokenizer(
-				sentences, add_special_tokens=False
-			)["input_ids"]
-			sentences = np.array(sentences, dtype=object)
+		# Extract and tokenize sentences
+		sentences = self.sent_tokenizer(text)
+		sentences = tokenizer(
+			sentences, add_special_tokens=False
+		)["input_ids"]
+		sentences = np.array(sentences, dtype=object)
 
-			# Sum of length of sentences
-			total_length = sum([
-				len(sent) for sent in sentences
-			])
+		# Sum of length of sentences
+		total_length = sum([
+			len(sent) for sent in sentences
+		])
 
-			# Approximate probability of picking a sentence
-			p = max_tokens / total_length
+		# Approximate probability of picking a sentence
+		p = max_tokens / total_length
 
-			# Sample until sentences fit in model
-			while True:
-				sent_mask = np.random.rand(len(sentences)) <= p
-				sampled = sentences[sent_mask]
+		# Sample until sentences fit in model
+		while True:
+			sent_mask = np.random.rand(len(sentences)) <= p
+			sampled = sentences[sent_mask]
 
-				# Flatten sentences
-				sampled = [
-					elm for lis in sampled
-					for elm in lis + [self.sent_sep_id]
-				]
+			# Flatten sentences
+			sampled = [
+				elm for lis in sampled
+				for elm in lis + [self.sent_sep_id]
+			]
+			if len(sampled) <= max_tokens:
+				break
 
-				if len(sampled) <= max_tokens:
-					break
+		# Remove last sentence separator token
+		sampled = sampled[:-1]
 
-			# Remove last sentence separator token
-			sampled = sampled[:-1]
-
-			# Add BOS and EOS tokens
-			if self.add_special_tokens:
-				sampled = self.add_tokens(sampled)
-
-			# Add sampled sentences to processed texts
-			processed_texts.append(sampled)
-
-		return processed_texts
+		return sampled
 	
 
 
@@ -227,72 +219,64 @@ class SentenceSampler(Encoder):
 		)[0]
 
 	def encode(
-		self, texts: list[str], max_tokens: int
-	) -> list[list[int]]:
+		self, text: str, max_tokens: int|None=None
+	) -> list[int]:
 		sent_tokenizer = self.sent_tokenizer
+		if max_tokens is None:
+			max_tokens = self.max_tokens
 		tokenizer = self.tokenizer
 		if self.add_special_tokens:
 			max_tokens -= 2
 
-		processed_texts = []
-		for text in texts:
-			# Check if encodings fit in the model
-			encodings = tokenizer.encode(
-				text, add_special_tokens=False
-			)
-			if len(encodings) <= max_tokens:
-				processed_texts.append(encodings)
-				continue
+		# Check if encodings fit in the model
+		encodings = tokenizer.encode(
+			text, add_special_tokens=False
+		)
+		if len(encodings) <= max_tokens:
+			return encodings
 
-			# Extract and tokenize sentences
-			sentences = sent_tokenizer(text)
-			sentences = tokenizer(
-				sentences, add_special_tokens=False
-			)["input_ids"]
+		# Extract and tokenize sentences
+		sentences = sent_tokenizer(text)
+		sentences = tokenizer(
+			sentences, add_special_tokens=False
+		)["input_ids"]
 
-			# Sum of length of sentences
-			total_length = np.sum([
-				len(sent) for sent in sentences
-			])
+		# Sum of length of sentences
+		total_length = np.sum([
+			len(sent) for sent in sentences
+		])
 
-			# Approximate probability of picking a sentence
-			p = max_tokens / total_length
+		# Approximate probability of picking a sentence
+		p = max_tokens / total_length
 
-			# Sample until sentences fit in model
-			while True:
-				sampled = []
-				sampled_embedding = np.zeros((1, self.sent_embedding_dim))
-				num_sampled = 0
-				for sent_encoding in sentences:
-					if np.random.rand() > p:
-						continue
-					sent = tokenizer.decode(sent_encoding)
-					sent_embedding = self.sent_encoder.encode([sent])
-					similarity = cosine_similarity(
-						sampled_embedding, sent_embedding
-					)
-					if self.threshold < similarity:
-						continue
-					sampled.extend(sent_encoding)
-					sampled.append(self.sent_sep_id)
-					sampled_embedding = (
-						(num_sampled * sampled_embedding + sent_embedding) /
-						(num_sampled := num_sampled + 1)
-					)
-				if len(sampled) <= max_tokens:
-					break
+		# Sample until sentences fit in model
+		while True:
+			sampled = []
+			sampled_embedding = np.zeros((1, self.sent_embedding_dim))
+			num_sampled = 0
+			for sent_encoding in sentences:
+				if np.random.rand() > p:
+					continue
+				sent = tokenizer.decode(sent_encoding)
+				sent_embedding = self.sent_encoder.encode([sent])
+				similarity = cosine_similarity(
+					sampled_embedding, sent_embedding
+				)
+				if self.threshold < similarity:
+					continue
+				sampled.extend(sent_encoding)
+				sampled.append(self.sent_sep_id)
+				sampled_embedding = (
+					(num_sampled * sampled_embedding + sent_embedding) /
+					(num_sampled := num_sampled + 1)
+				)
+			if len(sampled) <= max_tokens:
+				break
 
-			# Remove last sentence separator token
-			sampled = sampled[:-1]
-			
-			# Add BOS and EOS tokens
-			if self.add_special_tokens:
-				sampled = self.add_tokens(sampled)
+		# Remove last sentence separator token
+		sampled = sampled[:-1]
 
-			# Add sampled sentences to processed texts
-			processed_texts.append(sampled)
-
-		return processed_texts
+		return sampled
 	
 
 
@@ -320,68 +304,58 @@ class RemoveRedundancy(Encoder):
 		)[0]
 
 	def encode(
-		self, texts: list[str], max_tokens: int
-	) -> list[list[int]]:
+		self, text: str, max_tokens: int|None=None
+	) -> list[int]:
 		tokenizer = self.tokenizer
+		if max_tokens is None:
+			max_tokens = self.max_tokens
 		if self.add_special_tokens:
 			max_tokens -= 2
 
-		processed_texts = []
-		for text in texts:
-			# Check if encodings fit in the model
-			encodings = tokenizer.encode(
-				text, add_special_tokens=False
-			)
-			if len(encodings) <= max_tokens:
-				processed_texts.append(encodings)
-				continue
+		# Check if encodings fit in the model
+		encodings = tokenizer.encode(
+			text, add_special_tokens=False
+		)
+		if len(encodings) <= max_tokens:
+			return encodings
 
-			# Extract sentences
-			sentences = self.sent_tokenizer(text)
+		# Extract sentences
+		sentences = self.sent_tokenizer(text)
 
-			# Remove redundant sentences
-			sentences = self.remove_redundancy(sentences)
+		# Remove redundant sentences
+		sentences = self.remove_redundancy(sentences)
 
-			# Tokenize sentences
-			sentences = tokenizer(
-				sentences, add_special_tokens=False
-			)["input_ids"]
-			sentences = np.array(sentences, dtype=list)
+		# Tokenize sentences
+		sentences = tokenizer(
+			sentences, add_special_tokens=False
+		)["input_ids"]
+		sentences = np.array(sentences, dtype=object)
 
-			# Sum of length of sentences
-			total_length = sum([
-				len(sent) for sent in sentences
-			])
+		# Sum of length of sentences
+		total_length = sum([
+			len(sent) for sent in sentences
+		])
 
-			# Approximate probability of picking a sentence
-			p = max_tokens / total_length
+		# Approximate probability of picking a sentence
+		p = max_tokens / total_length
 
-			# Sample until sentences fit in model
-			while True:
+		# Sample until sentences fit in model
+		while True:
+			sent_mask = np.random.rand(len(sentences)) <= p
+			sampled = sentences[sent_mask]
 
-				sent_mask = np.random.rand(len(sentences)) <= p
-				sampled = sentences[sent_mask]
+			# Flatten sentences
+			sampled = [
+				elm for lis in sampled
+				for elm in lis + [self.sent_sep_id]
+			]
+			if len(sampled) <= max_tokens:
+				break
 
-				# Flatten sentences
-				sampled = [
-					elm for lis in sampled
-					for elm in lis + [self.sent_sep_id]
-				]
+		# Remove last sentence separator token
+		sampled = sampled[:-1]
 
-				if len(sampled) <= max_tokens:
-					break
-
-			# Remove last sentence separator token
-			sampled = sampled[:-1]
-
-			# Add BOS and EOS tokens
-			if self.add_special_tokens:
-				sampled = self.add_tokens(sampled)
-
-			# Add sampled sentences to processed texts
-			processed_texts.append(sampled)
-
-		return processed_texts
+		return sampled
 	
 	def remove_redundancy(self, sents: list[str]) -> list[str]:
 		selected_sents = []
