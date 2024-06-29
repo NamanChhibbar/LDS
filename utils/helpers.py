@@ -26,12 +26,6 @@ def get_device() -> str:
 		return "mps"
 	return "cpu"
 
-def extract_special_tokens(token_list):
-	all_tokens = []
-	for token in token_list:
-		all_tokens += token if isinstance(token, list) else [token]
-	return all_tokens
-
 def show_exception(exc: Exception):
 	exc_class = exc.__class__.__name__
 	exc_msg = str(exc)
