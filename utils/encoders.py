@@ -53,12 +53,15 @@ class Encoder(ABC):
 		if self.preprocessor is not None:
 			texts = self.preprocessor(texts)
 		encodings = self.encode(texts, max_tokens)
-		return encodings
+		batch_encoding = self.tokenizer.pad({
+			"input_ids": encodings
+		}, return_tensors="pt")
+		return batch_encoding
 	
 	@abstractmethod
 	def encode(
 		self, texts: list[str], max_tokens: int
-	) -> BatchEncoding:
+	) -> list[list[int]]:
 		...
 	
 	def add_tokens(self, encodings: list[int]):
@@ -88,7 +91,7 @@ class TruncateMiddle(Encoder):
 
 	def encode(
 		self, texts: list[str], max_tokens: int
-	) -> BatchEncoding:
+	) -> list[list[int]]:
 		tokenizer = self.tokenizer
 		if self.add_special_tokens:
 			max_tokens -= 2
@@ -117,13 +120,8 @@ class TruncateMiddle(Encoder):
 			# Add BOS and EOS tokens
 			encodings = self.add_tokens(encodings)
 			truncated_ids.append(encodings)
-		
-		# Pad sentences and create attention mask
-		padded_ids = tokenizer.pad({
-			"input_ids": truncated_ids
-			}, return_tensors="pt")
 
-		return padded_ids
+		return truncated_ids
 
 
 
@@ -147,7 +145,7 @@ class UniformSampler(Encoder):
 
 	def encode(
 		self, texts: list[str], max_tokens: int
-	) -> BatchEncoding:
+	) -> list[list[int]]:
 		tokenizer = self.tokenizer
 		if self.add_special_tokens:
 			max_tokens -= 2
@@ -195,17 +193,13 @@ class UniformSampler(Encoder):
 			sampled = sampled[:-1]
 
 			# Add BOS and EOS tokens
-			sampled = self.add_tokens(sampled)
+			if self.add_special_tokens:
+				sampled = self.add_tokens(sampled)
 
 			# Add sampled sentences to processed texts
 			processed_texts.append(sampled)
 
-		# Pad sentences and create attention mask
-		padded_ids = tokenizer.pad({
-			"input_ids": processed_texts
-		}, return_tensors="pt")
-
-		return padded_ids
+		return processed_texts
 	
 
 
@@ -222,7 +216,6 @@ class SentenceSampler(Encoder):
 			tokenizer.bos_token_id, tokenizer.eos_token_id
 		)
 		self.sent_tokenizer = sent_tokenizer
-		print(device)
 		self.sent_encoder = sent_encoder.to(device)
 		self.sent_embedding_dim = sent_encoder.get_sentence_embedding_dimension()
 		self.threshold = threshold
@@ -235,7 +228,7 @@ class SentenceSampler(Encoder):
 
 	def encode(
 		self, texts: list[str], max_tokens: int
-	) -> BatchEncoding:
+	) -> list[list[int]]:
 		sent_tokenizer = self.sent_tokenizer
 		tokenizer = self.tokenizer
 		if self.add_special_tokens:
@@ -293,17 +286,13 @@ class SentenceSampler(Encoder):
 			sampled = sampled[:-1]
 			
 			# Add BOS and EOS tokens
-			sampled = self.add_tokens(sampled)
+			if self.add_special_tokens:
+				sampled = self.add_tokens(sampled)
 
 			# Add sampled sentences to processed texts
 			processed_texts.append(sampled)
 
-		# Pad sentences and create attention mask
-		padded_ids = tokenizer.pad({
-			"input_ids": processed_texts
-		}, return_tensors="pt")
-
-		return padded_ids
+		return processed_texts
 	
 
 
@@ -332,7 +321,7 @@ class RemoveRedundancy(Encoder):
 
 	def encode(
 		self, texts: list[str], max_tokens: int
-	) -> BatchEncoding:
+	) -> list[list[int]]:
 		tokenizer = self.tokenizer
 		if self.add_special_tokens:
 			max_tokens -= 2
@@ -386,17 +375,13 @@ class RemoveRedundancy(Encoder):
 			sampled = sampled[:-1]
 
 			# Add BOS and EOS tokens
-			sampled = self.add_tokens(sampled)
+			if self.add_special_tokens:
+				sampled = self.add_tokens(sampled)
 
 			# Add sampled sentences to processed texts
 			processed_texts.append(sampled)
 
-		# Pad sentences and create attention mask
-		padded_ids = tokenizer.pad({
-			"input_ids": processed_texts
-		}, return_tensors="pt")
-
-		return padded_ids
+		return processed_texts
 	
 	def remove_redundancy(self, sents: list[str]) -> list[str]:
 		selected_sents = []
