@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from warnings import filterwarnings
 
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
@@ -6,6 +7,8 @@ import torch
 from transformers.tokenization_utils_base import BatchEncoding
 
 from .helpers import TextProcessor
+
+filterwarnings("ignore")
 
 SENT_SEP = " "
 

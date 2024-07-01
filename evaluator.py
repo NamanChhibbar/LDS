@@ -99,18 +99,18 @@ def main() -> None:
 		) for encoder in encoders
 	]
 	evaluator = Evaluator(
-		pipelines, texts, summaries, device=device
+		pipelines, device=device
 	)
 
 	print("Generating summaries...")
-	time_taken = evaluator.generate_summaries(batch_size, num_workers)
+	time_taken = evaluator.generate_summaries(texts, batch_size, num_workers)
 	print("Getting scores...\n")
-	rouge_score = evaluator.get_rouge_score()
-	bert_score = evaluator.get_bert_score()
+	bert_score = evaluator.get_bert_score(summaries)
+	rouge_score = evaluator.get_rouge_score(summaries)
 	scores = {
 		"time-taken": time_taken,
-		"rouge-scores": rouge_score,
-		"bert-scores": bert_score
+		"bert-scores": bert_score,
+		"rouge-scores": rouge_score
 	}
 	print(scores)
 	print(f"Saving scores in {scores_path}...")

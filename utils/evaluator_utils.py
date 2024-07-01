@@ -11,20 +11,18 @@ from rouge import Rouge
 class Evaluator:
 
 	def __init__(
-			self, pipelines, texts: str|list[str], summaries: str|list[str],
-			rouge_metrics: list[str]|None=None, rougen_max_n: int=2,
-			rougew_weight_factor: int=1.2, device: str|torch.device|None=None
-		) -> None:
-		if isinstance(texts, str):
-			texts = [texts]
-		if isinstance(summaries, str):
-			summaries = [summaries]
-
-		# Initialize pipelines, texts, and summaries
-		self.pipelines = pipelines
+		self, pipelines, rouge_metrics: list[str]|None=None,
+		rougen_max_n: int=2, rougew_weight_factor: int=1.2,
+		device: str|torch.device|None=None
+	) -> None:
+		# Initialize pipelines
+		pipelines = self.pipelines = pipelines if \
+			isinstance(pipelines, list) else [pipelines]
 		self.num_pipelines = len(pipelines)
-		self.texts = texts
-		self.summaries = summaries
+
+		# Initialize BERT scorer
+		self.bert_scorer = BERTScorer(lang="en", device=device)
+		self.device = device
 
 		# Initialise ROUGE scorer
 		if rouge_metrics is None:
@@ -44,18 +42,33 @@ class Evaluator:
 		self.rougen_max_n = rougen_max_n
 		self.rougew_weight_factor = rougew_weight_factor
 
-		# Initialize BERT scorer
-		self.bert_scorer = BERTScorer(lang="en", device=device)
-		self.device = device
 		self.generated_summaries = None
+
+	def __call__(
+		self, texts: str|list[str], summaries: str|list[str],
+		batch_size: int|None=None, num_workers: int|None=None
+	) -> dict:
+		time_taken = self.generate_summaries(texts, batch_size, num_workers)
+		print(f"Time taken to generate summaries: {time_taken}")
+		bert_score = self.get_bert_score(summaries)
+		rouge_score = self.get_rouge_score(summaries)
+		scores = {
+			"time-taken": time_taken,
+			"bert-scores": bert_score,
+			"rouge-scores": rouge_score
+		}
+		return scores
 	
 	def generate_summaries(
-		self, batch_size: int|None=None, num_workers: int|None=None
+		self, texts: str|list[str], batch_size: int|None=None,
+		num_workers: int|None=None
 	) -> list[int]:
-		summaries = self.generated_summaries = []
+		if isinstance(texts, str):
+			texts = [texts]
+		generated_summaries = self.generated_summaries = []
 		time_taken = []
 		inputs = [
-			(i, batch_size) for i in range(self.num_pipelines)
+			(texts, i, batch_size) for i in range(self.num_pipelines)
 		]
 		if num_workers is not None and num_workers > 1:
 			with ProcessPoolExecutor(max_workers=num_workers) as executor:
@@ -63,16 +76,18 @@ class Evaluator:
 		else:
 			results = map(self._generate_summaries, inputs)
 		for summary, time in results:
-			summaries.extend(summary)
+			generated_summaries.extend(summary)
 			time_taken.append(time)
 		return time_taken
 	
 	# P, R, F
-	def get_bert_score(self) -> list[torch.Tensor]:
+	def get_bert_score(
+		self, summaries: str|list[str]
+	) -> list[torch.Tensor]:
 		generated_summaries = self.generated_summaries
 		assert generated_summaries is not None, "Summaries not generated"
 		num_pipelines = self.num_pipelines
-		summaries = num_pipelines * self.summaries
+		summaries = num_pipelines * summaries
 		metrics = self.bert_scorer.score(generated_summaries, summaries)
 		metrics = np.array([
 			metric.reshape((num_pipelines, -1)).mean(dim=1)
@@ -83,11 +98,12 @@ class Evaluator:
 		return metrics
 	
 	# F, P, R
-	def get_rouge_score(self) -> list[dict[str, np.ndarray]]:
+	def get_rouge_score(
+		self, summaries: str|list[str]
+	) -> list[dict[str, np.ndarray]]:
 		generated_summaries = self.generated_summaries
 		assert generated_summaries is not None, "Summaries not generated"
 		num_generated_summaries = len(generated_summaries)
-		summaries = self.summaries
 		num_summaries = len(summaries)
 		scores = []
 		for i in range(0, num_generated_summaries, num_summaries):
@@ -106,10 +122,10 @@ class Evaluator:
 		return scores
 	
 	def _generate_summaries(self, args):
-		ind, batch_size = args
+		texts, ind, batch_size = args
 		pipeline = self.pipelines[ind]
 		start = perf_counter()
-		summaries = pipeline(self.texts, batch_size)
+		summaries = pipeline(texts, batch_size)
 		time_taken = (perf_counter() - start)
 		print(f"Generated summary for pipeline {ind+1} in {time_taken}s")
 		return summaries, time_taken
