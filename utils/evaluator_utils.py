@@ -49,7 +49,6 @@ class Evaluator:
 		num_workers: int|None=None
 	) -> dict:
 		time_taken = self.generate_summaries(texts, num_workers)
-		print(f"Time taken to generate summaries: {time_taken}")
 		bert_score = self.get_bert_score(summaries)
 		rouge_score = self.get_rouge_score(summaries)
 		scores = {

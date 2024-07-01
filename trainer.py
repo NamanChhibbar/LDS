@@ -1,6 +1,5 @@
 import os
 import json
-import pickle
 from argparse import ArgumentParser, Namespace
 
 from nltk import sent_tokenize
@@ -30,7 +29,7 @@ def main() -> None:
 	save_dir = f"{data_dir}/Models/BART-GovReport-SentenceSampler"
 	# t5_dir = f"{data_dir}/Models/T5"
 	# save_dir = f"{data_dir}/Models/T5-GovReport-SentenceSampler"
-	train_history_path = f"{data_dir}/train-history/bart-history.pkl"
+	train_history_path = f"{data_dir}/train-history/bart-history.json"
 
 	# Use the command line arguments
 	# See function get_arguments for descriptions
@@ -101,8 +100,10 @@ def main() -> None:
 	dirs, _ = os.path.split(train_history_path)
 	if not os.path.exists(dirs):
 		os.makedirs(dirs)
-	with open(train_history_path, "wb") as fp:
-		pickle.dump(train_history, fp)
+	with open(train_history_path, "w") as fp:
+		json.dump({
+			"train-history": train_history
+		}, fp)
 	print("Finished")
 
 

@@ -1,6 +1,5 @@
 import os
 import json
-import pickle
 from argparse import ArgumentParser, Namespace
 
 from nltk import sent_tokenize
@@ -30,7 +29,7 @@ def main() -> None:
 	bart_dir = f"{data_dir}/Models/BART"
 	# t5_dir = f"{data_dir}/Models/T5"
 	# save_dir = f"{data_dir}/Models/T5-GovReport-SentenceSampler"
-	scores_path = f"{data_dir}/scores/bart-scores.pkl"
+	scores_path = f"{data_dir}/scores/bart-scores.json"
 
 	print("Loading tokenizer and model...")
 	# BART
@@ -118,8 +117,8 @@ def main() -> None:
 	dirs, _ = os.path.split(scores_path)
 	if not os.path.exists(dirs):
 		os.makedirs(dirs)
-	with open(scores_path, "wb") as fp:
-		pickle.dump(scores, fp)
+	with open(scores_path, "w") as fp:
+		json.dump(scores, fp)
 
 
 

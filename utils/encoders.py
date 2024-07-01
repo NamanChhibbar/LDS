@@ -17,7 +17,7 @@ SENT_DELIMITER = " "
 
 class Encoder(ABC):
 	"""
-	Base class for encoders
+	Base class for encoders.
 	"""
 	def __init__(
 		self, tokenizer, max_tokens: int,
@@ -26,7 +26,7 @@ class Encoder(ABC):
 		eos_id: int|None=None
 	) -> None:
 		"""
-		Initialiser for Encoder
+		Base class for encoders. DO NOT instantiate directly.
 
 		## Parameters
 		`tokenizer`: Hugging Face tokenizer
