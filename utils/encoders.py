@@ -8,9 +8,10 @@ from transformers.tokenization_utils_base import BatchEncoding
 
 from .helpers import TextProcessor
 
+
 filterwarnings("ignore")
 
-SENT_SEP = " "
+SENT_DELIMITER = " "
 
 
 
@@ -155,18 +156,18 @@ class UniformSampler(Encoder):
 
 	def __init__(
 		self, tokenizer, max_tokens: int,
-		sent_tokenizer, preprocessor: TextProcessor|None=None,
+		sent_segmenter, preprocessor: TextProcessor|None=None,
 		add_special_tokens: bool=True, seed: int|None=None
 	) -> None:
 		super().__init__(
 			tokenizer, max_tokens, preprocessor, add_special_tokens,
 			tokenizer.bos_token_id, tokenizer.eos_token_id
 		)
-		self.sent_tokenizer = sent_tokenizer
+		self.sent_segmenter = sent_segmenter
 		self.seed = seed
 		np.random.seed(seed)
-		self.sent_sep_id = tokenizer.encode(
-			SENT_SEP, add_special_tokens=False
+		self.delimiter_id = tokenizer.encode(
+			SENT_DELIMITER, add_special_tokens=False
 		)[0]
 
 	def encode(
@@ -186,7 +187,7 @@ class UniformSampler(Encoder):
 			return encodings
 
 		# Extract and tokenize sentences
-		sentences = self.sent_tokenizer(text)
+		sentences = self.sent_segmenter(text)
 		sentences = tokenizer(
 			sentences, add_special_tokens=False
 		)["input_ids"]
@@ -208,7 +209,7 @@ class UniformSampler(Encoder):
 			# Flatten sentences
 			sampled = [
 				elm for lis in sampled
-				for elm in lis + [self.sent_sep_id]
+				for elm in lis + [self.delimiter_id]
 			]
 			if len(sampled) <= max_tokens:
 				break
@@ -223,7 +224,7 @@ class UniformSampler(Encoder):
 class SentenceSampler(Encoder):
 
 	def __init__(
-			self, tokenizer, max_tokens: int, sent_tokenizer,
+			self, tokenizer, max_tokens: int, sent_segmenter,
 			sent_encoder, preprocessor: TextProcessor|None=None,
 			add_special_tokens: bool=True, threshold: float=.7,
 			device: str|torch.device|None=None, seed: int|None=None
@@ -232,21 +233,21 @@ class SentenceSampler(Encoder):
 			tokenizer, max_tokens, preprocessor, add_special_tokens,
 			tokenizer.bos_token_id, tokenizer.eos_token_id
 		)
-		self.sent_tokenizer = sent_tokenizer
+		self.sent_segmenter = sent_segmenter
 		self.sent_encoder = sent_encoder.to(device)
 		self.sent_embedding_dim = sent_encoder.get_sentence_embedding_dimension()
 		self.threshold = threshold
 		self.device = device
 		self.seed = seed
 		np.random.seed(seed)
-		self.sent_sep_id = tokenizer.encode(
-			SENT_SEP, add_special_tokens=False
+		self.delimiter_id = tokenizer.encode(
+			SENT_DELIMITER, add_special_tokens=False
 		)[0]
 
 	def encode(
 		self, text: str, max_tokens: int|None=None
 	) -> list[int]:
-		sent_tokenizer = self.sent_tokenizer
+		sent_segmenter = self.sent_segmenter
 		if max_tokens is None:
 			max_tokens = self.max_tokens
 		tokenizer = self.tokenizer
@@ -261,7 +262,7 @@ class SentenceSampler(Encoder):
 			return encodings
 
 		# Extract and tokenize sentences
-		sentences = sent_tokenizer(text)
+		sentences = sent_segmenter(text)
 		sentences = tokenizer(
 			sentences, add_special_tokens=False
 		)["input_ids"]
@@ -290,7 +291,7 @@ class SentenceSampler(Encoder):
 				if self.threshold < similarity:
 					continue
 				sampled.extend(sent_encoding)
-				sampled.append(self.sent_sep_id)
+				sampled.append(self.delimiter_id)
 				sampled_embedding = (
 					(num_sampled * sampled_embedding + sent_embedding) /
 					(num_sampled := num_sampled + 1)
@@ -308,7 +309,7 @@ class SentenceSampler(Encoder):
 class RemoveRedundancy(Encoder):
 
 	def __init__(
-			self, tokenizer, max_tokens: int, sent_tokenizer,
+			self, tokenizer, max_tokens: int, sent_segmenter,
 			sent_encoder, preprocessor: TextProcessor|None=None,
 			add_special_tokens: bool=True, threshold: float=.7,
 			device: str|torch.device|None=None, seed: int|None=None
@@ -317,15 +318,15 @@ class RemoveRedundancy(Encoder):
 			tokenizer, max_tokens, preprocessor, add_special_tokens,
 			tokenizer.bos_token_id, tokenizer.eos_token_id
 		)
-		self.sent_tokenizer = sent_tokenizer
+		self.sent_segmenter = sent_segmenter
 		self.sent_encoder = sent_encoder.to(device)
 		self.sent_embedding_dim = sent_encoder.get_sentence_embedding_dimension()
 		self.threshold = threshold
 		self.device = device
 		self.seed = seed
 		np.random.seed(seed)
-		self.sent_sep_id = tokenizer.encode(
-			SENT_SEP, add_special_tokens=False
+		self.delimiter_id = tokenizer.encode(
+			SENT_DELIMITER, add_special_tokens=False
 		)[0]
 
 	def encode(
@@ -345,7 +346,7 @@ class RemoveRedundancy(Encoder):
 			return encodings
 
 		# Extract sentences
-		sentences = self.sent_tokenizer(text)
+		sentences = self.sent_segmenter(text)
 
 		# Remove redundant sentences
 		sentences = self.remove_redundancy(sentences)
@@ -372,7 +373,7 @@ class RemoveRedundancy(Encoder):
 			# Flatten sentences
 			sampled = [
 				elm for lis in sampled
-				for elm in lis + [self.sent_sep_id]
+				for elm in lis + [self.delimiter_id]
 			]
 			if len(sampled) <= max_tokens:
 				break

@@ -4,6 +4,9 @@ import numpy as np
 import torch
 
 
+inf = np.inf
+
+
 
 def count_words(text: str):
 	return len(text.split())
@@ -51,12 +54,12 @@ class TextProcessor:
 		# HTML tags
 		(r"<[^\n>]+>", ""),
 		# Remove hanging periods
-		(r"(\s)+\.(\s)+", r"\1\2"),
+		(r"(\s)+\.", r"\1"),
 		# Remove unecessary periods
-		(r"\.\s*([;:\?-])", r"\1"),
+		(r"\.\s*([;:?-])", r"\1"),
 		# Remove ending period of abbreviations
 		# (due to difficulties in sentence segmentation)
-		(r"(\w+.\w+)\.", r"\1"),
+		(r"(\w+.\w+)\.(\W)", r"\1\2"),
 		# Remove unecessary decimal points
 		(r"(\d+)\.(\s)", r"\1\2")
 	]
@@ -107,3 +110,35 @@ class TextProcessor:
 			text = pat.sub(sub, text)
 		text = text.strip()
 		return text
+
+
+
+class TextSegmenter:
+
+	def __init__(
+		self, sent_tokenizer, min_words: int,
+		sent_delimiter: str=" "
+	) -> None:
+		self.base_tokenizer = sent_tokenizer
+		self.min_words = min_words
+		self.sent_delimiter = sent_delimiter
+	
+	def __call__(self, text: str) -> list[str]:
+		min_words = self.min_words
+		sent_delimiter = self.sent_delimiter
+		sents = self.base_tokenizer(text)
+		num_sents = len(sents)
+		segments = []
+		for i, sent in enumerate(sents):
+			if count_words(sent) >= min_words:
+				segments.append(sent)
+				continue
+			prev_text_words = count_words(segments[-1]) if \
+				segments else inf
+			next_text_words = count_words(sents[i+1]) if \
+				i + 1 < num_sents else inf
+			if next_text_words < prev_text_words:
+				sents[i + 1] = f"{sent}{sent_delimiter}{sents[i+1]}"
+			else:
+				segments[-1] = f"{segments[-1]}{sent_delimiter}{sent}"
+		return segments

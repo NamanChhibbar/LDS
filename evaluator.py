@@ -59,7 +59,8 @@ def main() -> None:
 	crs_files = os.listdir(crs_dir)
 	texts, summaries = [], []
 	for file in crs_files:
-		with open(f"{crs_dir}/{file}") as fp:
+		file = os.path.join(crs_dir, file)
+		with open(file) as fp:
 			data = json.load(fp)
 		if count_words(data["text"]) < max_words:
 			texts.append(data["text"])
