@@ -35,6 +35,7 @@ def show_exception(exc: Exception):
 
 class TextProcessor:
 
+	# Basic preprocessing
 	_preprocessing_pats_subs = [
 		# Non-ASCII quotes
 		(r"‘|’", "'"),
@@ -60,9 +61,10 @@ class TextProcessor:
 		(r"(\d+)\.(\s)", r"\1\2")
 	]
 
-	# Numbers
+	# Numbers removal pattern
 	_number_pat_sub = (r"[+?\d+-?]+", "")
 
+	# White space processing
 	_whitespace_pats_subs = [
 		# Multiple spaces and tabs
 		(r"([ \t]){2,}", r"\1"),
@@ -77,10 +79,16 @@ class TextProcessor:
 			ignore_tokens: list[str]|None=None
 		) -> None:
 		pats_subs = []
+
+		# Include preprocessing patterns
 		if preprocessing:
 			pats_subs.extend(TextProcessor._preprocessing_pats_subs)
+
+		# Include numbers removal
 		if remove_nums:
 			pats_subs.append(TextProcessor._number_pat_sub)
+
+		# Ignore specific tokens
 		if ignore_tokens is not None:
 			pats_subs.append((re.compile(r"|".join(ignore_tokens)), ""))
 		pats_subs.extend(TextProcessor._whitespace_pats_subs)

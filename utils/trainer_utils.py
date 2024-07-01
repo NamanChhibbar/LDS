@@ -38,7 +38,7 @@ class SummarizationDataset:
 				summary_batch = summaries[i*batch_size:(i+1)*batch_size].tolist()
 				self.summary_batches[i] = summary_batch
 
-		# Use cache as a numpy array, if specified
+		# Use numpy array as a cache, if specified
 		self.cached = np.zeros(
 			self.num_batches, dtype=object
 		) if use_cache else None
@@ -102,9 +102,11 @@ class SummarizationDataset:
 		return self
 	
 	def __next__(self) -> BatchEncoding:
-		# Check if iterator is not implemented or if iterations are completed
 		it = self.it
-		if it is None or it == self.num_batches:
+		# Check if iterator is initialized
+		assert it is not None, "Iterator not initialized"
+		# Check if iterations are completed
+		if it == self.num_batches:
 			raise StopIteration()
 		self.it += 1
 		return self[it]

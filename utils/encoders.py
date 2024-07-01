@@ -22,9 +22,16 @@ class Encoder(ABC):
 		eos_id: int|None=None
 	) -> None:
 		"""
+		Initialiser for Encoder
+
 		## Parameters
 		`tokenizer`: Hugging Face tokenizer
+		`max_tokens`: Max tokens in text encodings
 		`preprocessor`: Text preprocessor
+		`add_special_tokens`: Add BOS and EOS tokens to text before
+		summary generation
+		`bos_id`: Beginning Of Sentence (BOS) token id
+		`eos_id`: End Of Sentence (EOS) token id
 		"""
 		super().__init__()
 		self.tokenizer = tokenizer
@@ -42,6 +49,8 @@ class Encoder(ABC):
 
 		## Parameters
 		`texts`: Texts (or text) to encode
+		`max_tokens`: Max tokens in text encodings; overrides
+		the default value of `max_tokens` if specified
 
 		## Returns
 		`encodings`: Text encodings of type BatchEncoding
@@ -65,11 +74,24 @@ class Encoder(ABC):
 	
 	@abstractmethod
 	def encode(
-		self, texts: list[str], max_tokens: int
-	) -> list[list[int]]:
+		self, text: str, max_tokens: int
+	) -> list[int]:
+		"""
+		Creates encdoings for a given text which fit in the
+		model's context size.
+
+		## Parameters
+		`text`: Text to encode
+		`max_tokens`: Max tokens in text encodings
+
+		## Returns
+		`encodings`: Text encodings
+		"""
 		...
 	
-	def add_tokens(self, encodings: list[int]):
+	def add_tokens(
+		self, encodings: list[int]
+	) -> list[int]:
 		bos_id = self.bos_id
 		eos_id = self.eos_id
 		if bos_id is not None:
