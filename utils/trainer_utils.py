@@ -16,10 +16,22 @@ class SummarizationDataset:
 
 	def __init__(
 		self, texts: list[str], encoder: Encoder, batch_size: int,
-		summaries: list[str]|None=None, context_size: int|None=None,
+		summaries: list[str]|None=None, summary_max_tokens: int|None=None,
 		use_cache: bool=False, shuffle: bool=False, seed: int|None=None
 	) -> None:
+		"""
+		Creates an iterable batched dataset of text (and summary) encodings.
 
+		## Parameters
+		`texts`: List of texts
+		`encoder`: Encoder used to encode `texts`
+		`batch_size`: Maximum number of text encodings in a batch
+		`summaries`: List of summaries
+		`summary_max_tokens`: Maximum tokens in summary encodings
+		`use_cache`: Use a cache to store already processed encodings while iterating
+		`shuffle`: Shuffle dataset before iterating
+		`seed`: Manual seed for output reproducibility
+		"""
 		# This enables dynamic batching
 		perm = np.argsort([count_words(text) for text in texts])
 		texts = np.array(texts)[perm]
@@ -45,7 +57,7 @@ class SummarizationDataset:
 
 		self.encoder = encoder
 		self.batch_size = batch_size
-		self.context_size = context_size
+		self.summary_max_tokens = summary_max_tokens
 		self.shuffle = shuffle
 		self.seed = seed
 		np.random.seed(seed)
@@ -69,7 +81,7 @@ class SummarizationDataset:
 			tokenizer = self.encoder.tokenizer
 			summaries = summary_batches[ind]
 			summ_encodings = tokenizer(
-				summaries, padding=True, max_length=self.context_size,
+				summaries, padding=True, max_length=self.summary_max_tokens,
 				truncation=True, return_tensors="pt"
 			)["input_ids"]
 

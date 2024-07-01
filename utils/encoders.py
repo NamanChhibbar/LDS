@@ -224,11 +224,11 @@ class UniformSampler(Encoder):
 class SentenceSampler(Encoder):
 
 	def __init__(
-			self, tokenizer, max_tokens: int, sent_segmenter,
-			sent_encoder, preprocessor: TextProcessor|None=None,
-			add_special_tokens: bool=True, threshold: float=.7,
-			device: str|torch.device|None=None, seed: int|None=None
-		) -> None:
+		self, tokenizer, max_tokens: int, sent_segmenter,
+		sent_encoder, preprocessor: TextProcessor|None=None,
+		add_special_tokens: bool=True, threshold: float=.7,
+		device: str|torch.device|None=None, seed: int|None=None
+	) -> None:
 		super().__init__(
 			tokenizer, max_tokens, preprocessor, add_special_tokens,
 			tokenizer.bos_token_id, tokenizer.eos_token_id
@@ -309,11 +309,11 @@ class SentenceSampler(Encoder):
 class RemoveRedundancy(Encoder):
 
 	def __init__(
-			self, tokenizer, max_tokens: int, sent_segmenter,
-			sent_encoder, preprocessor: TextProcessor|None=None,
-			add_special_tokens: bool=True, threshold: float=.7,
-			device: str|torch.device|None=None, seed: int|None=None
-		) -> None:
+		self, tokenizer, max_tokens: int, sent_segmenter,
+		sent_encoder, preprocessor: TextProcessor|None=None,
+		add_special_tokens: bool=True, threshold: float=.7,
+		device: str|torch.device|None=None, seed: int|None=None
+	) -> None:
 		super().__init__(
 			tokenizer, max_tokens, preprocessor, add_special_tokens,
 			tokenizer.bos_token_id, tokenizer.eos_token_id

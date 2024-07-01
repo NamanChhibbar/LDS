@@ -3,54 +3,44 @@ import openai
 
 from .helpers import TextProcessor, count_tokens, show_exception
 from .encoders import Encoder
-from .trainer_utils import SummarizationDataset
 
 
 
 class SummarizationPipeline:
 
 	def __init__(
-			self, summarizer, encoder: Encoder, max_tokens: int,
-			postprocessor: TextProcessor|None=None,
-			device: str|torch.device|None=None
-		) -> None:
+		self, summarizer, encoder: Encoder, summary_max_tokens: int,
+		postprocessor: TextProcessor|None=None,
+		device: str|torch.device|None=None
+	) -> None:
 		self.summarizer = summarizer.to(device)
 		self.encoder = encoder
-		self.max_tokens = max_tokens
+		self.summary_max_tokens = summary_max_tokens
 		self.postprocessor = postprocessor
 		self.device = device
 
-	def __call__(
-			self, texts: str|list[str], batch_size: int|None=None
-		) -> list[str]:
+	def __call__(self, texts: str|list[str]) -> list[str]:
 		encoder = self.encoder
+		summary_max_tokens = self.summary_max_tokens
 		postprocessor = self.postprocessor
 
 		if isinstance(texts, str):
 			texts = [texts]
 
-		# Create dataset
-		# Create a single batch if batch size is None
-		batch_size = len(texts) if batch_size is None else batch_size
-		dataset = SummarizationDataset(texts, encoder, batch_size)
+		# Generate encodings
+		encodings = encoder(texts)
+		encodings = encodings.to(self.device)
 
-		summaries = []
-		for encodings in dataset:
-			encodings = encodings.to(self.device)
+		# Generate summaries' encodings
+		outputs = self.summarizer.generate(
+			**encodings, max_length=summary_max_tokens
+		)
 
-			# Generate summaries' encodings
-			outputs = self.summarizer.generate(
-				**encodings, max_length=self.max_tokens
-			)
-
-			# Decode summaries' encodings
-			generated_summaries = [
-				encoder.tokenizer.decode(out, skip_special_tokens=True)
-				for out in outputs
-			]
-
-			# Add generated summaries
-			summaries.extend(generated_summaries)
+		# Decode summaries' encodings
+		summaries = [
+			encoder.tokenizer.decode(out, skip_special_tokens=True)
+			for out in outputs
+		]
 
 		# Postprocess summaries
 		if postprocessor is not None:
@@ -74,14 +64,12 @@ class OpenAIPipeline:
 		self.call_inputs = None
 		self.response = None
 	
-	def __call__(
-		self, texts: list[str], prev_msgs: list[str]|None=None
-	) -> list[str]:
+	def __call__(self, texts: list[str]) -> list[str]:
 		summaries = []
 
 		for text in texts:
 			# Create call inputs
-			self.create_inputs(text, prev_msgs)
+			self.create_inputs(text)
 
 			# Return summaries is call is not successful
 			if not self.send_call():
@@ -93,9 +81,7 @@ class OpenAIPipeline:
 
 		return summaries
 	
-	def create_inputs(
-		self, text: str, prev_msgs: list[str]|None=None
-	) -> int:
+	def create_inputs(self, text: str) -> int:
 		encoder = self.encoder
 		max_tokens = self.max_tokens
 		prompt_template = self.prompt_template
@@ -104,8 +90,7 @@ class OpenAIPipeline:
 		# Tokens used to create OpenAI prompt template
 		# 3 tokens for prompt base
 		# 4 tokens each for every message
-		num_prev_msgs = 0 if prev_msgs is None else len(prev_msgs)
-		tokens_used = 3 + 4 * (2 * num_prev_msgs + 1)
+		tokens_used = 7
 
 		# Create system prompt
 		system_prompt = self.system_prompt
@@ -113,13 +98,6 @@ class OpenAIPipeline:
 		if system_prompt:
 			messages.append({"role": "system", "content": system_prompt})
 			tokens_used += count_tokens(system_prompt, tokenizer) + 4
-
-		# Add previous messages, if any
-		if num_prev_msgs:
-			for text, summary in prev_msgs:
-				messages.append({"role": "user", "content": text})
-				messages.append({"role": "assistant", "content": summary})
-				tokens_used += count_tokens([text, summary], tokenizer)
 
 		# Count tokens in prompt template
 		tokens_used += count_tokens(prompt_template, tokenizer)

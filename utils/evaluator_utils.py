@@ -46,9 +46,9 @@ class Evaluator:
 
 	def __call__(
 		self, texts: str|list[str], summaries: str|list[str],
-		batch_size: int|None=None, num_workers: int|None=None
+		num_workers: int|None=None
 	) -> dict:
-		time_taken = self.generate_summaries(texts, batch_size, num_workers)
+		time_taken = self.generate_summaries(texts, num_workers)
 		print(f"Time taken to generate summaries: {time_taken}")
 		bert_score = self.get_bert_score(summaries)
 		rouge_score = self.get_rouge_score(summaries)
@@ -60,15 +60,14 @@ class Evaluator:
 		return scores
 	
 	def generate_summaries(
-		self, texts: str|list[str], batch_size: int|None=None,
-		num_workers: int|None=None
+		self, texts: str|list[str], num_workers: int|None=None
 	) -> list[int]:
 		if isinstance(texts, str):
 			texts = [texts]
 		generated_summaries = self.generated_summaries = []
 		time_taken = []
 		inputs = [
-			(texts, i, batch_size) for i in range(self.num_pipelines)
+			(texts, i) for i in range(self.num_pipelines)
 		]
 		if num_workers is not None and num_workers > 1:
 			with ProcessPoolExecutor(max_workers=num_workers) as executor:
@@ -122,10 +121,10 @@ class Evaluator:
 		return scores
 	
 	def _generate_summaries(self, args):
-		texts, ind, batch_size = args
+		texts, ind = args
 		pipeline = self.pipelines[ind]
 		start = perf_counter()
-		summaries = pipeline(texts, batch_size)
+		summaries = pipeline(texts)
 		time_taken = (perf_counter() - start)
 		print(f"Generated summary for pipeline {ind+1} in {time_taken}s")
 		return summaries, time_taken
