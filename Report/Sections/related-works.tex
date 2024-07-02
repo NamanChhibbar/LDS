@@ -2,59 +2,38 @@
 
 In this section, we discuss some recent works related to long document summarization.
 
+\citet{10.1145/3639233.3639253} take a "Divide and Conquer" based approach to address
+sequence length limitations in summarizing long meeting transcripts.
+They begin by segmenting the transcript and then use the BART (Bidirectional and
+Auto-Regressive Transformer) model to summarize each segment individually.
+These segment summaries are then recursively combined and summarized until a single
+summary remains.
+This method performs well with long documents but may take considerable time to converge due
+to repeated calls to the summarizer.
 
-\subsection*{Longformer}
+There have been efforts to improve the efficiency of attention mechanisms in Transformers.
+\citet{beltagy2020longformer} introduce Longformer, which replaces the quadratic
+self-attention mechanism in the Transofrmer model with a sliding window self-attention,
+resulting in a linear complexity with respect to the input size.
+\citet{huang-etal-2021-efficient} modify the encoder-decoder attention mechanism such that
+each attention head in the decoder attends to $n/s_h$ tokens in the input sequence, where
+$n$ is input length and $s_h$ is number of heads.
+This method has a complexity of $O(mn/s_h)$, where $m$ is the length of output sequence.
+\citet{NEURIPS2023_6f9806a5} introduce Unlimiformer, which also modifies the encoder-decoder
+attention.
+The attention heads in the decoder only attends to the tokens picked by their
+k-nearest-neighbor (kNN) algorithm.
+The kNN indices between the input tokens are created by the hidden states generated in the
+encoder.
 
-\citet{beltagy2020longformer} introduce Longformer, a tranformer modified to handle
-long sequences.
-They do this by replacing the quadratic self attention mechanism in the transformer
-architecture with a sliding window self attention, which has a linear complexity
-with respect to input size.
-To capture global dependencies, they add global attention to pre-selected input
-positions.
-They have also experimented with dilated sliding window and ablated models.
-
-
-\subsection*{Summarization of Long Meeting Transcripts}
-
-\citet{10.1145/3639233.3639253} describe a unique way of summarizing long meeting
-transcripts.
-Their approach is based on "Divide-and-Conquer", which starts with
-segmenting the transcript to summarize each segment individually and combine them.
-They use the BART (Bidirectional and Auto-Regressive Transformer) model to summarize
-the segments due to its high speed and performance.
-They also extract action-item pairs to aid summarization.
-After processing every segment, all summaries are combined for a final abstractive
-summarization.
-If the combined summary fails to fit the context size, the combined summary is
-recursively segmented and summarized again.
-This study gives us insights into how we can process long inputs for summarization.
-
-
-\subsection*{Question-Answering on Long Videos}
-
-\citet{wang2024videoagent} introduce VideoAgent, an AI agent designed to answer a
-given question using the context of a long video (approximately an hour long).
-The agent first generates captions from multiple uniformly sampled frames from the
-video, which are used to answer the question.
-If the agent feels that the captions are not sufficient to answer the question, it
-identifies a segment between the initial frames to obtain more frames.
-This work is relevant since a long video, a sequence of frames, can be considered
-analogous to a long document, a sequence of tokens. The techniques utilized by
-VideoAgent can be adapted to perform query-based summarization in long documents.
-
-
-\subsection*{Long Chinese News Classification}
-
-\citet{chen2022long} describe a novel algorithm for long document classification
-aimed to classify Chinese news into a set of pre-defined categories.
-Their approach begins with pre-processing a long text by segmenting it into sentences
-and forming groups of sentences determined by a fixed maximum number of tokens a
-group should have.
-BERT is then used to encode these groups of sentences for further processing.
-Each sentence embedding is passed through a 1D convolution layer for local feature
-extraction, followed by a 1D max-pooling layer.
-Finally, a classifier head with softmax activation is used to classify using the
-extracted features.
-Methods utilized in this video, like segmenting and convolving, may prove helpful in
-encoding long documents.
+Other unique approaches include VideoAgent \cite{wang2024videoagent}, an AI agent designed
+to answer a given question based on a long video. \citet{wang2024videoagent} achieve this
+by generating captions from multiple uniformly sampled frames from the video.
+These captions are used to answer the user's question.
+\citet{chen2022long} describe a novel algorithm to classify long Chinese news into a set
+of predefined categories.
+They form multiple groups of sentences based on maximum token threshold in each group.
+These groups are then encoded using BERT (Bidirectional Encoder Representations from
+Transformers) and passed through a 1D convolution layer for local feature extraction.
+What makes this method special is that the attention mechanism is replaced by a 1D
+convolution layer, which has linear complexity.
