@@ -7,7 +7,7 @@ from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LRScheduler
 from transformers.tokenization_utils_base import BatchEncoding
 
-from .helpers import count_words, show_exception
+from .helpers import count_words, show_exception, clear_stdout
 from .encoders import Encoder
 
 
@@ -177,9 +177,8 @@ def train_model(
 			if days:
 				time_remaining = f"{days}d {time_remaining}"
 
-			
+			clear_stdout(SPACES)
 			print(
-				f"\r{" " * SPACES}\r"
 				f"Epoch [{epoch+1}/{epochs}] "
 				f"Batch [{batch+1}/{num_batches}] "
 				f"Time [{round(time, flt_prec)} ms/batch] "
@@ -195,8 +194,8 @@ def train_model(
 		if scheduler is not None:
 			scheduler.step(epoch_loss)
 
+		clear_stdout(SPACES)
 		print(
-			f"\r{" " * SPACES}\r"
 			f"\rEpoch [{epoch+1}/{epochs}] "
 			f"Average loss [{round(epoch_loss, flt_prec)}] "
 			f"Avergage time [{round(epoch_time, flt_prec)} ms/batch]"

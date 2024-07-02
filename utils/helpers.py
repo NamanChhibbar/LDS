@@ -34,6 +34,9 @@ def show_exception(exc: Exception):
 	exc_msg = str(exc)
 	print(f"Encountered exception of type {exc_class}: {exc_msg}")
 
+def clear_stdout(spaces: int=100):
+	print(f"\r{" " * spaces}\r", end="")
+
 
 
 class TextProcessor:
