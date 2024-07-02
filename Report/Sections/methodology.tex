@@ -2,7 +2,8 @@
 % \section{Methodology}
 
 
-\subsection{Central Truncation}
+\subsection{Truncation}
+\label{method:truncation}
 
 Truncation is the most common and straightforward approach used to handle long texts
 that exceed the context size of an LLM.
@@ -24,6 +25,7 @@ complicated hierarchical methods, displaying superiority with simplicity.
 
 
 \subsection{Document Skimming}
+\label{method:skimming}
 
 One way to process long texts is by employing a speed reading strategy known as
 "skimming".
@@ -80,7 +82,8 @@ limited-range attention mechanism, an algorithm similar to \citet{chen2022long}.
 
 This method begins with separating sentences from the document and grouping them
 based on a fixed maximum number of sentences per group.
-These groups are then encoded and passed through a 1D convolution layer of size $k$ with $f$ filters, where $k$ and $f$ are hyperparameters in the model.
+These groups are then encoded and passed through a 1D convolution layer of size $k$ with
+$f$ filters, where $k$ and $f$ are hyperparameters in the model.
 A max-pooling layer can also be applied for feature enhancement.
 A decoder-only transformer then uses these processed embeddings as keys and values
 for the encoder-decoder attention mechanism to generate the summary.
@@ -89,3 +92,62 @@ Longformer model \cite{beltagy2020longformer} uses a windowed attention mechanis
 linear complexity to process long texts.
 Our 1D convolution operation outperforms the windowed attention mechanism since it has
 linear complexity and is more efficient to calculate than attention.
+
+
+\section{Implemented Pipelines}
+
+
+\subsection*{Pipeline 1}
+
+This pipeline is based on the Truncation method proposed in Section \ref{method:truncation}
+and truncates the middle of the text.
+It includes a hyperparameter $\mathrm{head\_size} \in [0, 1]$ which determines the fraction
+of tokens to be taken from the head.
+Setting $\mathrm{head\_size} = 1$ results in taking tokens only from the head, whereas
+setting $\mathrm{head\_size} = 0$ results in taking tokens only from the tail.
+
+
+\subsection*{Pipeline 2}
+
+This pipeline is based on the Document Skimming method proposed in Section \ref{method:skimming}
+and uniformly samples segments of the text.
+This method starts by segmenting the text using a segmenter.
+It inlcudes a hyperparameter $\mathrm{min\_words}$, which controls the minimum number of
+words required in a segment.
+The segmenter uses a sentence tokenizer to separate sentences from the text, and then
+merges the sentences which have fewer words than $\mathrm{min\_words}$.
+We then choose segments uniformly, with each segment having probability $p$ to be picked.
+The calculation for the optimal value is given below.
+
+Let $X$ be denote the total number of tokens in the picked segments.
+Since segments are picked randomly, $X$ is a random variable.
+If the context size of the model is $c$, we want $\mathrm{E}[X] = c$, where $\mathrm{E}[X]$
+denotes the expectation of $X$.
+
+Suppose we have $n \in \mathbb{N}$ segments and $X_i$ denotes if segment $i$ is chosen,
+$i \in \{1, 2, \dots, n\}$.
+Therefore, $X_i \sim \mathrm{Bernoulli}(p), i \in \{1, 2, \dots, n\}$ are independent and
+identically distributed (IID) random variables.
+
+If $\mathrm{len}_i$ denotes the number of tokens in segment $i$, we can write:
+
+\[ X = \sum_{i = 1}^{n} X_i \cdot \mathrm{len}_i \]
+\[ \Rightarrow \mathrm{E}[X] = \mathrm{E}[\sum_{i = 1}^{n} X_i \cdot \mathrm{len}_i] \]
+\[ \Rightarrow \mathrm{E}[X] = \sum_{i = 1}^{n} \mathrm{E}[X_i \cdot \mathrm{len}_i] \]
+\[ \Rightarrow \mathrm{E}[X] = \sum_{i = 1}^{n} \mathrm{E}[X_i] \cdot \mathrm{len}_i \]
+
+Since $X_i \sim \mathrm{Bernoulli}(p), i \in \{1, 2, \dots, n\}$, we have
+$\mathrm{E}[X_i] = p, i \in \{1, 2, \dots, n\}$.
+
+\[ \Rightarrow \mathrm{E}[X] = \sum_{i = 1}^{n} p \cdot \mathrm{len}_i \]
+\[ \Rightarrow \mathrm{E}[X] = p \cdot \sum_{i = 1}^{n} \mathrm{len}_i \]
+
+Let $\mathrm{total\_len}$ be the total number of tokens in the text, then
+$\mathrm{total\_len} = \sum_{i = 1}^{n} \mathrm{len}_i$.
+
+\[ \therefore \mathrm{E}[X] = p \cdot \mathrm{total\_len} \]
+\[ \mathrm{E}[X] = c \Rightarrow p \cdot \mathrm{total\_len} = c \]
+\[ \therefore p = c / \mathrm{total\_len} \]
+
+
+\subsection*{Pipeline 3}
