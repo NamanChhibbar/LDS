@@ -13,13 +13,14 @@ class SummarizationPipeline:
 		postprocessor: TextProcessor|None=None,
 		device: str|torch.device|None=None
 	) -> None:
-		self.summarizer = summarizer.to(device)
+		self.summarizer = summarizer.to("cpu")
 		self.encoder = encoder
 		self.summary_max_tokens = summary_max_tokens
 		self.postprocessor = postprocessor
 		self.device = device
 
 	def __call__(self, texts: str|list[str]) -> list[str]:
+		summarizer = self.summarizer.to(self.device)
 		encoder = self.encoder
 		summary_max_tokens = self.summary_max_tokens
 		postprocessor = self.postprocessor
@@ -35,6 +36,9 @@ class SummarizationPipeline:
 		outputs = self.summarizer.generate(
 			**encodings, max_length=summary_max_tokens
 		)
+
+		# Remove summarizer from device
+		summarizer.to("cpu")
 
 		# Decode summaries' encodings
 		summaries = [

@@ -234,7 +234,7 @@ class SentenceSampler(Encoder):
 			tokenizer.bos_token_id, tokenizer.eos_token_id
 		)
 		self.sent_segmenter = sent_segmenter
-		self.sent_encoder = sent_encoder.to(device)
+		self.sent_encoder = sent_encoder.to("cpu")
 		self.sent_embedding_dim = sent_encoder.get_sentence_embedding_dimension()
 		self.threshold = threshold
 		self.device = device
@@ -248,6 +248,7 @@ class SentenceSampler(Encoder):
 		self, text: str, max_tokens: int|None=None
 	) -> list[int]:
 		sent_segmenter = self.sent_segmenter
+		sent_encoder = self.sent_encoder.to(self.device)
 		if max_tokens is None:
 			max_tokens = self.max_tokens
 		tokenizer = self.tokenizer
@@ -284,7 +285,7 @@ class SentenceSampler(Encoder):
 				if np.random.rand() > p:
 					continue
 				sent = tokenizer.decode(sent_encoding)
-				sent_embedding = self.sent_encoder.encode([sent])
+				sent_embedding = sent_encoder.encode([sent])
 				similarity = cosine_similarity(
 					sampled_embedding, sent_embedding
 				)
@@ -298,6 +299,9 @@ class SentenceSampler(Encoder):
 				)
 			if len(sampled) <= max_tokens:
 				break
+
+		# Remove sentence encoder from device
+		sent_encoder.to("cpu")
 
 		# Remove last sentence separator token
 		sampled = sampled[:-1]
@@ -319,7 +323,7 @@ class RemoveRedundancy(Encoder):
 			tokenizer.bos_token_id, tokenizer.eos_token_id
 		)
 		self.sent_segmenter = sent_segmenter
-		self.sent_encoder = sent_encoder.to(device)
+		self.sent_encoder = sent_encoder.to("cpu")
 		self.sent_embedding_dim = sent_encoder.get_sentence_embedding_dimension()
 		self.threshold = threshold
 		self.device = device
@@ -384,6 +388,7 @@ class RemoveRedundancy(Encoder):
 		return sampled
 	
 	def remove_redundancy(self, sents: list[str]) -> list[str]:
+		sent_encoder = self.sent_encoder.to(self.device)
 		selected_sents = []
 
 		# Average embedding of selected sentences
@@ -391,7 +396,7 @@ class RemoveRedundancy(Encoder):
 
 		num_sents = 0
 		for sent in sents:
-			sent_embedding = self.sent_encoder.encode([sent])
+			sent_embedding = sent_encoder.encode([sent])
 
 			# Calculate similarity between current sentence and chosen sentences
 			similarity = cosine_similarity(
@@ -410,4 +415,8 @@ class RemoveRedundancy(Encoder):
 				(num_sents * selected_embedding + sent_embedding) /
 				(num_sents := num_sents + 1)
 			)
+
+		# Remove sentence encoder from device
+		sent_encoder.to("cpu")
+
 		return selected_sents

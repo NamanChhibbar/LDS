@@ -1,20 +1,19 @@
 \section{Related Works}
 
-In this section, we discuss some recent works related to long document summarization.
-
 \citet{10.1145/3639233.3639253} take a "Divide and Conquer" based approach to address
 sequence length limitations in summarizing long meeting transcripts.
 They begin by segmenting the transcript and then use the BART (Bidirectional and
 Auto-Regressive Transformer) model to summarize each segment individually.
 These segment summaries are then recursively combined and summarized until a single
 summary remains.
-This method performs well with long documents but may take considerable time to converge due
-to repeated calls to the summarizer.
+This method performs well with long documents but may take considerable amount of time
+to converge due to repeated calls to the summarizer.
 
-There have been efforts to improve the efficiency of attention mechanisms in Transformers.
+There hav also been efforts to improve the efficiency of attention mechanisms in Transformers.
 \citet{beltagy2020longformer} introduce Longformer, which replaces the quadratic
 self-attention mechanism in the Transofrmer model with a sliding window self-attention,
 resulting in a linear complexity with respect to the input size.
+To capture long-ranged dependencies, they include global attention at specific token positions.
 \citet{huang-etal-2021-efficient} modify the encoder-decoder attention mechanism such that
 each attention head in the decoder attends to $n/s_h$ tokens in the input sequence, where
 $n$ is input length and $s_h$ is number of heads.
@@ -26,9 +25,10 @@ k-nearest-neighbor (kNN) algorithm.
 The kNN indices between the input tokens are created by the hidden states generated in the
 encoder.
 
-Other unique approaches include VideoAgent \cite{wang2024videoagent}, an AI agent designed
-to answer a given question based on a long video. \citet{wang2024videoagent} achieve this
-by generating captions from multiple uniformly sampled frames from the video.
+Other unique approaches include VideoAgent, introduced by \citet{wang2024videoagent}, an
+AI agent designed to answer a given question based on a long video.
+They achieve this by generating captions from multiple uniformly sampled frames from the
+video.
 These captions are used to answer the user's question.
 \citet{chen2022long} describe a novel algorithm to classify long Chinese news into a set
 of predefined categories.
