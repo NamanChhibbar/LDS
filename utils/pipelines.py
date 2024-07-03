@@ -9,13 +9,14 @@ from .encoders import Encoder
 class SummarizationPipeline:
 
 	def __init__(
-		self, summarizer, encoder: Encoder, summary_max_tokens: int,
+		self, summarizer, encoder: Encoder, summary_max_tokens: int|None=None,
 		postprocessor: TextProcessor|None=None,
 		device: str|torch.device|None=None
 	) -> None:
 		self.summarizer = summarizer.to("cpu")
 		self.encoder = encoder
-		self.summary_max_tokens = summary_max_tokens
+		self.summary_max_tokens = encoder.max_tokens \
+			if summary_max_tokens is None else summary_max_tokens
 		self.postprocessor = postprocessor
 		self.device = device
 
