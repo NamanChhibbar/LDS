@@ -94,6 +94,7 @@ Our 1D convolution operation outperforms the windowed attention mechanism since 
 linear complexity and is more efficient to calculate than attention.
 
 
+
 \section{Implemented Pipelines}
 
 
@@ -105,6 +106,7 @@ It includes a hyperparameter $head\_size \in [0, 1]$ which determines the fracti
 to be taken from the head.
 Setting $head\_size = 1$ results in taking tokens only from the head, whereas
 setting $head\_size = 0$ results in taking tokens only from the tail.
+The truncated text is then sent to the summarizer.
 
 
 \subsection*{Pipeline 2}
@@ -116,8 +118,9 @@ It inlcudes a hyperparameter $min\_words$, which controls the minimum number of 
 in a segment.
 The segmenter uses a sentence tokenizer to separate sentences from the text, and then
 merges the sentences which have fewer words than $min\_words$.
-We then choose segments uniformly, with each segment having probability $p$ to be picked.
-The calculation for the optimal value is given below.
+We then sample segments uniformly, with each segment having probability $p$ to be picked.
+The sampled segments are then merged to form a single text and sent to the summarizer.
+The calculation for the optimal value of $p$ is given below:
 
 Let $X$ be denote the total number of tokens in the picked segments.
 Since segments are picked randomly, $X$ is a random variable.
@@ -161,6 +164,7 @@ We use cosine similarity to compare $mean\_emb$ to the current segment embedding
 denoted as $emb_i$, where $i$ is the index of the current segment.
 If \[ \mathrm{cos\_sim}(mean\_emb, emb_i) \ge threshold \]
 where $threshold$ is a hyperparameter, then segment $i$ is removed.
+The filtered segments are then concatenated and sent to the summarizer.
 
 
 \subsection*{Pipeline 4}
@@ -173,3 +177,5 @@ Although this pipeline is slower than \textbf{Pipeline 3}, it ensures better uti
 the LLM's context size.
 Similar to \textbf{Pipeline 3}, it includes a hyperparameter $threshold$, which controls
 how similar a segment should be to remove it.
+After removal of segments and sampling, the segments are concatenated and sent to the
+summarizer.
