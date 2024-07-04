@@ -103,7 +103,7 @@ def main() -> None:
 	with open(train_history_path, "w") as fp:
 		json.dump({
 			"train-history": train_history
-		}, fp)
+		}, fp, indent=2)
 	print("Finished")
 
 

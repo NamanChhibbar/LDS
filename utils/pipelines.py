@@ -3,6 +3,7 @@ import openai
 
 from .helpers import TextProcessor, count_tokens, show_exception
 from .encoders import Encoder
+from .trainer_utils import SummarizationDataset
 
 
 
@@ -10,8 +11,7 @@ class SummarizationPipeline:
 
 	def __init__(
 		self, summarizer, encoder: Encoder, summary_max_tokens: int|None=None,
-		postprocessor: TextProcessor|None=None,
-		device: str|torch.device|None=None
+		postprocessor: TextProcessor|None=None, device: str|torch.device="cpu"
 	) -> None:
 		self.summarizer = summarizer.to("cpu")
 		self.encoder = encoder
@@ -20,32 +20,41 @@ class SummarizationPipeline:
 		self.postprocessor = postprocessor
 		self.device = device
 
-	def __call__(self, texts: str|list[str]) -> list[str]:
+	def __call__(
+		self, texts: str|list[str], batch_size: int|None=None
+	) -> list[str]:
+		if isinstance(texts, str):
+			texts = [texts]
+		
 		summarizer = self.summarizer.to(self.device)
 		encoder = self.encoder
+		batch_size = len(texts) if batch_size is None else batch_size
 		summary_max_tokens = self.summary_max_tokens
 		postprocessor = self.postprocessor
 
-		if isinstance(texts, str):
-			texts = [texts]
+		# Generate encodings in batches
+		batches = SummarizationDataset(texts, encoder, batch_size)
 
-		# Generate encodings
-		encodings = encoder(texts)
-		encodings = encodings.to(self.device)
+		# Generate summaries
+		summaries = []
+		for encodings in batches:
 
-		# Generate summaries' encodings
-		outputs = self.summarizer.generate(
-			**encodings, max_length=summary_max_tokens
-		)
+			# Generate summaries' encodings
+			outputs = self.summarizer.generate(
+				**encodings, max_length=summary_max_tokens
+			)
+
+			# Decode summaries' encodings
+			batch_summaries = [
+				encoder.tokenizer.decode(out, skip_special_tokens=True)
+				for out in outputs
+			]
+
+			# Append summaries
+			summaries.extend(batch_summaries)
 
 		# Remove summarizer from device
 		summarizer.to("cpu")
-
-		# Decode summaries' encodings
-		summaries = [
-			encoder.tokenizer.decode(out, skip_special_tokens=True)
-			for out in outputs
-		]
 
 		# Postprocess summaries
 		if postprocessor is not None:
@@ -69,7 +78,7 @@ class OpenAIPipeline:
 		self.call_inputs = None
 		self.response = None
 	
-	def __call__(self, texts: list[str]) -> list[str]:
+	def __call__(self, texts: list[str], _) -> list[str]:
 		summaries = []
 
 		for text in texts:

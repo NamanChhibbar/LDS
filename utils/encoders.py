@@ -17,7 +17,16 @@ SENT_DELIMITER = " "
 
 class Encoder(ABC):
 	"""
-	Base class for encoders.
+	Base class for encoders. DO NOT instantiate directly.
+
+	## Parameters
+	`tokenizer`: Hugging Face tokenizer
+	`max_tokens`: Max tokens in text encodings
+	`preprocessor`: Text preprocessor
+	`add_special_tokens`: Add BOS and EOS tokens to text before
+	summary generation
+	`bos_id`: Beginning Of Sentence (BOS) token id
+	`eos_id`: End Of Sentence (EOS) token id
 	"""
 	def __init__(
 		self, tokenizer, max_tokens: int,
@@ -25,18 +34,6 @@ class Encoder(ABC):
 		add_special_tokens: bool=True, bos_id: int|None=None,
 		eos_id: int|None=None
 	) -> None:
-		"""
-		Base class for encoders. DO NOT instantiate directly.
-
-		## Parameters
-		`tokenizer`: Hugging Face tokenizer
-		`max_tokens`: Max tokens in text encodings
-		`preprocessor`: Text preprocessor
-		`add_special_tokens`: Add BOS and EOS tokens to text before
-		summary generation
-		`bos_id`: Beginning Of Sentence (BOS) token id
-		`eos_id`: End Of Sentence (EOS) token id
-		"""
 		super().__init__()
 		self.tokenizer = tokenizer
 		self.max_tokens = max_tokens
@@ -49,12 +46,12 @@ class Encoder(ABC):
 		self, texts: str|list[str], max_tokens: int|None=None
 	) -> BatchEncoding:
 		"""
-		Encode texts
+		Encodes texts to fit in the model's context size and creates a BatchEncoding.
 
 		## Parameters
 		`texts`: Texts (or text) to encode
-		`max_tokens`: Max tokens in text encodings; overrides
-		the default value of `max_tokens` if specified
+		`max_tokens`: Max tokens in text encodings; overrides the default
+		value of `max_tokens` if specified
 
 		## Returns
 		`encodings`: Text encodings of type BatchEncoding
@@ -81,8 +78,7 @@ class Encoder(ABC):
 		self, text: str, max_tokens: int
 	) -> list[int]:
 		"""
-		Creates encdoings for a given text which fit in the
-		model's context size.
+		Creates encodings for a given text which fit in the model's context size.
 
 		## Parameters
 		`text`: Text to encode
@@ -166,9 +162,6 @@ class UniformSampler(Encoder):
 		self.sent_segmenter = sent_segmenter
 		self.seed = seed
 		np.random.seed(seed)
-		self.delimiter_id = tokenizer.encode(
-			SENT_DELIMITER, add_special_tokens=False
-		)[0]
 
 	def encode(
 		self, text: str, max_tokens: int|None=None
@@ -183,39 +176,33 @@ class UniformSampler(Encoder):
 		encodings = tokenizer.encode(
 			text, add_special_tokens=False
 		)
-		if len(encodings) <= max_tokens:
+		num_tokens = len(encodings)
+		if num_tokens <= max_tokens:
 			return encodings
 
 		# Extract and tokenize sentences
 		sentences = self.sent_segmenter(text)
-		sentences = tokenizer(
-			sentences, add_special_tokens=False
-		)["input_ids"]
-		sentences = np.array(sentences, dtype=object)
-
-		# Sum of length of sentences
-		total_length = sum([
-			len(sent) for sent in sentences
-		])
+		sentences = np.array(sentences)
+		num_sentences = len(sentences)
 
 		# Approximate probability of picking a sentence
-		p = max_tokens / total_length
+		p = max_tokens / num_tokens
 
 		# Sample until sentences fit in model
 		while True:
-			sent_mask = np.random.rand(len(sentences)) <= p
+			sent_mask = np.random.rand(num_sentences) <= p
 			sampled = sentences[sent_mask]
 
 			# Flatten sentences
-			sampled = [
-				elm for lis in sampled
-				for elm in lis + [self.delimiter_id]
-			]
+			sampled = SENT_DELIMITER.join(sampled)
+
+			# Tokenize sampled sentences
+			sampled = tokenizer.encode(
+				sampled, add_special_tokens=False
+			)
+
 			if len(sampled) <= max_tokens:
 				break
-
-		# Remove last sentence separator token
-		sampled = sampled[:-1]
 
 		return sampled
 	
@@ -227,7 +214,7 @@ class SentenceSampler(Encoder):
 		self, tokenizer, max_tokens: int, sent_segmenter,
 		sent_encoder, preprocessor: TextProcessor|None=None,
 		add_special_tokens: bool=True, threshold: float=.7,
-		device: str|torch.device|None=None, seed: int|None=None
+		device: str|torch.device="cpu", seed: int|None=None
 	) -> None:
 		super().__init__(
 			tokenizer, max_tokens, preprocessor, add_special_tokens,
@@ -240,9 +227,6 @@ class SentenceSampler(Encoder):
 		self.device = device
 		self.seed = seed
 		np.random.seed(seed)
-		self.delimiter_id = tokenizer.encode(
-			SENT_DELIMITER, add_special_tokens=False
-		)[0]
 
 	def encode(
 		self, text: str, max_tokens: int|None=None
@@ -259,52 +243,50 @@ class SentenceSampler(Encoder):
 		encodings = tokenizer.encode(
 			text, add_special_tokens=False
 		)
-		if len(encodings) <= max_tokens:
+		num_tokens = len(encodings)
+		if num_tokens <= max_tokens:
 			return encodings
 
 		# Extract and tokenize sentences
 		sentences = sent_segmenter(text)
-		sentences = tokenizer(
-			sentences, add_special_tokens=False
-		)["input_ids"]
-
-		# Sum of length of sentences
-		total_length = np.sum([
-			len(sent) for sent in sentences
-		])
 
 		# Approximate probability of picking a sentence
-		p = max_tokens / total_length
+		p = max_tokens / num_tokens
 
 		# Sample until sentences fit in model
 		while True:
 			sampled = []
 			sampled_embedding = np.zeros((1, self.sent_embedding_dim))
 			num_sampled = 0
-			for sent_encoding in sentences:
+
+			for sentence in sentences:
 				if np.random.rand() > p:
 					continue
-				sent = tokenizer.decode(sent_encoding)
-				sent_embedding = sent_encoder.encode([sent])
+				sent_embedding = sent_encoder.encode([sentence])
 				similarity = cosine_similarity(
 					sampled_embedding, sent_embedding
 				)
 				if self.threshold < similarity:
 					continue
-				sampled.extend(sent_encoding)
-				sampled.append(self.delimiter_id)
+				sampled.extend(sentence)
 				sampled_embedding = (
 					(num_sampled * sampled_embedding + sent_embedding) /
 					(num_sampled := num_sampled + 1)
 				)
+			
+			# Flatten sentences
+			sampled = SENT_DELIMITER.join(sampled)
+
+			# Tokenize sampled sentences
+			sampled = tokenizer.encode(
+				sampled, add_special_tokens=False
+			)
+
 			if len(sampled) <= max_tokens:
 				break
 
 		# Remove sentence encoder from device
 		sent_encoder.to("cpu")
-
-		# Remove last sentence separator token
-		sampled = sampled[:-1]
 
 		return sampled
 	
@@ -316,7 +298,7 @@ class RemoveRedundancy(Encoder):
 		self, tokenizer, max_tokens: int, sent_segmenter,
 		sent_encoder, preprocessor: TextProcessor|None=None,
 		add_special_tokens: bool=True, threshold: float=.7,
-		device: str|torch.device|None=None, seed: int|None=None
+		device: str|torch.device="cpu", seed: int|None=None
 	) -> None:
 		super().__init__(
 			tokenizer, max_tokens, preprocessor, add_special_tokens,
@@ -329,9 +311,6 @@ class RemoveRedundancy(Encoder):
 		self.device = device
 		self.seed = seed
 		np.random.seed(seed)
-		self.delimiter_id = tokenizer.encode(
-			SENT_DELIMITER, add_special_tokens=False
-		)[0]
 
 	def encode(
 		self, text: str, max_tokens: int|None=None
@@ -354,36 +333,37 @@ class RemoveRedundancy(Encoder):
 
 		# Remove redundant sentences
 		sentences = self.remove_redundancy(sentences)
+		sentences = np.array(sentences)
+		num_sentences = len(sentences)
 
 		# Tokenize sentences
-		sentences = tokenizer(
+		tokenized_sentences = tokenizer(
 			sentences, add_special_tokens=False
 		)["input_ids"]
-		sentences = np.array(sentences, dtype=object)
 
-		# Sum of length of sentences
-		total_length = sum([
-			len(sent) for sent in sentences
+		# Sum of number of tokens in sentences
+		num_tokens = sum([
+			len(sent) for sent in tokenized_sentences
 		])
 
 		# Approximate probability of picking a sentence
-		p = max_tokens / total_length
+		p = max_tokens / num_tokens
 
 		# Sample until sentences fit in model
 		while True:
-			sent_mask = np.random.rand(len(sentences)) <= p
+			sent_mask = np.random.rand(num_sentences) <= p
 			sampled = sentences[sent_mask]
 
 			# Flatten sentences
-			sampled = [
-				elm for lis in sampled
-				for elm in lis + [self.delimiter_id]
-			]
+			sampled = SENT_DELIMITER.join(sampled)
+
+			# Tokenize sampled sentences
+			sampled = tokenizer.encode(
+				sampled, add_special_tokens=False
+			)
+
 			if len(sampled) <= max_tokens:
 				break
-
-		# Remove last sentence separator token
-		sampled = sampled[:-1]
 
 		return sampled
 	
