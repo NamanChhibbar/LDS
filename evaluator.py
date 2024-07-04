@@ -9,6 +9,7 @@ from transformers import (
 	GPT2TokenizerFast
 )
 from sentence_transformers import SentenceTransformer
+from dotenv import load_dotenv
 
 from utils.helpers import TextProcessor, TextSegmenter, get_device, count_words
 from utils.encoders import (
@@ -20,6 +21,8 @@ from utils.evaluator_utils import Evaluator
 
 
 def main() -> None:
+	load_dotenv()
+
 	data_dir = "/Users/naman/Workspace/Data/Long-Document-Summarization"
 	out_dir = f"{data_dir}/GovReport/processed"
 	crs_files = os.listdir(f"{data_dir}/GovReport/crs")
