@@ -1,6 +1,6 @@
 import os
 import json
-from argparse import ArgumentParser, Namespace
+from warnings import filterwarnings
 
 from nltk import sent_tokenize
 from transformers import (
@@ -18,6 +18,7 @@ from utils.encoders import (
 from utils.pipelines import SummarizationPipeline, OpenAIPipeline
 from utils.evaluator_utils import Evaluator
 
+filterwarnings("ignore")
 
 
 def main() -> None:
