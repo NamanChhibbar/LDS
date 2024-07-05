@@ -87,14 +87,14 @@ class Evaluator:
 		pipeline = self.pipelines[ind]
 		start = perf_counter()
 		summaries = pipeline(texts, batch_size)
-		time_taken = (perf_counter() - start)
-		print(f"Generated summary for pipeline {ind+1} in {time_taken}s")
+		time_taken = perf_counter() - start
+		print(f"Generated summaries for pipeline {ind+1} in {time_taken}s")
 		return summaries, time_taken
 	
 	# P, R, F
 	def get_bert_score(
 		self, summaries: str|list[str]
-	) -> list[torch.Tensor]:
+	) -> list[list[float]]:
 		generated_summaries = self.generated_summaries
 		assert generated_summaries is not None, "Summaries not generated"
 		num_pipelines = self.num_pipelines

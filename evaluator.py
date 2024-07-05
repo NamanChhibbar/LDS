@@ -136,9 +136,9 @@ def main() -> None:
 		) for enc in t5_encoders
 	]
 	gpt_pipelines = [
-		OpenAIPipeline(
-			gpt_model, enc, system_prompt=system_prompt
-		) for enc in gpt_encoders
+		# OpenAIPipeline(
+		# 	gpt_model, enc, system_prompt=system_prompt
+		# ) for enc in gpt_encoders
 	]
 	pipelines = bart_pipelines + t5_pipelines + gpt_pipelines
 
