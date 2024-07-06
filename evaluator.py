@@ -55,7 +55,7 @@ def main() -> None:
 	preprocessor = TextProcessor(preprocessing=True)
 	postprocessor = None
 
-	min_words = 20_000
+	min_words = 30_000
 	texts, summaries = [], []
 	for file in crs_files:
 		with open(f"{out_dir}/{file}") as fp:
@@ -144,6 +144,7 @@ def main() -> None:
 
 	batch_size = 3
 	num_workers = min(len(pipelines), os.cpu_count())
+	# num_workers = 0
 
 	evaluator = Evaluator(pipelines, num_workers, device)
 	results = evaluator(texts, summaries, batch_size)

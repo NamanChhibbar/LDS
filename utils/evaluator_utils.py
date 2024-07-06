@@ -77,18 +77,19 @@ class Evaluator:
 				results = executor.map(self._generate_summaries, inputs)
 		else:
 			results = map(self._generate_summaries, inputs)
-		for summary, time in results:
-			generated_summaries.extend(summary)
+		for summaries, time in results:
+			generated_summaries.extend(summaries)
 			time_taken.append(time)
 		return time_taken
 	
 	def _generate_summaries(self, args):
 		ind, texts, batch_size = args
 		pipeline = self.pipelines[ind]
+		print(f"Generating summaries for pipeline {ind+1}...")
 		start = perf_counter()
 		summaries = pipeline(texts, batch_size)
 		time_taken = perf_counter() - start
-		print(f"Generated summaries for pipeline {ind+1} in {time_taken}s")
+		print(f"Pipeline {ind+1} took {time_taken}s")
 		return summaries, time_taken
 	
 	# P, R, F

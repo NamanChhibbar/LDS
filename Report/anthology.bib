@@ -58,7 +58,7 @@
   url="https://proceedings.neurips.cc/paper/7181-attention-is-all"
 }
 
-@inproceedings{10.1145/3639233.3639253,
+@inproceedings{golia2024action,
   author = {Golia, Logan and Kalita, Jugal},
   title = {Action-Item-Driven Summarization of Long Meeting Transcripts},
   year = {2024},
@@ -118,7 +118,7 @@
   url="https://www.jair.org/index.php/jair/article/view/10396"
 }
 
-@INPROCEEDINGS{10188527,
+@INPROCEEDINGS{siddika2022automatic,
   author={Siddika, Saba and Hossen, Md. Sharif},
   booktitle={2022 International Conference on Recent Progresses in Science, Engineering and Technology (ICRPSET)}, 
   title={Automatic Text Summarization Using Term Frequency, Luhn's Heuristic, and Cosine Similarity Approaches}, 
@@ -192,6 +192,71 @@
   url="https://proceedings.neurips.cc/paper/2020/hash/3f5ee243547dee91fbd053c1c4a845aa-Abstract.html"
 }
 
+@inproceedings{lewis-etal-2020-bart,
+  title = "{BART}: Denoising Sequence-to-Sequence Pre-training for Natural Language Generation, Translation, and Comprehension",
+  author = "Lewis, Mike  and
+    Liu, Yinhan  and
+    Goyal, Naman  and
+    Ghazvininejad, Marjan  and
+    Mohamed, Abdelrahman  and
+    Levy, Omer  and
+    Stoyanov, Veselin  and
+    Zettlemoyer, Luke",
+  editor = "Jurafsky, Dan  and
+    Chai, Joyce  and
+    Schluter, Natalie  and
+    Tetreault, Joel",
+  booktitle = "Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics",
+  month = jul,
+  year = "2020",
+  address = "Online",
+  publisher = "Association for Computational Linguistics",
+  url = "https://aclanthology.org/2020.acl-main.703",
+  doi = "10.18653/v1/2020.acl-main.703",
+  pages = "7871--7880",
+  abstract = "We present BART, a denoising autoencoder for pretraining sequence-to-sequence models. BART is trained by (1) corrupting text with an arbitrary noising function, and (2) learning a model to reconstruct the original text. It uses a standard Tranformer-based neural machine translation architecture which, despite its simplicity, can be seen as generalizing BERT (due to the bidirectional encoder), GPT (with the left-to-right decoder), and other recent pretraining schemes. We evaluate a number of noising approaches, finding the best performance by both randomly shuffling the order of sentences and using a novel in-filling scheme, where spans of text are replaced with a single mask token. BART is particularly effective when fine tuned for text generation but also works well for comprehension tasks. It matches the performance of RoBERTa on GLUE and SQuAD, and achieves new state-of-the-art results on a range of abstractive dialogue, question answering, and summarization tasks, with gains of up to 3.5 ROUGE. BART also provides a 1.1 BLEU increase over a back-translation system for machine translation, with only target language pretraining. We also replicate other pretraining schemes within the BART framework, to understand their effect on end-task performance."
+}
+
+@article{guo2021longt5,
+  title={LongT5: Efficient text-to-text transformer for long sequences},
+  author={Guo, Mandy and Ainslie, Joshua and Uthus, David and Ontanon, Santiago and Ni, Jianmo and Sung, Yun-Hsuan and Yang, Yinfei},
+  journal={arXiv preprint arXiv:2112.07916},
+  year={2021},
+  url="https://arxiv.org/abs/2112.07916"
+}
+
+@article{raffel2020exploring,
+  title={Exploring the limits of transfer learning with a unified text-to-text transformer},
+  author={Raffel, Colin and Shazeer, Noam and Roberts, Adam and Lee, Katherine and Narang, Sharan and Matena, Michael and Zhou, Yanqi and Li, Wei and Liu, Peter J},
+  journal={Journal of machine learning research},
+  volume={21},
+  number={140},
+  pages={1--67},
+  year={2020},
+  url="https://www.jmlr.org/papers/v21/20-074.html"
+}
+
+@article{brown2020language,
+  title={Language models are few-shot learners},
+  author={Brown, Tom and Mann, Benjamin and Ryder, Nick and Subbiah, Melanie and Kaplan, Jared D and Dhariwal, Prafulla and Neelakantan, Arvind and Shyam, Pranav and Sastry, Girish and Askell, Amanda and others},
+  journal={Advances in neural information processing systems},
+  volume={33},
+  pages={1877--1901},
+  year={2020},
+  url="https://proceedings.neurips.cc/paper/2020/hash/1457c0d6bfcb4967418bfb8ac142f64a-Abstract.html"
+}
+
+@article{fabbri2021summeval,
+  title={Summeval: Re-evaluating summarization evaluation},
+  author={Fabbri, Alexander R and Kry{\'s}ci{\'n}ski, Wojciech and McCann, Bryan and Xiong, Caiming and Socher, Richard and Radev, Dragomir},
+  journal={Transactions of the Association for Computational Linguistics},
+  volume={9},
+  pages={391--409},
+  year={2021},
+  publisher={MIT Press One Rogers Street, Cambridge, MA 02142-1209, USA journals-info~…},
+  url="https://direct.mit.edu/tacl/article-abstract/doi/10.1162/tacl_a_00373/100686"
+}
+
 
 % Datasets
 
@@ -214,7 +279,6 @@
   abstract = "The quadratic computational and memory complexities of large Transformers have limited their scalability for long document summarization. In this paper, we propose Hepos, a novel efficient encoder-decoder attention with head-wise positional strides to effectively pinpoint salient information from the source. We further conduct a systematic study of existing efficient self-attentions. Combined with Hepos, we are able to process ten times more tokens than existing models that use full attentions. For evaluation, we present a new dataset, GovReport, with significantly longer documents and summaries. Results show that our models produce significantly higher ROUGE scores than competitive comparisons, including new state-of-the-art results on PubMed. Human evaluation also shows that our models generate more informative summaries with fewer unfaithful errors.",
 }
 
-%% BigPatent
 @inproceedings{sharma-etal-2019-bigpatent,
   title = "{BIGPATENT}: A Large-Scale Dataset for Abstractive and Coherent Summarization",
   author = "Sharma, Eva  and
@@ -232,6 +296,23 @@
   doi = "10.18653/v1/P19-1212",
   pages = "2204--2213",
   abstract = "Most existing text summarization datasets are compiled from the news domain, where summaries have a flattened discourse structure. In such datasets, summary-worthy content often appears in the beginning of input articles. Moreover, large segments from input articles are present verbatim in their respective summaries. These issues impede the learning and evaluation of systems that can understand an article{'}s global content structure as well as produce abstractive summaries with high compression ratio. In this work, we present a novel dataset, BIGPATENT, consisting of 1.3 million records of U.S. patent documents along with human written abstractive summaries. Compared to existing summarization datasets, BIGPATENT has the following properties: i) summaries contain a richer discourse structure with more recurring entities, ii) salient content is evenly distributed in the input, and iii) lesser and shorter extractive fragments are present in the summaries. Finally, we train and evaluate baselines and popular learning models on BIGPATENT to shed light on new challenges and motivate future directions for summarization research.",
+}
+
+@article{kryscinski2021booksum,
+  title={Booksum: A collection of datasets for long-form narrative summarization},
+  author={Kry{\'s}ci{\'n}ski, Wojciech and Rajani, Nazneen and Agarwal, Divyansh and Xiong, Caiming and Radev, Dragomir},
+  journal={arXiv preprint arXiv:2105.08209},
+  year={2021},
+  url="https://arxiv.org/abs/2105.08209"
+}
+
+%% CNN/Daily Mail
+@article{nallapati2016abstractive,
+  title={Abstractive text summarization using sequence-to-sequence rnns and beyond},
+  author={Nallapati, Ramesh and Zhou, Bowen and Gulcehre, Caglar and Xiang, Bing and others},
+  journal={arXiv preprint arXiv:1602.06023},
+  year={2016},
+  url="https://arxiv.org/abs/1602.06023"
 }
 
 
