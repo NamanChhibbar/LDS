@@ -55,7 +55,7 @@ def main() -> None:
 	preprocessor = TextProcessor(preprocessing=True)
 	postprocessor = None
 
-	min_words = 30_000
+	min_words = 50_000
 	texts, summaries = [], []
 	for file in crs_files:
 		with open(f"{out_dir}/{file}") as fp:

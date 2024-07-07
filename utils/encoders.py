@@ -333,7 +333,6 @@ class RemoveRedundancy(Encoder):
 
 		# Remove redundant sentences
 		sentences = self.remove_redundancy(sentences)
-		sentences = np.array(sentences)
 		num_sentences = len(sentences)
 
 		# Tokenize sentences
@@ -348,6 +347,9 @@ class RemoveRedundancy(Encoder):
 
 		# Approximate probability of picking a sentence
 		p = max_tokens / num_tokens
+
+		# Convert list of sentences to numpy array for sampling
+		sentences = np.array(sentences)
 
 		# Sample until sentences fit in model
 		while True:
