@@ -95,10 +95,10 @@ class Encoder(ABC):
 		bos_id = self.bos_id
 		eos_id = self.eos_id
 		if bos_id is not None:
-			text_ids = [bos_id] + encodings
+			encodings = [bos_id] + encodings
 		if eos_id is not None:
-			text_ids = text_ids + [eos_id]
-		return text_ids
+			encodings = encodings + [eos_id]
+		return encodings
 	
 
 

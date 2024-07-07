@@ -26,7 +26,8 @@ class SummarizationPipeline:
 		if isinstance(texts, str):
 			texts = [texts]
 		
-		summarizer = self.summarizer.to(self.device)
+		device = self.device
+		summarizer = self.summarizer.to(device)
 		encoder = self.encoder
 		batch_size = len(texts) if batch_size is None else batch_size
 		summary_max_tokens = self.summary_max_tokens
@@ -38,6 +39,9 @@ class SummarizationPipeline:
 		# Generate summaries
 		summaries = []
 		for encodings in batches:
+
+			# Send encodings to device
+			encodings = encodings.to(device)
 
 			# Generate summaries' encodings
 			outputs = self.summarizer.generate(

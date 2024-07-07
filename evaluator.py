@@ -24,7 +24,8 @@ filterwarnings("ignore")
 def main() -> None:
 	load_dotenv()
 
-	data_dir = "/Users/naman/Workspace/Data/Long-Document-Summarization"
+	data_dir = "/home/nchibbar/Data"
+	# data_dir = "/Users/naman/Workspace/Data/Long-Document-Summarization"
 	out_dir = f"{data_dir}/GovReport/processed"
 	crs_files = os.listdir(f"{data_dir}/GovReport/crs")
 	results_path = f"{data_dir}/govreport-results.json"
@@ -71,7 +72,7 @@ def main() -> None:
 	threshold = .7
 	seed = 69
 	device = get_device()
-	device = "cpu"
+	# device = "cpu"
 	system_prompt = "You will be given some segments of a very long document. Your task is to summarize the entire document as a whole by extracting key information and ideas from the segments. Generate a detailed, concise, and coherent summary in 500 words. Do not refer to the document in the summary in any way."
 
 	bart_encoders = [
@@ -144,7 +145,7 @@ def main() -> None:
 
 	batch_size = 3
 	num_workers = min(len(pipelines), os.cpu_count())
-	# num_workers = 0
+	num_workers = 0
 
 	evaluator = Evaluator(pipelines, num_workers, device)
 	results = evaluator(texts, summaries, batch_size)
