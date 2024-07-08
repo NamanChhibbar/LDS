@@ -106,13 +106,14 @@ class Evaluator:
 			for metric in metrics
 		])
 		order = [2, 0, 1]
+		metrics *= 100
 		metrics = metrics.T[:, order].tolist()
 		return metrics
 	
 	# F, P, R
 	def get_rouge_score(
 		self, summaries: str|list[str]
-	) -> list[dict[str, np.ndarray]]:
+	) -> list[dict[str, list[float]]]:
 		generated_summaries = self.generated_summaries
 		assert generated_summaries is not None, "Summaries not generated"
 		num_generated_summaries = len(generated_summaries)
@@ -129,6 +130,6 @@ class Evaluator:
 				for metric, values in score.items():
 					mean_score[metric] += list(values.values())
 			for metric, values in mean_score.items():
-				mean_score[metric] = (values / num_summaries).tolist()
+				mean_score[metric] = (values * 100 / num_summaries).tolist()
 			scores.append(mean_score)
 		return scores
