@@ -8,13 +8,29 @@ from .trainer_utils import SummarizationDataset
 
 
 class SummarizationPipeline:
+	"""
+	Pipeline for generating summaries using a summarizer and an encoder.
 
+	## Parameters
+	`summarizer`: The summarizer model.
+	`encoder`: The encoder model.
+	`summary_min_tokens`: The minimum number of tokens in the summary.
+	`summary_max_tokens`: The maximum number of tokens in the summary.
+	`postprocessor`: The postprocessor for the generated summaries.
+	`device`: The device to use for computation.
+
+	## Returns
+	list[str]: The generated summaries.
+	"""
 	def __init__(
-		self, summarizer, encoder: Encoder, summary_max_tokens: int|None=None,
-		postprocessor: TextProcessor|None=None, device: str|torch.device="cpu"
+		self, summarizer, encoder: Encoder, summary_min_tokens: int|None=None,
+		summary_max_tokens: int|None=None, postprocessor: TextProcessor|None=None,
+		device: str|torch.device="cpu"
 	) -> None:
 		self.summarizer = summarizer.to("cpu")
 		self.encoder = encoder
+		self.summary_min_tokens = summarizer.config.min_length \
+			if summary_min_tokens is None else summary_min_tokens
 		self.summary_max_tokens = encoder.max_tokens \
 			if summary_max_tokens is None else summary_max_tokens
 		self.postprocessor = postprocessor

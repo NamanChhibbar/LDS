@@ -56,7 +56,7 @@ def main() -> None:
 	preprocessor = TextProcessor(preprocessing=True)
 	postprocessor = None
 
-	min_words = 50_000
+	min_words = 30_000
 	texts, summaries = [], []
 	for file in crs_files:
 		with open(f"{out_dir}/{file}") as fp:
@@ -126,14 +126,17 @@ def main() -> None:
 			preprocessor, True, device=device, seed=seed
 		)
 	]
+	min_summary_tokens = 400
 	bart_pipelines = [
 		SummarizationPipeline(
-			bart_model, enc, bart_context_size, postprocessor, device
+			bart_model, enc, min_summary_tokens, bart_context_size,
+			postprocessor, device
 		) for enc in bart_encoders
 	]
 	t5_pipelines = [
 		SummarizationPipeline(
-			t5_model, enc, t5_context_size, postprocessor, device
+			t5_model, enc, min_summary_tokens, t5_context_size,
+			postprocessor, device
 		) for enc in t5_encoders
 	]
 	gpt_pipelines = [
