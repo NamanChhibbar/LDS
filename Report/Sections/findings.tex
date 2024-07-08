@@ -10,7 +10,7 @@ context size of 4096.
 
 We compare our results with the state-of-the-art summarization models, including
 Unlimiformer \cite{bertsch2023unlimiformer}, Hepos \cite{huang-etal-2021-efficient},
-staggered block-local attention \cite{phang2022investigating}.
+and PEGASUS-X with staggered block-local attention \cite{phang2022investigating}.
 Refer to Table \ref{tab:results} for baseline results and our results.
 
 \begin{table*}[!ht]
@@ -21,18 +21,20 @@ Refer to Table \ref{tab:results} for baseline results and our results.
 		\textbf{Model} & \textbf{ROUGE-1} & \textbf{ROUGE-2} & \textbf{ROUGE-L} &
 		\textbf{BERTScore} \\
 		\hline
-		BART + Unlimiformer & 53.4 & 22.5 & 22.5 & 66.0 \\
-		PRIMERA + Unlimiformer & 56.5 & 24.8 & 26.3 & 67.7 \\
+		BART w/ Unlimiformer & 53.4 & 22.5 & 22.5 & 66.0 \\
+		PRIMERA w/ Unlimiformer & 56.5 & 24.8 & 26.3 & 67.7 \\
 		Hepos & 51.34 & 19.09 & \textbf{48.73} & - \\
-		PEGASUS-X \textbackslash w & \textbf{60.3} & 30.0 & 31.5 & - \\
-		Staggered Block-Local Attention & & & & \\
+		PEGASUS-X w/ & & & & \\
+		Staggered Block-Local & \textbf{60.3} & \textbf{30.0} & 31.5 & - \\
+		Attention & & & & \\
 		\hline
-		Pipeline 3 \textbackslash w GPT-3.5 Turbo & 58.71 & 13.15 & 35.04 & \textbf{85.37} \\
-		Pipeline 1 \textbackslash w LongT5 & 46.20 & 4.38 & 38.27 & 82.19 \\
-		Pipeline 3 \textbackslash w LongT5 & 46.76 & 4.56 & 39.61 & 81.96 \\
+		Pipeline 3 w/ GPT-3.5 Turbo & 58.71 & 13.15 & 35.04 & \textbf{85.37} \\
+		Pipeline 1 w/ LongT5 & 46.20 & 4.38 & 38.27 & 82.19 \\
+		Pipeline 3 w/ LongT5 & 46.76 & 4.56 & 39.61 & 81.96 \\
 		\hline
 	\end{tabular}
 
-	\caption{Automatic evaluation results on GovReport dataset}
+	\caption{Automatic evaluation results on GovReport dataset. The best scores are
+	highlighted in \textbf{bold}.}
 	\label{tab:results}
 \end{table*}
