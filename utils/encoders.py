@@ -254,7 +254,9 @@ class SentenceSampler(Encoder):
 		p = max_tokens / num_tokens
 
 		# Sample until sentences fit in model
+		num_iters = 0
 		while True:
+			num_iters += 1
 			sampled = []
 			sampled_embedding = np.zeros((1, self.sent_embedding_dim))
 			num_sampled = 0
@@ -268,7 +270,7 @@ class SentenceSampler(Encoder):
 				)
 				if self.threshold < similarity:
 					continue
-				sampled.extend(sentence)
+				sampled.append(sentence)
 				sampled_embedding = (
 					(num_sampled * sampled_embedding + sent_embedding) /
 					(num_sampled + 1)
