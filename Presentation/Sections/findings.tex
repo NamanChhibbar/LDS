@@ -1,0 +1,48 @@
+\section{Experimental Findings}
+
+\begin{frame}{Experimental Findings}
+
+	We have tested our pipelines on the following summarizers:
+	
+	\begin{itemize}
+		\item<2-> \textbf{BART} (Bidirectional and Auto-Regressive Transformer)
+		\citep{lewis-etal-2020-bart} fine-tuned on the CNN/Daily Mail dataset
+		with a context size of 1024.
+		\item<3-> \textbf{LongT5} \citep{guo2021longt5}, a variant of Text-to-Text
+		Transfer Transformer (T5) \citep{raffel2020exploring} fine-tuned on the
+		BookSum dataset with a context size of 4096.
+		\item<4> \textbf{GPT-3.5 Turbo} \citep{brown2020language} with a context
+		size of 4096.
+	\end{itemize}
+	
+\end{frame}
+
+\begin{frame}{Experimental Findings (contd.)}
+
+	\begin{table}[!ht]
+		\centering
+		\tiny
+	
+		\begin{tabular}{c c c c c}
+			\hline
+			\textbf{Model} & \textbf{ROUGE-1} & \textbf{ROUGE-2} & \textbf{ROUGE-L} &
+			\textbf{BERTScore} \\
+			\hline
+			BART \textbackslash w Unlimiformer & 53.4 & 22.5 & 22.5 & 66.0 \\
+			PRIMERA \textbackslash w Unlimiformer & 56.5 & 24.8 & 26.3 & 67.7 \\
+			Hepos & 51.34 & 19.09 & \textbf{48.73} & - \\
+			PEGASUS-X \textbackslash w & & & & \\
+			Staggered Block-Local & \textbf{60.3} & 30.0 & 31.5 & - \\
+			Attention & & & & \\
+			\hline
+			Pipeline 3 \textbackslash w GPT-3.5 Turbo & 58.71 & 13.15 & 35.04 & \textbf{85.37} \\
+			Pipeline 1 \textbackslash w LongT5 & 46.20 & 4.38 & 38.27 & 82.19 \\
+			Pipeline 3 \textbackslash w LongT5 & 46.76 & 4.56 & 39.61 & 81.96 \\
+			\hline
+		\end{tabular}
+	
+		\caption{Automatic evaluation results on GovReport dataset}
+		\label{tab:results}
+	\end{table}
+	
+\end{frame}

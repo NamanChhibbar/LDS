@@ -107,7 +107,7 @@ class OpenAIPipeline:
 
 			# Return summaries is call is not successful
 			if not self.send_call():
-				return summaries
+				summary = ""
 			
 			# Extract and append summary
 			summary = self.response.choices[0].message.content

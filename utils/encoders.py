@@ -11,7 +11,7 @@ from .helpers import TextProcessor
 
 filterwarnings("ignore")
 
-SENT_DELIMITER = " "
+SEG_DELIMITER = " "
 
 
 
@@ -194,7 +194,7 @@ class UniformSampler(Encoder):
 			sampled = sentences[sent_mask]
 
 			# Flatten sentences
-			sampled = SENT_DELIMITER.join(sampled)
+			sampled = SEG_DELIMITER.join(sampled)
 
 			# Tokenize sampled sentences
 			sampled = tokenizer.encode(
@@ -278,7 +278,7 @@ class SentenceSampler(Encoder):
 				num_sampled += 1
 			
 			# Flatten sentences
-			sampled = SENT_DELIMITER.join(sampled)
+			sampled = SEG_DELIMITER.join(sampled)
 
 			# Tokenize sampled sentences
 			sampled = tokenizer.encode(
@@ -360,7 +360,7 @@ class RemoveRedundancy(Encoder):
 			sampled = sentences[sent_mask]
 
 			# Flatten sentences
-			sampled = SENT_DELIMITER.join(sampled)
+			sampled = SEG_DELIMITER.join(sampled)
 
 			# Tokenize sampled sentences
 			sampled = tokenizer.encode(

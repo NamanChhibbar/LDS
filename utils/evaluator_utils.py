@@ -60,7 +60,7 @@ class Evaluator:
 			"rouge-scores": rouge_score
 		}
 		return scores
-	
+
 	def generate_summaries(
 		self, texts: str|list[str], batch_size: int|None=None
 	) -> list[int]:
