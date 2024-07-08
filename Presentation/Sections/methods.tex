@@ -1,6 +1,25 @@
 \section{Proposed Methods}
 
 
+\subsection{Central truncation}
+
+\begin{frame}{Back to basics: Truncation}
+
+\begin{itemize}
+	\item The most common and straightforward approach used in practice to handle texts
+	exceeding the context size is truncation.
+	\item<2-> Generally, sequences are truncated from the end before processing.
+	\item<3-> \citet{sun2019fine} find that truncating the middle produced better results
+	than truncating the beginning or end.
+	\item<4-> Their results show that it is even better than more complex hierarchial
+	methods!
+	\item<5> \citet{worsham-kalita-2018-genre} also find promising results by truncating
+	the beginning or the end for summarizing long documents.
+\end{itemize}
+
+\end{frame}
+
+
 \subsection{Skimming}
 
 \begin{frame}{The Solution: Document Skimming}
@@ -87,20 +106,20 @@
 \end{frame}
 
 
-\subsection{Central truncation}
 
-\begin{frame}{Back to basics: Truncation}
+\section{Implemented Pipelines}
 
-\begin{itemize}
-	\item The most common and straightforward approach used in practice to handle texts
-	exceeding the context size is truncation.
-	\item<2-> Generally, sequences are truncated from the end before processing.
-	\item<3-> \citet{sun2019fine} find that truncating the middle produced better results
-	than truncating the beginning or end.
-	\item<4-> Their results show that it is even better than more complex hierarchial
-	methods!
-	\item<5> \citet{worsham-kalita-2018-genre} also find promising results by truncating
-	the beginning or the end for summarizing long documents.
-\end{itemize}
 
+\subsection{Pipeline 1}
+
+\begin{frame}{Pipeline 1}
+
+	\begin{itemize}
+		\item This pipeline is based on Central Truncation, i.e. truncating
+		tokens from the middle of the text.
+		\item<2-> Hyperparameter $\mathrm{head\_size} \in [0, 1]$: Controls the fraction
+		of tokens taken from the head.
+		\item<3-> The tokens from the head and tail are concatenated and sent to the summarizer.
+	\end{itemize}
+	
 \end{frame}
