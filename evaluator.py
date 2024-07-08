@@ -28,7 +28,7 @@ def main() -> None:
 	# data_dir = "/Users/naman/Workspace/Data/Long-Document-Summarization"
 	out_dir = f"{data_dir}/GovReport/processed"
 	crs_files = os.listdir(f"{data_dir}/GovReport/crs")
-	results_path = f"{data_dir}/govreport-results.json"
+	results_path = f"{data_dir}/govreport-results2.json"
 
 	# Sentence transformer
 	sent_dir = f"{data_dir}/Models/Sent-Transformer"
@@ -56,20 +56,28 @@ def main() -> None:
 	preprocessor = TextProcessor(preprocessing=True)
 	postprocessor = None
 
-	min_words = 30_000
+	min_words = 4_000
+	max_words = 20_000
+	max_texts = 30
 	texts, summaries = [], []
+	num_texts = 0
 	for file in crs_files:
 		with open(f"{out_dir}/{file}") as fp:
 			data = json.load(fp)
-		if count_words(data["text"]) > min_words:
+		if min_words < count_words(data["text"]) < max_words:
 			texts.append(data["text"])
 			summaries.append(data["summary"])
+			num_texts += 1
+		if num_texts == max_texts:
+			break
+
+	print(f"Number of texts: {len(texts)}")
 
 	segment_min_words = 20
 	sent_segmenter = TextSegmenter(sent_tokenize, segment_min_words)
 
 	head_size = .5
-	threshold = .7
+	threshold = .8
 	seed = 69
 	device = get_device()
 	# device = "cpu"

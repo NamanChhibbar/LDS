@@ -9,7 +9,7 @@ summary remains.
 This method performs well with long documents but may take considerable amount of time
 to converge due to repeated calls to the summarizer.
 
-There hav also been efforts to improve the efficiency of attention mechanisms in Transformers.
+There have also been efforts to improve the efficiency of attention mechanisms in Transformers.
 \citet{beltagy2020longformer} introduce Longformer, which replaces the quadratic
 self-attention mechanism in the Transofrmer model with a sliding window self-attention,
 resulting in a linear complexity with respect to the input size.
@@ -18,12 +18,17 @@ To capture long-ranged dependencies, they include global attention at specific t
 each attention head in the decoder attends to $n/s_h$ tokens in the input sequence, where
 $n$ is input length and $s_h$ is number of heads.
 This method has a complexity of $O(mn/s_h)$, where $m$ is the length of output sequence.
-\citet{NEURIPS2023_6f9806a5} introduce Unlimiformer, which also modifies the encoder-decoder
-attention.
+\citet{bertsch2023unlimiformer} introduce Unlimiformer, which also modifies the encoder-decoder
+attention in a Transformer.
 The attention heads in the decoder only attends to the tokens picked by their
 k-nearest-neighbor (kNN) algorithm.
 The kNN indices between the input tokens are created by the hidden states generated in the
 encoder.
+\citet{phang2022investigating} intorduce the staggered block-local attention mechanism.
+In block-local attention mechanism, the input sequence is divided into non-overlapping blocks
+and tokens in attend to tokens in the same block.
+In staggered block-local attention, the blocks are staggered such that each token is in a
+different block in each head.
 
 Other unique approaches include VideoAgent, introduced by \citet{wang2024videoagent}, an
 AI agent designed to answer a given question based on a long video.

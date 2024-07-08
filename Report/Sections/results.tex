@@ -5,4 +5,31 @@ Autoregressive Transformer (BART) \cite{lewis-etal-2020-bart} fine-tuned on the
 CNN/Daily Mail dataset \cite{nallapati2016abstractive} with a context size of 1024,
 LongT5 \cite{guo2021longt5}, a variant of Text-to-Text Transfer Transformer (T5)
 \cite{raffel2020exploring}, fine-tuned on the BookSum dataset with a context size
-of 4096, GPT-3.5 Turbo \cite{brown2020language} with a context size of 4096.
+of 4096, and GPT-3.5 Turbo \cite{brown2020language} with a context size of 4096.
+
+We compare our results with the state-of-the-art summarization models, including
+Unlimiformer \cite{bertsch2023unlimiformer}, Hepos \cite{huang-etal-2021-efficient},
+staggered block-local attention \cite{phang2022investigating}.
+Refer to Table \ref{tab:results} for baseline results and our results.
+
+\begin{table*}[!ht]
+	\centering
+
+	\begin{tabular}{c c c c c}
+		\hline
+		\textbf{Model} & \textbf{ROUGE-1} & \textbf{ROUGE-2} & \textbf{ROUGE-L} & \textbf{BERTScore} \\
+		\hline
+		BART + Unlimiformer & 53.4 & 22.5 & 22.5 & 66.0 \\
+		PRIMERA + Unlimiformer & 56.5 & 24.8 & 26.3 & 67.7 \\
+		Hepos & 51.34 & 19.09 & 48.73 & - \\
+		Staggered Block-Local Attention & 0.44 & 0.21 & 0.40 & 0.27 \\
+		\hline
+		- & - & - & - & - \\
+		- & - & - & - & - \\
+		- & - & - & - & - \\
+		\hline
+	\end{tabular}
+
+	\caption{Automatic evaluation results on GovReport dataset}
+	\label{tab:results}
+\end{table*}

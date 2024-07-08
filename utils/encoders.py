@@ -271,8 +271,9 @@ class SentenceSampler(Encoder):
 				sampled.extend(sentence)
 				sampled_embedding = (
 					(num_sampled * sampled_embedding + sent_embedding) /
-					(num_sampled := num_sampled + 1)
+					(num_sampled + 1)
 				)
+				num_sampled += 1
 			
 			# Flatten sentences
 			sampled = SENT_DELIMITER.join(sampled)
