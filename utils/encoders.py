@@ -195,23 +195,23 @@ class UniformSampler(Encoder):
 		if num_tokens <= max_tokens:
 			return encodings
 
-		# Extract and tokenize sentences
-		sentences = self.sent_segmenter(text)
-		sentences = np.array(sentences)
-		num_sentences = len(sentences)
+		# Extract and tokenize segments
+		segments = self.sent_segmenter(text)
+		segments = np.array(segments)
+		num_segments = len(segments)
 
-		# Approximate probability of picking a sentence
+		# Approximate probability of picking a segment
 		p = max_tokens / num_tokens
 
-		# Sample until sentences fit in model
+		# Sample until segments fit in model
 		while True:
-			sent_mask = np.random.rand(num_sentences) <= p
-			sampled = sentences[sent_mask]
+			sent_mask = np.random.rand(num_segments) <= p
+			sampled = segments[sent_mask]
 
-			# Flatten sentences
+			# Flatten segments
 			sampled = SEG_DELIMITER.join(sampled)
 
-			# Tokenize sampled sentences
+			# Tokenize sampled segments
 			sampled = tokenizer.encode(
 				sampled, add_special_tokens=False
 			)
@@ -223,7 +223,7 @@ class UniformSampler(Encoder):
 	
 
 
-class SentenceSampler(Encoder):
+class SegmentSampler(Encoder):
 
 	def __init__(
 		self, tokenizer, max_tokens: int, sent_segmenter,
@@ -261,13 +261,13 @@ class SentenceSampler(Encoder):
 		if num_tokens <= max_tokens:
 			return encodings
 
-		# Extract and tokenize sentences
-		sentences = sent_segmenter(text)
+		# Extract and tokenize segments
+		segments = sent_segmenter(text)
 
-		# Approximate probability of picking a sentence
+		# Approximate probability of picking a segment
 		p = max_tokens / num_tokens
 
-		# Sample until sentences fit in model
+		# Sample until segments fit in model
 		num_iters = 0
 		while True:
 			num_iters += 1
@@ -275,26 +275,26 @@ class SentenceSampler(Encoder):
 			sampled_embedding = np.zeros((1, self.sent_embedding_dim))
 			num_sampled = 0
 
-			for sentence in sentences:
+			for segment in segments:
 				if np.random.rand() > p:
 					continue
-				sent_embedding = sent_encoder.encode([sentence])
+				sent_embedding = sent_encoder.encode([segment])
 				similarity = cosine_similarity(
 					sampled_embedding, sent_embedding
 				)
 				if self.threshold < similarity:
 					continue
-				sampled.append(sentence)
+				sampled.append(segment)
 				sampled_embedding = (
 					(num_sampled * sampled_embedding + sent_embedding) /
 					(num_sampled + 1)
 				)
 				num_sampled += 1
 			
-			# Flatten sentences
+			# Flatten segments
 			sampled = SEG_DELIMITER.join(sampled)
 
-			# Tokenize sampled sentences
+			# Tokenize sampled segments
 			sampled = tokenizer.encode(
 				sampled, add_special_tokens=False
 			)
@@ -341,38 +341,38 @@ class RemoveRedundancy(Encoder):
 		if len(encodings) <= max_tokens:
 			return encodings
 
-		# Extract sentences
-		sentences = self.sent_segmenter(text)
+		# Extract segments
+		segments = self.sent_segmenter(text)
 
-		# Remove redundant sentences
-		sentences = self.remove_redundancy(sentences)
-		num_sentences = len(sentences)
+		# Remove redundant segments
+		segments = self.remove_redundancy(segments)
+		num_segments = len(segments)
 
-		# Tokenize sentences
-		tokenized_sentences = tokenizer(
-			sentences, add_special_tokens=False
+		# Tokenize segments
+		tokenized_segments = tokenizer(
+			segments, add_special_tokens=False
 		)["input_ids"]
 
-		# Sum of number of tokens in sentences
+		# Sum of number of tokens in segments
 		num_tokens = sum([
-			len(sent) for sent in tokenized_sentences
+			len(sent) for sent in tokenized_segments
 		])
 
-		# Approximate probability of picking a sentence
+		# Approximate probability of picking a segment
 		p = max_tokens / num_tokens
 
-		# Convert list of sentences to numpy array for sampling
-		sentences = np.array(sentences)
+		# Convert list of segments to numpy array for sampling
+		segments = np.array(segments)
 
-		# Sample until sentences fit in model
+		# Sample until segments fit in model
 		while True:
-			sent_mask = np.random.rand(num_sentences) <= p
-			sampled = sentences[sent_mask]
+			sent_mask = np.random.rand(num_segments) <= p
+			sampled = segments[sent_mask]
 
-			# Flatten sentences
+			# Flatten segments
 			sampled = SEG_DELIMITER.join(sampled)
 
-			# Tokenize sampled sentences
+			# Tokenize sampled segments
 			sampled = tokenizer.encode(
 				sampled, add_special_tokens=False
 			)
@@ -386,26 +386,26 @@ class RemoveRedundancy(Encoder):
 		sent_encoder = self.sent_encoder
 		selected_sents = []
 
-		# Average embedding of selected sentences
+		# Average embedding of selected segments
 		selected_embedding = np.zeros((1, self.sent_embedding_dim))
 
 		num_sents = 0
 		for sent in sents:
 			sent_embedding = sent_encoder.encode([sent])
 
-			# Calculate similarity between current sentence and chosen sentences
+			# Calculate similarity between current segment and chosen segments
 			similarity = cosine_similarity(
 				selected_embedding, sent_embedding
 			)
 
-			# Discard current sentence and contnue if it is similar
+			# Discard current segment and contnue if it is similar
 			if self.threshold < similarity:
 				continue
 
 			# Otherwise select it
 			selected_sents.append(sent)
 
-			# Update selected sentences embedding
+			# Update selected segments embedding
 			selected_embedding = (
 				(num_sents * selected_embedding + sent_embedding) /
 				(num_sents := num_sents + 1)

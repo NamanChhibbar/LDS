@@ -11,7 +11,7 @@ from sentence_transformers import SentenceTransformer
 
 from utils.helpers import TextProcessor, TextSegmenter, get_device, count_words
 from utils.encoders import (
-	TruncateMiddle, UniformSampler, SentenceSampler, RemoveRedundancy
+	TruncateMiddle, UniformSampler, SegmentSampler, RemoveRedundancy
 )
 from utils.pipelines import SummarizationPipeline
 from utils.evaluator_utils import Evaluator
@@ -35,7 +35,7 @@ def main() -> None:
 
 	# BART
 	bart_dir = f"{data_dir}/Models/BART"
-	bart_fine_tuned = f"{data_dir}/Models/BART-GovReport-SentenceSampler"
+	bart_fine_tuned = f"{data_dir}/Models/BART-GovReport-SegmentSampler"
 	bart_tokenizer = BartTokenizer.from_pretrained(bart_dir)
 	bart_model = BartForConditionalGeneration.from_pretrained(bart_fine_tuned)
 	bart_context_size = bart_model.config.max_position_embeddings
@@ -86,7 +86,7 @@ def main() -> None:
 			bart_tokenizer, bart_context_size, sent_segmenter, preprocessor,
 			True, seed, num_workers
 		),
-		SentenceSampler(
+		SegmentSampler(
 			bart_tokenizer, bart_context_size, sent_segmenter, sent_encoder,
 			preprocessor, True, threshold, seed, num_workers
 		),
@@ -104,7 +104,7 @@ def main() -> None:
 			t5_tokenizer, t5_context_size, sent_segmenter, preprocessor,
 			True, seed, num_workers
 		),
-		SentenceSampler(
+		SegmentSampler(
 			t5_tokenizer, t5_context_size, sent_segmenter, sent_encoder,
 			preprocessor, True, threshold, seed, num_workers
 		),

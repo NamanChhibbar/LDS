@@ -12,7 +12,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from sentence_transformers import SentenceTransformer
 
 from utils.helpers import TextProcessor, get_device, count_words
-from utils.encoders import SentenceSampler
+from utils.encoders import SegmentSampler
 from utils.trainer_utils import SummarizationDataset, train_model
 
 
@@ -26,9 +26,9 @@ def main() -> None:
 	crs_dir = f"{data_dir}/GovReport/crs-processed"
 	sent_dir = f"{data_dir}/Models/Sent-Transformer"
 	bart_dir = f"{data_dir}/Models/BART"
-	save_dir = f"{data_dir}/Models/BART-GovReport-SentenceSampler"
+	save_dir = f"{data_dir}/Models/BART-GovReport-SegmentSampler"
 	# t5_dir = f"{data_dir}/Models/T5"
-	# save_dir = f"{data_dir}/Models/T5-GovReport-SentenceSampler"
+	# save_dir = f"{data_dir}/Models/T5-GovReport-SegmentSampler"
 	train_history_path = f"{data_dir}/train-history/bart-history.json"
 
 	# Use the command line arguments
@@ -71,7 +71,7 @@ def main() -> None:
 	print("Creating dataset...")
 	preprocessor = TextProcessor(preprocessing=True)
 	sent_encoder = SentenceTransformer(sent_dir)
-	encoder = SentenceSampler(
+	encoder = SegmentSampler(
 		tokenizer=tokenizer, max_tokens=context_size,
 		sent_tokenizer=sent_tokenize, sent_encoder=sent_encoder,
 		preprocessor=preprocessor, threshold=threshold, seed=seed
@@ -137,7 +137,7 @@ def get_arguments() -> Namespace:
 	parser.add_argument(
 		"--threshold", action="store", type=float,
 		help="Maximum similarity threshold to pick sentences in "
-		"SentenceSampler pipeline"
+		"SegmentSampler pipeline"
 	)
 	parser.add_argument(
 		"--learning-rate", action="store", type=float,
