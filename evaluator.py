@@ -29,6 +29,7 @@ def main() -> None:
 	results_path = f"{data_dir}/govreport-results2.json"
 
 	# Sentence transformer
+	# Automatically loads into gpu if available
 	sent_dir = f"{data_dir}/Models/Sent-Transformer"
 	sent_encoder = SentenceTransformer(sent_dir)
 
@@ -73,39 +74,43 @@ def main() -> None:
 	seed = 69
 	device = get_device()
 	# device = "cpu"
+	num_workers = min(len(texts), os.cpu_count())
+	# num_workers = 0
 
 	bart_encoders = [
 		TruncateMiddle(
-			bart_tokenizer, bart_context_size, head_size, preprocessor, True
+			bart_tokenizer, bart_context_size, head_size, preprocessor, True,
+			num_workers
 		),
 		UniformSampler(
 			bart_tokenizer, bart_context_size, sent_segmenter, preprocessor,
-			True, seed
+			True, seed, num_workers
 		),
 		SentenceSampler(
 			bart_tokenizer, bart_context_size, sent_segmenter, sent_encoder,
-			preprocessor, True, threshold, seed=seed
+			preprocessor, True, threshold, seed, num_workers
 		),
 		RemoveRedundancy(
 			bart_tokenizer, bart_context_size, sent_segmenter, sent_encoder,
-			preprocessor, True, threshold, seed=seed
+			preprocessor, True, threshold, seed, num_workers
 		)
 	]
 	t5_encoders = [
 		TruncateMiddle(
-			t5_tokenizer, t5_context_size, head_size, preprocessor, True
+			t5_tokenizer, t5_context_size, head_size, preprocessor, True,
+			num_workers
 		),
 		UniformSampler(
 			t5_tokenizer, t5_context_size, sent_segmenter, preprocessor,
-			True, seed
+			True, seed, num_workers
 		),
 		SentenceSampler(
 			t5_tokenizer, t5_context_size, sent_segmenter, sent_encoder,
-			preprocessor, True, seed=seed
+			preprocessor, True, threshold, seed, num_workers
 		),
 		RemoveRedundancy(
 			t5_tokenizer, t5_context_size, sent_segmenter, sent_encoder,
-			preprocessor, True, seed=seed
+			preprocessor, True, threshold, seed, num_workers
 		)
 	]
 	min_summary_tokens = 400
