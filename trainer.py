@@ -74,8 +74,7 @@ def main() -> None:
 	encoder = SentenceSampler(
 		tokenizer=tokenizer, max_tokens=context_size,
 		sent_tokenizer=sent_tokenize, sent_encoder=sent_encoder,
-		preprocessor=preprocessor, threshold=threshold,
-		device=device, seed=seed
+		preprocessor=preprocessor, threshold=threshold, seed=seed
 	)
 	dataset = SummarizationDataset(
 		texts, encoder, batch_size, summaries,

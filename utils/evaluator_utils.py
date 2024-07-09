@@ -1,5 +1,4 @@
 from time import perf_counter
-from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
 import torch
@@ -11,7 +10,7 @@ from rouge import Rouge
 class Evaluator:
 
 	def __init__(
-		self, pipelines, num_workers: int=0,  device: str|torch.device="cpu",
+		self, pipelines,  device: str|torch.device="cpu",
 		rouge_metrics: list[str]|None=None, rougen_max_n: int=2,
 		rougew_weight_factor: int=1.2
 	) -> None:
@@ -19,9 +18,6 @@ class Evaluator:
 		pipelines = self.pipelines = pipelines if \
 			isinstance(pipelines, list) else [pipelines]
 		self.num_pipelines = len(pipelines)
-
-		# Initialize number of workers
-		self.num_workers = num_workers
 
 		# Initialize BERT scorer
 		self.bert_scorer = BERTScorer(lang="en", device=device)
@@ -66,31 +62,17 @@ class Evaluator:
 	) -> list[int]:
 		if isinstance(texts, str):
 			texts = [texts]
-		num_workers = self.num_workers
 		generated_summaries = self.generated_summaries = []
 		time_taken = []
-		inputs = [
-			(i, texts, batch_size) for i in range(self.num_pipelines)
-		]
-		if num_workers > 1:
-			with ProcessPoolExecutor(max_workers=num_workers) as executor:
-				results = executor.map(self._generate_summaries, inputs)
-		else:
-			results = map(self._generate_summaries, inputs)
-		for summaries, time in results:
-			generated_summaries.extend(summaries)
+		for i, pipeline in enumerate(self.pipelines):
+			print(f"Generating summaries for pipeline {i+1}...")
+			start = perf_counter()
+			summaries = pipeline(texts, batch_size)
+			time = perf_counter() - start
+			print(f"Pipeline {i+1} took {time_taken}s")
+			generated_summaries.append(summaries)
 			time_taken.append(time)
 		return time_taken
-	
-	def _generate_summaries(self, args):
-		ind, texts, batch_size = args
-		pipeline = self.pipelines[ind]
-		print(f"Generating summaries for pipeline {ind+1}...")
-		start = perf_counter()
-		summaries = pipeline(texts, batch_size)
-		time_taken = perf_counter() - start
-		print(f"Pipeline {ind+1} took {time_taken}s")
-		return summaries, time_taken
 	
 	# P, R, F
 	def get_bert_score(

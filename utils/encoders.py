@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from warnings import filterwarnings
+from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
@@ -32,7 +33,7 @@ class Encoder(ABC):
 		self, tokenizer, max_tokens: int,
 		preprocessor: TextProcessor|None=None,
 		add_special_tokens: bool=True, bos_id: int|None=None,
-		eos_id: int|None=None
+		eos_id: int|None=None, num_workers: int=0
 	) -> None:
 		super().__init__()
 		self.tokenizer = tokenizer
@@ -41,6 +42,7 @@ class Encoder(ABC):
 		self.add_special_tokens = add_special_tokens
 		self.bos_id = bos_id
 		self.eos_id = eos_id
+		self.num_workers = num_workers
 
 	def __call__(
 		self, texts: str|list[str], max_tokens: int|None=None
@@ -56,22 +58,35 @@ class Encoder(ABC):
 		## Returns
 		`encodings`: Text encodings of type BatchEncoding
 		"""
+		preprocessor = self.preprocessor
+		num_workers = self.num_workers
 		if isinstance(texts, str):
 			texts = [texts]
 		if max_tokens is None:
 			max_tokens = self.max_tokens
-		if self.preprocessor is not None:
-			texts = self.preprocessor(texts)
-		encodings = []
-		for text in texts:
-			encoded_text = self.encode(text, max_tokens)
-			if self.add_special_tokens:
-				encoded_text = self.add_tokens(encoded_text)
-			encodings.append(encoded_text)
+		if preprocessor is not None:
+			texts = preprocessor(texts)
+		if num_workers > 1:
+			with ProcessPoolExecutor(num_workers) as executor:
+				args = [(text, max_tokens) for text in texts]
+				all_encodings = executor.map(self._encode_wrapper, args)
+				all_encodings = list(all_encodings)
+		else:
+			all_encodings = [
+				self._encode_wrapper((text, max_tokens))
+				for text in texts
+			]
 		batch_encoding = self.tokenizer.pad({
-			"input_ids": encodings
+			"input_ids": all_encodings
 		}, return_tensors="pt")
 		return batch_encoding
+
+	def _encode_wrapper(self, args):
+		text, max_tokens = args
+		encodings = self.encode(text, max_tokens)
+		if self.add_special_tokens:
+			encodings = self.add_tokens(encodings)
+		return encodings
 	
 	@abstractmethod
 	def encode(
@@ -105,14 +120,13 @@ class Encoder(ABC):
 class TruncateMiddle(Encoder):
 
 	def __init__(
-		self, tokenizer, max_tokens: int,
-		head_size: float=.5,
+		self, tokenizer, max_tokens: int, head_size: float=.5,
 		preprocessor: TextProcessor|None=None,
-		add_special_tokens: bool=True
+		add_special_tokens: bool=True, num_workers: int=0
 	) -> None:
 		super().__init__(
 			tokenizer, max_tokens, preprocessor, add_special_tokens,
-			tokenizer.bos_token_id, tokenizer.eos_token_id
+			tokenizer.bos_token_id, tokenizer.eos_token_id, num_workers
 		)
 		self.head_size = head_size
 
@@ -153,11 +167,12 @@ class UniformSampler(Encoder):
 	def __init__(
 		self, tokenizer, max_tokens: int,
 		sent_segmenter, preprocessor: TextProcessor|None=None,
-		add_special_tokens: bool=True, seed: int|None=None
+		add_special_tokens: bool=True, seed: int|None=None,
+		num_workers: int=0
 	) -> None:
 		super().__init__(
 			tokenizer, max_tokens, preprocessor, add_special_tokens,
-			tokenizer.bos_token_id, tokenizer.eos_token_id
+			tokenizer.bos_token_id, tokenizer.eos_token_id, num_workers
 		)
 		self.sent_segmenter = sent_segmenter
 		self.seed = seed
@@ -214,17 +229,16 @@ class SentenceSampler(Encoder):
 		self, tokenizer, max_tokens: int, sent_segmenter,
 		sent_encoder, preprocessor: TextProcessor|None=None,
 		add_special_tokens: bool=True, threshold: float=.7,
-		device: str|torch.device="cpu", seed: int|None=None
+		seed: int|None=None, num_workers: int=0
 	) -> None:
 		super().__init__(
 			tokenizer, max_tokens, preprocessor, add_special_tokens,
-			tokenizer.bos_token_id, tokenizer.eos_token_id
+			tokenizer.bos_token_id, tokenizer.eos_token_id, num_workers
 		)
 		self.sent_segmenter = sent_segmenter
 		self.sent_encoder = sent_encoder.to("cpu")
 		self.sent_embedding_dim = sent_encoder.get_sentence_embedding_dimension()
 		self.threshold = threshold
-		self.device = device
 		self.seed = seed
 		np.random.seed(seed)
 
@@ -232,7 +246,7 @@ class SentenceSampler(Encoder):
 		self, text: str, max_tokens: int|None=None
 	) -> list[int]:
 		sent_segmenter = self.sent_segmenter
-		sent_encoder = self.sent_encoder.to(self.device)
+		sent_encoder = self.sent_encoder
 		if max_tokens is None:
 			max_tokens = self.max_tokens
 		tokenizer = self.tokenizer
@@ -288,9 +302,6 @@ class SentenceSampler(Encoder):
 			if len(sampled) <= max_tokens:
 				break
 
-		# Remove sentence encoder from device
-		sent_encoder.to("cpu")
-
 		return sampled
 	
 
@@ -301,17 +312,16 @@ class RemoveRedundancy(Encoder):
 		self, tokenizer, max_tokens: int, sent_segmenter,
 		sent_encoder, preprocessor: TextProcessor|None=None,
 		add_special_tokens: bool=True, threshold: float=.7,
-		device: str|torch.device="cpu", seed: int|None=None
+		seed: int|None=None, num_workers: int=0
 	) -> None:
 		super().__init__(
 			tokenizer, max_tokens, preprocessor, add_special_tokens,
-			tokenizer.bos_token_id, tokenizer.eos_token_id
+			tokenizer.bos_token_id, tokenizer.eos_token_id, num_workers
 		)
 		self.sent_segmenter = sent_segmenter
 		self.sent_encoder = sent_encoder.to("cpu")
 		self.sent_embedding_dim = sent_encoder.get_sentence_embedding_dimension()
 		self.threshold = threshold
-		self.device = device
 		self.seed = seed
 		np.random.seed(seed)
 
@@ -373,7 +383,7 @@ class RemoveRedundancy(Encoder):
 		return sampled
 	
 	def remove_redundancy(self, sents: list[str]) -> list[str]:
-		sent_encoder = self.sent_encoder.to(self.device)
+		sent_encoder = self.sent_encoder
 		selected_sents = []
 
 		# Average embedding of selected sentences
@@ -400,8 +410,5 @@ class RemoveRedundancy(Encoder):
 				(num_sents * selected_embedding + sent_embedding) /
 				(num_sents := num_sents + 1)
 			)
-
-		# Remove sentence encoder from device
-		sent_encoder.to("cpu")
 
 		return selected_sents

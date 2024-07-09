@@ -153,6 +153,7 @@ def train_model(
 			except Exception as e:
 				show_exception(e)
 				print("Training terminated")
+				model.train(False)
 				return epoch_losses
 
 			epoch_loss += loss.item()
@@ -199,4 +200,5 @@ def train_model(
 			f"Average loss [{round(epoch_loss, flt_prec)}] "
 			f"Avergage time [{round(epoch_time, flt_prec)} ms/batch]"
 		)
+	model.train(False)
 	return epoch_losses
