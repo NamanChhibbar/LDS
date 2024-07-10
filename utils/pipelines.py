@@ -45,9 +45,10 @@ class SummarizationPipeline:
 		device = self.device
 		summarizer = self.summarizer.to(device)
 		encoder = self.encoder
-		batch_size = len(texts) if batch_size is None else batch_size
 		summary_max_tokens = self.summary_max_tokens
 		postprocessor = self.postprocessor
+		if batch_size is None:
+			batch_size = len(texts)
 
 		# Generate encodings in batches
 		batches = SummarizationDataset(texts, encoder, batch_size)
