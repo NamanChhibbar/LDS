@@ -42,7 +42,8 @@ class Encoder(ABC):
 		self.eos_id = eos_id
 
 	def __call__(
-		self, texts: str|list[str], max_tokens: int|None=None
+		self, texts: str|list[str], max_tokens: int|None=None,
+		return_batch: bool=True
 	) -> BatchEncoding:
 		"""
 		Encodes texts to fit in the model's context size and creates a BatchEncoding.
@@ -65,10 +66,11 @@ class Encoder(ABC):
 		encodings = [
 			self._encode_wrapper(text, max_tokens) for text in texts
 		]
-		batch_encoding = self.tokenizer.pad({
-			"input_ids": encodings
-		}, return_tensors="pt")
-		return batch_encoding
+		if return_batch:
+			encodings = self.tokenizer.pad({
+				"input_ids": encodings
+			}, return_tensors="pt")
+		return encodings
 	
 	@abstractmethod
 	def encode(
@@ -112,11 +114,11 @@ class TruncateMiddle(Encoder):
 	def __init__(
 		self, tokenizer, max_tokens: int, head_size: float=.5,
 		preprocessor: TextProcessor|None=None,
-		add_special_tokens: bool=True, num_workers: int=0
+		add_special_tokens: bool=True
 	) -> None:
 		super().__init__(
 			tokenizer, max_tokens, preprocessor, add_special_tokens,
-			tokenizer.bos_token_id, tokenizer.eos_token_id, num_workers
+			tokenizer.bos_token_id, tokenizer.eos_token_id
 		)
 		self.head_size = head_size
 
@@ -154,23 +156,26 @@ class TruncateMiddle(Encoder):
 class UniformSampler(Encoder):
 
 	def __init__(
-		self, tokenizer, max_tokens: int,
+		self, tokenizer, min_tokens: int, max_tokens: int,
 		sent_segmenter, preprocessor: TextProcessor|None=None,
 		add_special_tokens: bool=True, seed: int|None=None,
-		num_workers: int=0
 	) -> None:
 		super().__init__(
 			tokenizer, max_tokens, preprocessor, add_special_tokens,
-			tokenizer.bos_token_id, tokenizer.eos_token_id, num_workers
+			tokenizer.bos_token_id, tokenizer.eos_token_id
 		)
+		self.min_tokens = min_tokens
 		self.sent_segmenter = sent_segmenter
 		self.seed = seed
 		np.random.seed(seed)
 
 	def encode(
-		self, text: str, max_tokens: int|None=None
+		self, text: str, min_tokens: int|None=None,
+		max_tokens: int|None=None
 	) -> list[int]:
 		tokenizer = self.tokenizer
+		if min_tokens is None:
+			min_tokens = self.min_tokens
 		if max_tokens is None:
 			max_tokens = self.max_tokens
 
@@ -205,7 +210,7 @@ class UniformSampler(Encoder):
 			)
 
 			# Check if sampled segments fit in model
-			if len(sampled) <= max_tokens:
+			if min_tokens <= len(sampled) <= max_tokens:
 				break
 
 		return sampled
@@ -215,15 +220,16 @@ class UniformSampler(Encoder):
 class SegmentSampler(Encoder):
 
 	def __init__(
-		self, tokenizer, max_tokens: int, sent_segmenter,
+		self, tokenizer, min_tokens: int, max_tokens: int, sent_segmenter,
 		sent_encoder, preprocessor: TextProcessor|None=None,
 		add_special_tokens: bool=True, threshold: float=.7,
-		seed: int|None=None, num_workers: int=0
+		seed: int|None=None
 	) -> None:
 		super().__init__(
 			tokenizer, max_tokens, preprocessor, add_special_tokens,
-			tokenizer.bos_token_id, tokenizer.eos_token_id, num_workers
+			tokenizer.bos_token_id, tokenizer.eos_token_id
 		)
+		self.min_tokens = min_tokens
 		self.sent_segmenter = sent_segmenter
 		self.sent_encoder = sent_encoder
 		self.sent_embedding_dim = sent_encoder.get_sentence_embedding_dimension()
@@ -232,10 +238,13 @@ class SegmentSampler(Encoder):
 		np.random.seed(seed)
 
 	def encode(
-		self, text: str, max_tokens: int|None=None
+		self, text: str, min_tokens: int|None=None,
+		max_tokens: int|None=None
 	) -> list[int]:
 		sent_segmenter = self.sent_segmenter
 		sent_encoder = self.sent_encoder
+		if min_tokens is None:
+			min_tokens = self.min_tokens
 		if max_tokens is None:
 			max_tokens = self.max_tokens
 		tokenizer = self.tokenizer
@@ -286,7 +295,7 @@ class SegmentSampler(Encoder):
 				sampled, add_special_tokens=False
 			)
 
-			if len(sampled) <= max_tokens:
+			if min_tokens <= len(sampled) <= max_tokens:
 				break
 
 		return sampled
@@ -296,15 +305,16 @@ class SegmentSampler(Encoder):
 class RemoveRedundancy(Encoder):
 
 	def __init__(
-		self, tokenizer, max_tokens: int, sent_segmenter,
+		self, tokenizer, min_tokens: int, max_tokens: int, sent_segmenter,
 		sent_encoder, preprocessor: TextProcessor|None=None,
 		add_special_tokens: bool=True, threshold: float=.7,
-		seed: int|None=None, num_workers: int=0
+		seed: int|None=None
 	) -> None:
 		super().__init__(
 			tokenizer, max_tokens, preprocessor, add_special_tokens,
-			tokenizer.bos_token_id, tokenizer.eos_token_id, num_workers
+			tokenizer.bos_token_id, tokenizer.eos_token_id
 		)
+		self.min_tokens = min_tokens
 		self.sent_segmenter = sent_segmenter
 		self.sent_encoder = sent_encoder
 		self.sent_embedding_dim = sent_encoder.get_sentence_embedding_dimension()
@@ -313,9 +323,12 @@ class RemoveRedundancy(Encoder):
 		np.random.seed(seed)
 
 	def encode(
-		self, text: str, max_tokens: int|None=None
+		self, text: str, min_tokens: int|None=None,
+		max_tokens: int|None=None
 	) -> list[int]:
 		tokenizer = self.tokenizer
+		if min_tokens is None:
+			min_tokens = self.min_tokens
 		if max_tokens is None:
 			max_tokens = self.max_tokens
 
@@ -362,7 +375,7 @@ class RemoveRedundancy(Encoder):
 				sampled, add_special_tokens=False
 			)
 
-			if len(sampled) <= max_tokens:
+			if min_tokens <= len(sampled) <= max_tokens:
 				break
 
 		return sampled

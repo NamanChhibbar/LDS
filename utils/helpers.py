@@ -56,35 +56,38 @@ class TextProcessor:
 		(r"#[^\s]+", ""),
 		# HTML tags
 		(r"<[^\n>]+>", ""),
-		# Remove hanging periods
-		(r"(\s)+\.", r"\1"),
 		# Remove unecessary periods
-		(r"\.\s*([;:?-])", r"\1"),
+		(r"\.\s*([,;:?!-])", r"\1"),
+		(r"([,;:?!-])\s*\.", r"\1"),
+		(r"\.\s+([a-z])", r" \1"),
 		# Remove ending period of abbreviations
 		# (due to difficulties in sentence segmentation)
-		(r"(\w+.\w+)\.(\W)", r"\1\2"),
+		(r"(\w\.\w+)\.(\W)", r"\1\2"),
 		# Remove unecessary decimal points
-		(r"(\d+)\.(\s)", r"\1\2")
-	]
-
-	# Numbers removal pattern
-	_number_pat_sub = (r"[+?\d+-?]+", "")
-
-	# White space processing
-	_whitespace_pats_subs = [
-		# Multiple spaces and tabs
-		(r"([ \t]){2,}", r"\1"),
-		# Spaces and tabs before newline
-		(r"[ \t]\n", "\n"),
-		# Multiple newlines
+		(r"(\d+)\.(\s)", r"\1\2"),
+		# Repair punctuations
+		(r"(\w)\s+([,.;:?!-])", r"\1\2"),
+		# Join broken sentences
+		(r"(\w[,;]?)\s+(\w)", r"\1 \2"),
+		# Replace multiple spaces and tabs
+		(r"[ \t]+", " "),
+		# Remove spaces around newline
+		(r" ?\n ?", "\n"),
+		# Replace multiple newlines
 		(r"\n{3,}", "\n\n"),
 	]
+	# Numbers removal pattern
+	_number_pat_sub = (r"[+?\d+-?]+", "")
 
 	def __init__(
 			self, preprocessing: bool=False, remove_nums: bool=False,
 			ignore_tokens: list[str]|None=None
 		) -> None:
 		pats_subs = []
+
+		# Ignore specific tokens
+		if ignore_tokens is not None:
+			pats_subs.append((re.compile(r"|".join(ignore_tokens)), ""))
 
 		# Include preprocessing patterns
 		if preprocessing:
@@ -94,17 +97,13 @@ class TextProcessor:
 		if remove_nums:
 			pats_subs.append(TextProcessor._number_pat_sub)
 
-		# Ignore specific tokens
-		if ignore_tokens is not None:
-			pats_subs.append((re.compile(r"|".join(ignore_tokens)), ""))
-		pats_subs.extend(TextProcessor._whitespace_pats_subs)
 		self.pats_subs = [
 			(re.compile(pat), sub) for pat, sub in pats_subs
 		]
 	
 	def __call__(self, texts: str|list[str]) -> list[str]:
 		if isinstance(texts, str):
-			texts = [texts]
+			return self.process(texts)
 		texts = [self.process(text) for text in texts]
 		return texts
 		
