@@ -223,7 +223,7 @@ class SegmentSampler(Encoder):
 		self, tokenizer, min_tokens: int, max_tokens: int, sent_segmenter,
 		sent_encoder, preprocessor: TextProcessor|None=None,
 		add_special_tokens: bool=True, threshold: float=.7,
-		seed: int|None=None
+		prob_boost: float=.1, seed: int|None=None
 	) -> None:
 		super().__init__(
 			tokenizer, max_tokens, preprocessor, add_special_tokens,
@@ -234,6 +234,7 @@ class SegmentSampler(Encoder):
 		self.sent_encoder = sent_encoder
 		self.sent_embedding_dim = sent_encoder.get_sentence_embedding_dimension()
 		self.threshold = threshold
+		self.prob_boost = prob_boost
 		self.seed = seed
 		np.random.seed(seed)
 
@@ -261,7 +262,7 @@ class SegmentSampler(Encoder):
 		segments = sent_segmenter(text)
 
 		# Approximate probability of picking a segment
-		p = max_tokens / num_tokens
+		p = (1 + self.prob_boost) * max_tokens / num_tokens
 
 		# Sample until segments fit in model
 		num_iters = 0
@@ -297,6 +298,8 @@ class SegmentSampler(Encoder):
 
 			if min_tokens <= len(sampled) <= max_tokens:
 				break
+			else:
+				print(len(sampled) < min_tokens)
 
 		return sampled
 	
