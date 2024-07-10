@@ -4,7 +4,7 @@ import numpy as np
 import torch
 
 
-inf = np.inf
+inf = float("inf")
 
 
 

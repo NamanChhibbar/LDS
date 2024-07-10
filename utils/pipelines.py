@@ -53,34 +53,34 @@ class SummarizationPipeline:
 		batches = SummarizationDataset(texts, encoder, batch_size)
 
 		# Generate summaries
-		summaries = []
-		for encodings in batches:
+		all_summaries = []
+		for encoding in batches:
 
 			# Send encodings to device
-			encodings = encodings.to(device)
+			encoding = encoding.to(device)
 
 			# Generate summaries' encodings
-			outputs = self.summarizer.generate(
-				**encodings, max_length=summary_max_tokens
+			output = self.summarizer.generate(
+				**encoding, max_length=summary_max_tokens
 			)
 
 			# Decode summaries' encodings
-			batch_summaries = [
+			summaries = [
 				encoder.tokenizer.decode(out, skip_special_tokens=True)
-				for out in outputs
+				for out in output
 			]
 
 			# Append summaries
-			summaries.extend(batch_summaries)
+			all_summaries.extend(summaries)
 
 		# Remove summarizer from device
 		summarizer.to("cpu")
 
 		# Postprocess summaries
 		if postprocessor is not None:
-			summaries = postprocessor(summaries)
+			all_summaries = postprocessor(all_summaries)
 
-		return summaries
+		return all_summaries
 
 
 
@@ -136,11 +136,11 @@ class OpenAIPipeline:
 		# Count tokens in prompt template
 		tokens_used += count_tokens(prompt_template, tokenizer)
 
-		# Distill document
+		# Distill text
 		encodings = encoder.encode(text, max_tokens - tokens_used)
 		text = tokenizer.decode(encodings, ignore_special_tokens=True)
 
-		# Add prompt to template
+		# Create prompt
 		prompt = f"{prompt_template}{text}"
 		messages.append({"role": "user", "content": prompt})
 
@@ -157,11 +157,12 @@ class OpenAIPipeline:
 		call_inputs = self.call_inputs
 		assert call_inputs is not None, "Call inputs not created"
 
+		# Send call
 		try:
-			# Send call
 			self.response = openai.chat.completions.create(**call_inputs)
+
+		# Show exception and return False if the call failed
 		except Exception as e:
-			# Show exception and return False if the call failed
 			show_exception(e)
 			return False
 

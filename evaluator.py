@@ -35,9 +35,8 @@ def main() -> None:
 
 	# BART
 	bart_dir = f"{data_dir}/Models/BART"
-	bart_fine_tuned = f"{data_dir}/Models/BART-GovReport-SegmentSampler"
 	bart_tokenizer = BartTokenizer.from_pretrained(bart_dir)
-	bart_model = BartForConditionalGeneration.from_pretrained(bart_fine_tuned)
+	bart_model = BartForConditionalGeneration.from_pretrained(bart_dir)
 	bart_context_size = bart_model.config.max_position_embeddings
 
 	# T5
@@ -74,43 +73,39 @@ def main() -> None:
 	seed = 69
 	device = get_device()
 	# device = "cpu"
-	num_workers = min(len(texts), os.cpu_count())
-	# num_workers = 0
 
 	bart_encoders = [
 		TruncateMiddle(
-			bart_tokenizer, bart_context_size, head_size, preprocessor, True,
-			num_workers
+			bart_tokenizer, bart_context_size, head_size, preprocessor, True
 		),
 		UniformSampler(
 			bart_tokenizer, bart_context_size, sent_segmenter, preprocessor,
-			True, seed, num_workers
+			True, seed
 		),
 		SegmentSampler(
 			bart_tokenizer, bart_context_size, sent_segmenter, sent_encoder,
-			preprocessor, True, threshold, seed, num_workers
+			preprocessor, True, threshold, seed
 		),
 		RemoveRedundancy(
 			bart_tokenizer, bart_context_size, sent_segmenter, sent_encoder,
-			preprocessor, True, threshold, seed, num_workers
+			preprocessor, True, threshold, seed
 		)
 	]
 	t5_encoders = [
 		TruncateMiddle(
-			t5_tokenizer, t5_context_size, head_size, preprocessor, True,
-			num_workers
+			t5_tokenizer, t5_context_size, head_size, preprocessor, True
 		),
 		UniformSampler(
 			t5_tokenizer, t5_context_size, sent_segmenter, preprocessor,
-			True, seed, num_workers
+			True, seed
 		),
 		SegmentSampler(
 			t5_tokenizer, t5_context_size, sent_segmenter, sent_encoder,
-			preprocessor, True, threshold, seed, num_workers
+			preprocessor, True, threshold, seed
 		),
 		RemoveRedundancy(
 			t5_tokenizer, t5_context_size, sent_segmenter, sent_encoder,
-			preprocessor, True, threshold, seed, num_workers
+			preprocessor, True, threshold, seed
 		)
 	]
 	min_summary_tokens = 400

@@ -1,10 +1,8 @@
 from abc import ABC, abstractmethod
 from warnings import filterwarnings
-from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
-import torch
 from transformers.tokenization_utils_base import BatchEncoding
 
 from .helpers import TextProcessor
@@ -33,7 +31,7 @@ class Encoder(ABC):
 		self, tokenizer, max_tokens: int,
 		preprocessor: TextProcessor|None=None,
 		add_special_tokens: bool=True, bos_id: int|None=None,
-		eos_id: int|None=None, num_workers: int=0
+		eos_id: int|None=None
 	) -> None:
 		super().__init__()
 		self.tokenizer = tokenizer
@@ -42,7 +40,6 @@ class Encoder(ABC):
 		self.add_special_tokens = add_special_tokens
 		self.bos_id = bos_id
 		self.eos_id = eos_id
-		self.num_workers = num_workers
 
 	def __call__(
 		self, texts: str|list[str], max_tokens: int|None=None
@@ -56,37 +53,22 @@ class Encoder(ABC):
 		value of `max_tokens` if specified
 
 		## Returns
-		`encodings`: Text encodings of type BatchEncoding
+		`BatchEncoding`: Batched text encodings
 		"""
 		preprocessor = self.preprocessor
-		num_workers = self.num_workers
 		if isinstance(texts, str):
 			texts = [texts]
 		if max_tokens is None:
 			max_tokens = self.max_tokens
 		if preprocessor is not None:
 			texts = preprocessor(texts)
-		if num_workers > 1:
-			with ProcessPoolExecutor(num_workers) as executor:
-				args = [(text, max_tokens) for text in texts]
-				all_encodings = executor.map(self._encode_wrapper, args)
-				all_encodings = list(all_encodings)
-		else:
-			all_encodings = [
-				self._encode_wrapper((text, max_tokens))
-				for text in texts
-			]
+		encodings = [
+			self._encode_wrapper(text, max_tokens) for text in texts
+		]
 		batch_encoding = self.tokenizer.pad({
-			"input_ids": all_encodings
+			"input_ids": encodings
 		}, return_tensors="pt")
 		return batch_encoding
-
-	def _encode_wrapper(self, args):
-		text, max_tokens = args
-		encodings = self.encode(text, max_tokens)
-		if self.add_special_tokens:
-			encodings = self.add_tokens(encodings)
-		return encodings
 	
 	@abstractmethod
 	def encode(
@@ -100,20 +82,28 @@ class Encoder(ABC):
 		`max_tokens`: Max tokens in text encodings
 
 		## Returns
-		`encodings`: Text encodings
+		`list[int]`: Text encodings
 		"""
 		...
+
+	def _encode_wrapper(self, text, max_tokens):
+		if self.add_special_tokens:
+			max_tokens -= 2
+		encoding = self.encode(text, max_tokens)
+		if self.add_special_tokens:
+			encoding = self.add_tokens(encoding)
+		return encoding
 	
 	def add_tokens(
-		self, encodings: list[int]
+		self, encoding: list[int]
 	) -> list[int]:
 		bos_id = self.bos_id
 		eos_id = self.eos_id
 		if bos_id is not None:
-			encodings = [bos_id] + encodings
+			encoding = [bos_id] + encoding
 		if eos_id is not None:
-			encodings = encodings + [eos_id]
-		return encodings
+			encoding = encoding + [eos_id]
+		return encoding
 	
 
 
@@ -136,29 +126,28 @@ class TruncateMiddle(Encoder):
 		tokenizer = self.tokenizer
 		if max_tokens is None:
 			max_tokens = self.max_tokens
-		if self.add_special_tokens:
-			max_tokens -= 2
 
 		# Encode the text
-		encodings = tokenizer.encode(
+		encoding = tokenizer.encode(
 			text, add_special_tokens=False
 		)
+		encoding_size = len(encoding)
 
 		# Check if encodings fit in the model
-		if len(encodings) <= max_tokens:
-			return encodings
+		if encoding_size <= max_tokens:
+			return encoding
 
 		# Calculate indices of head and tail
 		head_idx = int(max_tokens * self.head_size)
-		tail_idx = len(encodings) - max_tokens + head_idx
+		tail_idx = encoding_size - max_tokens + head_idx
 
 		# Truncate the middle and concatenate head and tail
-		encodings = np.concatenate([
-			encodings[:head_idx],
-			encodings[tail_idx:]
+		encoding = np.concatenate([
+			encoding[:head_idx],
+			encoding[tail_idx:]
 		]).tolist()
 
-		return encodings
+		return encoding
 
 
 
@@ -184,16 +173,14 @@ class UniformSampler(Encoder):
 		tokenizer = self.tokenizer
 		if max_tokens is None:
 			max_tokens = self.max_tokens
-		if self.add_special_tokens:
-			max_tokens -= 2
 
 		# Check if encodings fit in the model
-		encodings = tokenizer.encode(
+		encoding = tokenizer.encode(
 			text, add_special_tokens=False
 		)
-		num_tokens = len(encodings)
-		if num_tokens <= max_tokens:
-			return encodings
+		encoding_size = len(encoding)
+		if encoding_size <= max_tokens:
+			return encoding
 
 		# Extract and tokenize segments
 		segments = self.sent_segmenter(text)
@@ -201,14 +188,15 @@ class UniformSampler(Encoder):
 		num_segments = len(segments)
 
 		# Approximate probability of picking a segment
-		p = max_tokens / num_tokens
+		p = max_tokens / encoding_size
 
 		# Sample until segments fit in model
 		while True:
+			# Create sampling mask
 			sent_mask = np.random.rand(num_segments) <= p
 			sampled = segments[sent_mask]
 
-			# Flatten segments
+			# Join sampled segments with delimiter
 			sampled = SEG_DELIMITER.join(sampled)
 
 			# Tokenize sampled segments
@@ -216,6 +204,7 @@ class UniformSampler(Encoder):
 				sampled, add_special_tokens=False
 			)
 
+			# Check if sampled segments fit in model
 			if len(sampled) <= max_tokens:
 				break
 
@@ -236,7 +225,7 @@ class SegmentSampler(Encoder):
 			tokenizer.bos_token_id, tokenizer.eos_token_id, num_workers
 		)
 		self.sent_segmenter = sent_segmenter
-		self.sent_encoder = sent_encoder.to("cpu")
+		self.sent_encoder = sent_encoder
 		self.sent_embedding_dim = sent_encoder.get_sentence_embedding_dimension()
 		self.threshold = threshold
 		self.seed = seed
@@ -250,8 +239,6 @@ class SegmentSampler(Encoder):
 		if max_tokens is None:
 			max_tokens = self.max_tokens
 		tokenizer = self.tokenizer
-		if self.add_special_tokens:
-			max_tokens -= 2
 
 		# Check if encodings fit in the model
 		encodings = tokenizer.encode(
@@ -319,7 +306,7 @@ class RemoveRedundancy(Encoder):
 			tokenizer.bos_token_id, tokenizer.eos_token_id, num_workers
 		)
 		self.sent_segmenter = sent_segmenter
-		self.sent_encoder = sent_encoder.to("cpu")
+		self.sent_encoder = sent_encoder
 		self.sent_embedding_dim = sent_encoder.get_sentence_embedding_dimension()
 		self.threshold = threshold
 		self.seed = seed
@@ -331,8 +318,6 @@ class RemoveRedundancy(Encoder):
 		tokenizer = self.tokenizer
 		if max_tokens is None:
 			max_tokens = self.max_tokens
-		if self.add_special_tokens:
-			max_tokens -= 2
 
 		# Check if encodings fit in the model
 		encodings = tokenizer.encode(

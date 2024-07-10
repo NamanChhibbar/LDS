@@ -83,6 +83,7 @@ def main() -> None:
 
 	# Adam optimizer with weight decay
 	optimizer = AdamW(model.parameters(), lr)
+
 	# Reduces LR when a tracked metric stops improving
 	scheduler = ReduceLROnPlateau(
 		optimizer, mode="min", factor=factor, patience=patience
