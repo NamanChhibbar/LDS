@@ -50,7 +50,7 @@ def main() -> None:
 
 	min_words = 4_000
 	max_words = 20_000
-	max_texts = 30
+	max_texts = 100
 	texts, summaries = [], []
 	num_texts = 0
 	for file in crs_files:
@@ -68,27 +68,32 @@ def main() -> None:
 	segment_min_words = 20
 	sent_segmenter = TextSegmenter(sent_tokenize, segment_min_words)
 
+	min_token_frac = .5
 	head_size = .5
 	threshold = .8
+	boost = .02
 	seed = 69
 	device = get_device()
 	# device = "cpu"
+
+	bart_min_tokens = int(min_token_frac * bart_context_size)
+	t5_min_tokens = int(min_token_frac * t5_context_size)
 
 	bart_encoders = [
 		TruncateMiddle(
 			bart_tokenizer, bart_context_size, head_size, preprocessor, True
 		),
 		UniformSampler(
-			bart_tokenizer, bart_context_size, sent_segmenter, preprocessor,
-			True, seed
+			bart_tokenizer, bart_min_tokens, bart_context_size, sent_segmenter,
+			preprocessor, True, seed
 		),
 		SegmentSampler(
-			bart_tokenizer, bart_context_size, sent_segmenter, sent_encoder,
-			preprocessor, True, threshold, seed
+			bart_tokenizer, bart_min_tokens, bart_context_size, sent_segmenter,
+			sent_encoder, preprocessor, True, threshold, boost, seed
 		),
 		RemoveRedundancy(
-			bart_tokenizer, bart_context_size, sent_segmenter, sent_encoder,
-			preprocessor, True, threshold, seed
+			bart_tokenizer, bart_min_tokens, bart_context_size, sent_segmenter,
+			sent_encoder, preprocessor, True, threshold, seed
 		)
 	]
 	t5_encoders = [
@@ -96,16 +101,16 @@ def main() -> None:
 			t5_tokenizer, t5_context_size, head_size, preprocessor, True
 		),
 		UniformSampler(
-			t5_tokenizer, t5_context_size, sent_segmenter, preprocessor,
-			True, seed
+			t5_tokenizer, t5_min_tokens, t5_context_size, sent_segmenter,
+			preprocessor, True, seed
 		),
 		SegmentSampler(
-			t5_tokenizer, t5_context_size, sent_segmenter, sent_encoder,
-			preprocessor, True, threshold, seed
+			t5_tokenizer, t5_min_tokens, t5_context_size, sent_segmenter,
+			sent_encoder, preprocessor, True, threshold, boost, seed
 		),
 		RemoveRedundancy(
-			t5_tokenizer, t5_context_size, sent_segmenter, sent_encoder,
-			preprocessor, True, threshold, seed
+			t5_tokenizer, t5_min_tokens, t5_context_size, sent_segmenter,
+			sent_encoder, preprocessor, True, threshold, seed
 		)
 	]
 	min_summary_tokens = 400

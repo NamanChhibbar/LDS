@@ -23,9 +23,9 @@ class SummarizationPipeline:
 	list[str]: The generated summaries.
 	"""
 	def __init__(
-		self, summarizer, encoder: Encoder, summary_min_tokens: int|None=None,
-		summary_max_tokens: int|None=None, postprocessor: TextProcessor|None=None,
-		device: str|torch.device="cpu"
+		self, summarizer, encoder:Encoder, summary_min_tokens:int|None=None,
+		summary_max_tokens:int|None=None, postprocessor:TextProcessor|None=None,
+		device:str|torch.device="cpu"
 	) -> None:
 		self.summarizer = summarizer.to("cpu")
 		self.encoder = encoder
@@ -37,7 +37,7 @@ class SummarizationPipeline:
 		self.device = device
 
 	def __call__(
-		self, texts: str|list[str], batch_size: int|None=None
+		self, texts:str|list[str], batch_size:int|None=None
 	) -> list[str]:
 		if isinstance(texts, str):
 			texts = [texts]
@@ -88,8 +88,8 @@ class SummarizationPipeline:
 class OpenAIPipeline:
 
 	def __init__(
-		self, model: str, encoder: Encoder,
-		prompt_template: str="", system_prompt: str=""
+		self, model:str, encoder:Encoder,
+		prompt_template:str="", system_prompt:str=""
 	) -> None:
 		self.model = model
 		self.encoder = encoder
@@ -99,7 +99,7 @@ class OpenAIPipeline:
 		self.call_inputs = None
 		self.response = None
 	
-	def __call__(self, texts: list[str], _) -> list[str]:
+	def __call__(self, texts:list[str], _=None) -> list[str]:
 		summaries = []
 
 		for text in texts:
@@ -116,7 +116,7 @@ class OpenAIPipeline:
 
 		return summaries
 	
-	def create_inputs(self, text: str) -> int:
+	def create_inputs(self, text:str) -> int:
 		encoder = self.encoder
 		max_tokens = self.max_tokens
 		prompt_template = self.prompt_template

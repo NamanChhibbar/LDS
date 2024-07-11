@@ -10,9 +10,9 @@ from rouge import Rouge
 class Evaluator:
 
 	def __init__(
-		self, pipelines,  device: str|torch.device="cpu",
-		rouge_metrics: list[str]|None=None, rougen_max_n: int=2,
-		rougew_weight_factor: int=1.2
+		self, pipelines,  device:str|torch.device="cpu",
+		rouge_metrics:list[str]|None=None, rougen_max_n:int=2,
+		rougew_weight_factor:int=1.2
 	) -> None:
 		# Initialize pipelines
 		pipelines = self.pipelines = pipelines if \
@@ -41,11 +41,11 @@ class Evaluator:
 		self.rougen_max_n = rougen_max_n
 		self.rougew_weight_factor = rougew_weight_factor
 
-		self.generated_summaries = None
+		self.summaries = None
 
 	def __call__(
-		self, texts: str|list[str], summaries: str|list[str],
-		batch_size: int|None=None
+		self, texts:str|list[str], summaries:str|list[str],
+		batch_size:int|None=None
 	) -> dict:
 		time_taken = self.generate_summaries(texts, batch_size)
 		bert_score = self.get_bert_score(summaries)
@@ -58,11 +58,11 @@ class Evaluator:
 		return scores
 
 	def generate_summaries(
-		self, texts: str|list[str], batch_size: int|None=None
+		self, texts:str|list[str], batch_size:int|None=None
 	) -> list[int]:
 		if isinstance(texts, str):
 			texts = [texts]
-		generated_summaries = self.generated_summaries = []
+		summaries = self.summaries = []
 		time_taken = []
 		for i, pipeline in enumerate(self.pipelines):
 			print(f"Generating summaries for pipeline {i+1}...")
@@ -70,15 +70,15 @@ class Evaluator:
 			summaries = pipeline(texts, batch_size)
 			time = perf_counter() - start
 			print(f"Pipeline {i+1} took {time_taken}s")
-			generated_summaries.append(summaries)
+			summaries.append(summaries)
 			time_taken.append(time)
 		return time_taken
 	
 	# P, R, F
 	def get_bert_score(
-		self, summaries: str|list[str]
+		self, summaries:str|list[str]
 	) -> list[list[float]]:
-		generated_summaries = self.generated_summaries
+		generated_summaries = self.summaries
 		assert generated_summaries is not None, "Summaries not generated"
 		num_pipelines = self.num_pipelines
 		summaries = num_pipelines * summaries
@@ -94,9 +94,9 @@ class Evaluator:
 	
 	# F, P, R
 	def get_rouge_score(
-		self, summaries: str|list[str]
+		self, summaries:str|list[str]
 	) -> list[dict[str, list[float]]]:
-		generated_summaries = self.generated_summaries
+		generated_summaries = self.summaries
 		assert generated_summaries is not None, "Summaries not generated"
 		num_generated_summaries = len(generated_summaries)
 		num_summaries = len(summaries)

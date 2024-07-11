@@ -8,10 +8,10 @@ inf = float("inf")
 
 
 
-def count_words(text: str):
+def count_words(text:str):
 	return len(text.split())
 
-def count_tokens(texts: str|list[str], tokenizer):
+def count_tokens(texts:str|list[str], tokenizer):
 	if isinstance(texts, str):
 		texts = [texts]
 	encodings = tokenizer(
@@ -29,12 +29,12 @@ def get_device() -> str:
 		return "mps"
 	return "cpu"
 
-def show_exception(exc: Exception):
+def show_exception(exc:Exception):
 	exc_class = exc.__class__.__name__
 	exc_msg = str(exc)
 	print(f"Encountered exception of type {exc_class}: {exc_msg}")
 
-def clear_stdout(spaces: int=100):
+def clear_stdout(spaces:int=100):
 	print(f"\r{" " * spaces}\r", end="")
 
 
@@ -80,8 +80,8 @@ class TextProcessor:
 	_number_pat_sub = (r"[+?\d+-?]+", "")
 
 	def __init__(
-			self, preprocessing: bool=False, remove_nums: bool=False,
-			ignore_tokens: list[str]|None=None
+			self, preprocessing:bool=False, remove_nums:bool=False,
+			ignore_tokens:list[str]|None=None
 		) -> None:
 		pats_subs = []
 
@@ -101,13 +101,13 @@ class TextProcessor:
 			(re.compile(pat), sub) for pat, sub in pats_subs
 		]
 	
-	def __call__(self, texts: str|list[str]) -> list[str]:
+	def __call__(self, texts:str|list[str]) -> list[str]:
 		if isinstance(texts, str):
 			return self.process(texts)
 		texts = [self.process(text) for text in texts]
 		return texts
 		
-	def process(self, text: str) -> str:
+	def process(self, text:str) -> str:
 		for pat, sub in self.pats_subs:
 			text = pat.sub(sub, text)
 		text = text.strip()
@@ -118,14 +118,14 @@ class TextProcessor:
 class TextSegmenter:
 
 	def __init__(
-		self, sent_tokenizer, min_words: int,
-		sent_delimiter: str=" "
+		self, sent_tokenizer, min_words:int,
+		sent_delimiter:str=" "
 	) -> None:
 		self.base_tokenizer = sent_tokenizer
 		self.min_words = min_words
 		self.sent_delimiter = sent_delimiter
 	
-	def __call__(self, text: str) -> list[str]:
+	def __call__(self, text:str) -> list[str]:
 		min_words = self.min_words
 		sent_delimiter = self.sent_delimiter
 		sents = self.base_tokenizer(text)

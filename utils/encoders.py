@@ -28,28 +28,33 @@ class Encoder(ABC):
 	`eos_id`: End Of Sentence (EOS) token id
 	"""
 	def __init__(
-		self, tokenizer, max_tokens: int,
-		preprocessor: TextProcessor|None=None,
-		add_special_tokens: bool=True, bos_id: int|None=None,
-		eos_id: int|None=None
+		self, tokenizer, min_tokens:int, max_tokens:int,
+		preprocessor:TextProcessor|None=None,
+		add_special_tokens:bool=True, bos_id:int|None=None,
+		eos_id:int|None=None
 	) -> None:
 		super().__init__()
 		self.tokenizer = tokenizer
+		self.min_tokens = min_tokens
 		self.max_tokens = max_tokens
 		self.preprocessor = preprocessor
 		self.add_special_tokens = add_special_tokens
 		self.bos_id = bos_id
 		self.eos_id = eos_id
+		self.num_special_tokens = \
+			int(bos_id is not None) + int(eos_id is not None)
 
 	def __call__(
-		self, texts: str|list[str], max_tokens: int|None=None,
-		return_batch: bool=True
+		self, texts:str|list[str], min_tokens:int|None=None,
+		max_tokens:int|None=None, return_batch:bool=True
 	) -> BatchEncoding:
 		"""
 		Encodes texts to fit in the model's context size and creates a BatchEncoding.
 
 		## Parameters
 		`texts`: Texts (or text) to encode
+		`min_tokens`: Min tokens in text encodings; overrides the default
+		value of `min_tokens` if specified
 		`max_tokens`: Max tokens in text encodings; overrides the default
 		value of `max_tokens` if specified
 
@@ -59,12 +64,15 @@ class Encoder(ABC):
 		preprocessor = self.preprocessor
 		if isinstance(texts, str):
 			texts = [texts]
+		if min_tokens is None:
+			min_tokens = self.min_tokens
 		if max_tokens is None:
 			max_tokens = self.max_tokens
 		if preprocessor is not None:
 			texts = preprocessor(texts)
 		encodings = [
-			self._encode_wrapper(text, max_tokens) for text in texts
+			self._encode_wrapper(text, min_tokens, max_tokens)
+			for text in texts
 		]
 		if return_batch:
 			encodings = self.tokenizer.pad({
@@ -74,7 +82,8 @@ class Encoder(ABC):
 	
 	@abstractmethod
 	def encode(
-		self, text: str, max_tokens: int
+		self, text:str, min_tokens:int|None=None,
+		max_tokens:int|None=None
 	) -> list[int]:
 		"""
 		Creates encodings for a given text which fit in the model's context size.
@@ -88,16 +97,18 @@ class Encoder(ABC):
 		"""
 		...
 
-	def _encode_wrapper(self, text, max_tokens):
+	def _encode_wrapper(
+		self, text, min_tokens, max_tokens
+	):
 		if self.add_special_tokens:
-			max_tokens -= 2
-		encoding = self.encode(text, max_tokens)
+			max_tokens -= self.num_special_tokens
+		encoding = self.encode(text, min_tokens, max_tokens)
 		if self.add_special_tokens:
 			encoding = self.add_tokens(encoding)
 		return encoding
 	
 	def add_tokens(
-		self, encoding: list[int]
+		self, encoding:list[int]
 	) -> list[int]:
 		bos_id = self.bos_id
 		eos_id = self.eos_id
@@ -112,18 +123,18 @@ class Encoder(ABC):
 class TruncateMiddle(Encoder):
 
 	def __init__(
-		self, tokenizer, max_tokens: int, head_size: float=.5,
-		preprocessor: TextProcessor|None=None,
-		add_special_tokens: bool=True
+		self, tokenizer, max_tokens:int, head_size:float=.5,
+		preprocessor:TextProcessor|None=None,
+		add_special_tokens:bool=True
 	) -> None:
 		super().__init__(
-			tokenizer, max_tokens, preprocessor, add_special_tokens,
+			tokenizer, 0, max_tokens, preprocessor, add_special_tokens,
 			tokenizer.bos_token_id, tokenizer.eos_token_id
 		)
 		self.head_size = head_size
 
 	def encode(
-		self, text: str, max_tokens: int|None=None
+		self, text:str, _=None, max_tokens:int|None=None
 	) -> list[int]:
 		tokenizer = self.tokenizer
 		if max_tokens is None:
@@ -156,22 +167,21 @@ class TruncateMiddle(Encoder):
 class UniformSampler(Encoder):
 
 	def __init__(
-		self, tokenizer, min_tokens: int, max_tokens: int,
-		sent_segmenter, preprocessor: TextProcessor|None=None,
-		add_special_tokens: bool=True, seed: int|None=None,
+		self, tokenizer, min_tokens:int, max_tokens:int,
+		sent_segmenter, preprocessor:TextProcessor|None=None,
+		add_special_tokens:bool=True, seed:int|None=None,
 	) -> None:
 		super().__init__(
-			tokenizer, max_tokens, preprocessor, add_special_tokens,
-			tokenizer.bos_token_id, tokenizer.eos_token_id
+			tokenizer, min_tokens, max_tokens, preprocessor,
+			add_special_tokens, tokenizer.bos_token_id, tokenizer.eos_token_id
 		)
-		self.min_tokens = min_tokens
 		self.sent_segmenter = sent_segmenter
 		self.seed = seed
 		np.random.seed(seed)
 
 	def encode(
-		self, text: str, min_tokens: int|None=None,
-		max_tokens: int|None=None
+		self, text:str, min_tokens:int|None=None,
+		max_tokens:int|None=None
 	) -> list[int]:
 		tokenizer = self.tokenizer
 		if min_tokens is None:
@@ -220,16 +230,15 @@ class UniformSampler(Encoder):
 class SegmentSampler(Encoder):
 
 	def __init__(
-		self, tokenizer, min_tokens: int, max_tokens: int, sent_segmenter,
-		sent_encoder, preprocessor: TextProcessor|None=None,
-		add_special_tokens: bool=True, threshold: float=.7,
-		prob_boost: float=.1, seed: int|None=None
+		self, tokenizer, min_tokens:int, max_tokens:int, sent_segmenter,
+		sent_encoder, preprocessor:TextProcessor|None=None,
+		add_special_tokens:bool=True, threshold:float=.7,
+		prob_boost:float=.01, seed:int|None=None
 	) -> None:
 		super().__init__(
-			tokenizer, max_tokens, preprocessor, add_special_tokens,
+			tokenizer, min_tokens, max_tokens, preprocessor, add_special_tokens,
 			tokenizer.bos_token_id, tokenizer.eos_token_id
 		)
-		self.min_tokens = min_tokens
 		self.sent_segmenter = sent_segmenter
 		self.sent_encoder = sent_encoder
 		self.sent_embedding_dim = sent_encoder.get_sentence_embedding_dimension()
@@ -239,8 +248,8 @@ class SegmentSampler(Encoder):
 		np.random.seed(seed)
 
 	def encode(
-		self, text: str, min_tokens: int|None=None,
-		max_tokens: int|None=None
+		self, text:str, min_tokens:int|None=None,
+		max_tokens:int|None=None
 	) -> list[int]:
 		sent_segmenter = self.sent_segmenter
 		sent_encoder = self.sent_encoder
@@ -308,16 +317,15 @@ class SegmentSampler(Encoder):
 class RemoveRedundancy(Encoder):
 
 	def __init__(
-		self, tokenizer, min_tokens: int, max_tokens: int, sent_segmenter,
-		sent_encoder, preprocessor: TextProcessor|None=None,
-		add_special_tokens: bool=True, threshold: float=.7,
-		seed: int|None=None
+		self, tokenizer, min_tokens:int, max_tokens:int, sent_segmenter,
+		sent_encoder, preprocessor:TextProcessor|None=None,
+		add_special_tokens:bool=True, threshold:float=.7,
+		seed:int|None=None
 	) -> None:
 		super().__init__(
-			tokenizer, max_tokens, preprocessor, add_special_tokens,
+			tokenizer, min_tokens, max_tokens, preprocessor, add_special_tokens,
 			tokenizer.bos_token_id, tokenizer.eos_token_id
 		)
-		self.min_tokens = min_tokens
 		self.sent_segmenter = sent_segmenter
 		self.sent_encoder = sent_encoder
 		self.sent_embedding_dim = sent_encoder.get_sentence_embedding_dimension()
@@ -326,8 +334,8 @@ class RemoveRedundancy(Encoder):
 		np.random.seed(seed)
 
 	def encode(
-		self, text: str, min_tokens: int|None=None,
-		max_tokens: int|None=None
+		self, text:str, min_tokens:int|None=None,
+		max_tokens:int|None=None
 	) -> list[int]:
 		tokenizer = self.tokenizer
 		if min_tokens is None:
@@ -383,7 +391,7 @@ class RemoveRedundancy(Encoder):
 
 		return sampled
 	
-	def remove_redundancy(self, sents: list[str]) -> list[str]:
+	def remove_redundancy(self, sents:list[str]) -> list[str]:
 		sent_encoder = self.sent_encoder
 		selected_sents = []
 
