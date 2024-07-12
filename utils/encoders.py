@@ -307,8 +307,6 @@ class SegmentSampler(Encoder):
 
 			if min_tokens <= len(sampled) <= max_tokens:
 				break
-			else:
-				print(len(sampled) < min_tokens)
 
 		return sampled
 	
