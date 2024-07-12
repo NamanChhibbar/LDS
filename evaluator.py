@@ -26,7 +26,7 @@ def main() -> None:
 	data_dir = "/home/nchibbar/Data"
 	out_dir = f"{data_dir}/GovReport/processed"
 	crs_files = os.listdir(f"{data_dir}/GovReport/crs")
-	results_path = f"{data_dir}/govreport-results2.json"
+	results_path = f"{data_dir}/govreport-results.json"
 
 	# Sentence transformer
 	# Automatically loads into gpu if available
@@ -116,14 +116,14 @@ def main() -> None:
 	min_summary_tokens = 400
 	bart_pipelines = [
 		SummarizationPipeline(
-			bart_model, enc, min_summary_tokens, bart_context_size,
-			postprocessor, device
+			bart_model, enc, postprocessor, min_summary_tokens,
+			bart_context_size, device
 		) for enc in bart_encoders
 	]
 	t5_pipelines = [
 		SummarizationPipeline(
-			t5_model, enc, min_summary_tokens, t5_context_size,
-			postprocessor, device
+			t5_model, enc, postprocessor, min_summary_tokens,
+			t5_context_size, device
 		) for enc in t5_encoders
 	]
 	pipelines = bart_pipelines + t5_pipelines
