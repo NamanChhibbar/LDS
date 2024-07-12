@@ -22,8 +22,8 @@ def main() -> None:
 
 	filterwarnings("ignore")
 
+	data_dir = "/Users/naman/Workspace/Data/Long-Document-Summarization"
 	data_dir = "/home/nchibbar/Data"
-	# data_dir = "/Users/naman/Workspace/Data/Long-Document-Summarization"
 	out_dir = f"{data_dir}/GovReport/processed"
 	crs_files = os.listdir(f"{data_dir}/GovReport/crs")
 	results_path = f"{data_dir}/govreport-results2.json"

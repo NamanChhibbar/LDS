@@ -1,3 +1,6 @@
+from time import sleep
+from abc import ABC, abstractmethod
+
 import torch
 import openai
 
@@ -6,13 +9,35 @@ from .encoders import Encoder
 from .trainer_utils import SummarizationDataset
 
 
+OPENAI_DELAY = 3
 
-class SummarizationPipeline:
+
+
+class Pipeline(ABC):
+
+	def __init__(
+		self, model, encoder:Encoder,
+		postprocessor:TextProcessor|None=None
+	) -> None:
+		self.model = model
+		self.encoder = encoder
+		self.postprocessor = postprocessor
+
+	@abstractmethod
+	def __call__(
+		self, texts:str|list[str], batch_size:int|None=None
+	) -> list[str]:
+		...
+
+
+
+
+class SummarizationPipeline(Pipeline):
 	"""
-	Pipeline for generating summaries using a summarizer and an encoder.
+	Pipeline for generating summaries using an encoder.
 
 	## Parameters
-	`summarizer`: The summarizer model.
+	`model`: The model model.
 	`encoder`: The encoder model.
 	`summary_min_tokens`: The minimum number of tokens in the summary.
 	`summary_max_tokens`: The maximum number of tokens in the summary.
@@ -23,17 +48,15 @@ class SummarizationPipeline:
 	list[str]: The generated summaries.
 	"""
 	def __init__(
-		self, summarizer, encoder:Encoder, summary_min_tokens:int|None=None,
-		summary_max_tokens:int|None=None, postprocessor:TextProcessor|None=None,
+		self, model, encoder:Encoder, postprocessor:TextProcessor|None=None,
+		summary_min_tokens:int|None=None, summary_max_tokens:int|None=None,
 		device:str|torch.device="cpu"
 	) -> None:
-		self.summarizer = summarizer.to("cpu")
-		self.encoder = encoder
-		self.summary_min_tokens = summarizer.config.min_length \
+		super().__init__(model.to("cpu"), encoder, postprocessor)
+		self.summary_min_tokens = model.config.min_length \
 			if summary_min_tokens is None else summary_min_tokens
 		self.summary_max_tokens = encoder.max_tokens \
 			if summary_max_tokens is None else summary_max_tokens
-		self.postprocessor = postprocessor
 		self.device = device
 
 	def __call__(
@@ -43,7 +66,7 @@ class SummarizationPipeline:
 			texts = [texts]
 		
 		device = self.device
-		summarizer = self.summarizer.to(device)
+		model = self.model.to(device)
 		encoder = self.encoder
 		summary_max_tokens = self.summary_max_tokens
 		postprocessor = self.postprocessor
@@ -61,7 +84,7 @@ class SummarizationPipeline:
 			encoding = encoding.to(device)
 
 			# Generate summaries' encodings
-			output = self.summarizer.generate(
+			output = self.model.generate(
 				**encoding, max_length=summary_max_tokens
 			)
 
@@ -74,8 +97,8 @@ class SummarizationPipeline:
 			# Append summaries
 			all_summaries.extend(summaries)
 
-		# Remove summarizer from device
-		summarizer.to("cpu")
+		# Remove model from device
+		model.to("cpu")
 
 		# Postprocess summaries
 		if postprocessor is not None:
@@ -85,14 +108,14 @@ class SummarizationPipeline:
 
 
 
-class OpenAIPipeline:
+class OpenAIPipeline(Pipeline):
 
 	def __init__(
 		self, model:str, encoder:Encoder,
+		postprocessor:TextProcessor|None=None,
 		prompt_template:str="", system_prompt:str=""
 	) -> None:
-		self.model = model
-		self.encoder = encoder
+		super().__init__(model, encoder, postprocessor)
 		self.max_tokens = encoder.max_tokens
 		self.prompt_template = prompt_template
 		self.system_prompt = system_prompt
@@ -100,8 +123,9 @@ class OpenAIPipeline:
 		self.response = None
 	
 	def __call__(self, texts:list[str], _=None) -> list[str]:
-		summaries = []
+		postprocessor = self.postprocessor
 
+		summaries = []
 		for text in texts:
 			# Create call inputs
 			self.create_inputs(text)
@@ -110,9 +134,18 @@ class OpenAIPipeline:
 			if not self.send_call():
 				summary = ""
 			
-			# Extract and append summary
+			# Extract summary
 			summary = self.response.choices[0].message.content
+
+			# Postprocess summary
+			if postprocessor is not None:
+				summary = postprocessor(summary)
+
+			# Append summary
 			summaries.append(summary)
+
+			# Delay before next call
+			sleep(OPENAI_DELAY)
 
 		return summaries
 	
@@ -138,7 +171,9 @@ class OpenAIPipeline:
 		tokens_used += count_tokens(prompt_template, tokenizer)
 
 		# Distill text
-		encodings = encoder.encode(text, max_tokens - tokens_used)
+		encodings = encoder.encode(
+			text, max_tokens=max_tokens-tokens_used
+		)
 		text = tokenizer.decode(encodings, ignore_special_tokens=True)
 
 		# Create prompt

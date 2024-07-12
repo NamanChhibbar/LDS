@@ -5,12 +5,14 @@ import torch
 from bert_score import BERTScorer
 from rouge import Rouge
 
+from .pipelines import Pipeline
+
 
 
 class Evaluator:
 
 	def __init__(
-		self, pipelines,  device:str|torch.device="cpu",
+		self, pipelines:list[Pipeline], device:str|torch.device="cpu",
 		rouge_metrics:list[str]|None=None, rougen_max_n:int=2,
 		rougew_weight_factor:int=1.2
 	) -> None:
@@ -78,11 +80,11 @@ class Evaluator:
 	def get_bert_score(
 		self, summaries:str|list[str]
 	) -> list[list[float]]:
-		generated_summaries = self.summaries
-		assert generated_summaries is not None, "Summaries not generated"
+		all_summaries = self.summaries
+		assert all_summaries is not None, "Summaries not generated"
 		num_pipelines = self.num_pipelines
 		summaries = num_pipelines * summaries
-		metrics = self.bert_scorer.score(generated_summaries, summaries)
+		metrics = self.bert_scorer.score(all_summaries, summaries)
 		metrics = np.array([
 			metric.reshape((num_pipelines, -1)).mean(dim=1)
 			for metric in metrics
