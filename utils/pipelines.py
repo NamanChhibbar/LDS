@@ -27,7 +27,7 @@ class Pipeline(ABC):
 	def __call__(
 		self, texts:str|list[str], batch_size:int|None=None
 	) -> list[str]:
-		...
+		pass
 
 
 

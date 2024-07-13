@@ -49,11 +49,11 @@ class TextProcessor:
 		# Non-ASCII characters
 		(r"[^\x00-\x7f]+", ""),
 		# Emails
-		(r"[^\s]+@[^\s]+\.com", ""),
+		(r"\S+@\S+\.\S+", ""),
 		# Hyperlinks
-		(r"[^\s]*://[^\s]*", ""),
+		(r"\S+://\S+\.\S+", ""),
 		# Hashtags
-		(r"#[^\s]+", ""),
+		(r"#\S+", ""),
 		# HTML tags
 		(r"<[^\n>]+>", ""),
 		# Remove unecessary periods
@@ -62,7 +62,7 @@ class TextProcessor:
 		(r"\.\s+([a-z])", r" \1"),
 		# Remove ending period of abbreviations
 		# (due to difficulties in sentence segmentation)
-		(r"(\w\.\w+)\.(\W)", r"\1\2"),
+		(r"(\w\.\w+)\.(\s)", r"\1\2"),
 		# Remove unecessary decimal points
 		(r"(\d+)\.(\s)", r"\1\2"),
 		# Repair punctuations
@@ -76,7 +76,7 @@ class TextProcessor:
 		# Replace multiple newlines
 		(r"\n{3,}", "\n\n"),
 	]
-	# Numbers removal pattern
+	# Remove numbers
 	_number_pat_sub = (r"[+?\d+-?]+", "")
 
 	def __init__(

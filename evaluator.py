@@ -6,15 +6,18 @@ from nltk import sent_tokenize
 from transformers import (
 	BartTokenizer, BartForConditionalGeneration,
 	T5Tokenizer, T5ForConditionalGeneration,
+	PegasusTokenizerFast, PegasusForConditionalGeneration,
 )
 from sentence_transformers import SentenceTransformer
 
 from utils.helpers import TextProcessor, TextSegmenter, get_device, count_words
 from utils.encoders import (
-	TruncateMiddle, UniformSampler, SegmentSampler, RemoveRedundancy
+	TruncateMiddle, UniformSampler, SegmentSampler, RemoveRedundancy,
 )
 from utils.pipelines import SummarizationPipeline
 from utils.evaluator_utils import Evaluator
+
+inf = float("inf")
 
 
 
@@ -45,12 +48,23 @@ def main() -> None:
 	t5_model = T5ForConditionalGeneration.from_pretrained(t5_dir)
 	t5_context_size = t5_model.config.n_positions
 
+	# Pegasus
+	pegasus_dir = f"{data_dir}/Models/PEGASUS"
+	pegasus_tokenizer = PegasusTokenizerFast.from_pretrained(pegasus_dir)
+	pegasus_model = PegasusForConditionalGeneration.from_pretrained(pegasus_dir)
+	pegasus_context_size = pegasus_model.config.max_position_embeddings
+
 	preprocessor = TextProcessor(preprocessing=True)
 	postprocessor = None
 
-	min_words = 4_000
+	min_words = 30_000
 	max_words = 20_000
-	max_texts = 100
+	max_texts = 1000
+
+	# min_words = 0
+	max_words = inf
+	# max_texts = inf
+
 	texts, summaries = [], []
 	num_texts = 0
 	for file in crs_files:
@@ -78,6 +92,7 @@ def main() -> None:
 
 	bart_min_tokens = int(min_token_frac * bart_context_size)
 	t5_min_tokens = int(min_token_frac * t5_context_size)
+	pegasus_min_tokens = int(min_token_frac * pegasus_context_size)
 
 	bart_encoders = [
 		TruncateMiddle(
@@ -113,6 +128,23 @@ def main() -> None:
 			sent_encoder, preprocessor, True, threshold, seed
 		)
 	]
+	pegasus_encoders = [
+		TruncateMiddle(
+			pegasus_tokenizer, pegasus_context_size, head_size, preprocessor, True
+		),
+		UniformSampler(
+			pegasus_tokenizer, pegasus_min_tokens, pegasus_context_size, sent_segmenter,
+			preprocessor, True, seed
+		),
+		SegmentSampler(
+			pegasus_tokenizer, pegasus_min_tokens, pegasus_context_size, sent_segmenter,
+			sent_encoder, preprocessor, True, threshold, boost, seed
+		),
+		RemoveRedundancy(
+			pegasus_tokenizer, pegasus_min_tokens, pegasus_context_size, sent_segmenter,
+			sent_encoder, preprocessor, True, threshold, seed
+		)
+	]
 	min_summary_tokens = 400
 	bart_pipelines = [
 		SummarizationPipeline(
@@ -126,9 +158,15 @@ def main() -> None:
 			t5_context_size, device
 		) for enc in t5_encoders
 	]
-	pipelines = bart_pipelines + t5_pipelines
+	pegasus_pipelines = [
+		SummarizationPipeline(
+			pegasus_model, enc, postprocessor, min_summary_tokens,
+			pegasus_context_size, device
+		) for enc in pegasus_encoders
+	]
+	pipelines = bart_pipelines + t5_pipelines + pegasus_pipelines
 
-	batch_size = 3
+	batch_size = 5
 
 	evaluator = Evaluator(pipelines, device)
 	results = evaluator(texts, summaries, batch_size)

@@ -16,10 +16,11 @@ SEG_DELIMITER = " "
 
 class Encoder(ABC):
 	"""
-	Base class for encoders. DO NOT instantiate directly.
+	Base class for encoders.
 
 	## Parameters
 	`tokenizer`: Hugging Face tokenizer
+	`min_tokens`: Min tokens in text encodings
 	`max_tokens`: Max tokens in text encodings
 	`preprocessor`: Text preprocessor
 	`add_special_tokens`: Add BOS and EOS tokens to text before
@@ -95,7 +96,7 @@ class Encoder(ABC):
 		## Returns
 		`list[int]`: Text encodings
 		"""
-		...
+		pass
 
 	def _encode_wrapper(
 		self, text, min_tokens, max_tokens
@@ -116,6 +117,35 @@ class Encoder(ABC):
 			encoding = [bos_id] + encoding
 		if eos_id is not None:
 			encoding = encoding + [eos_id]
+		return encoding
+	
+
+
+class VanillaEncoder(Encoder):
+
+	def __init__(
+		self, tokenizer, max_tokens:int,
+		preprocessor:TextProcessor|None=None,
+		add_special_tokens:bool=True,
+		bos_id:int|None=None, eos_id:int|None=None
+	) -> None:
+		super().__init__(
+			tokenizer, 0, max_tokens, preprocessor,
+			add_special_tokens, bos_id, eos_id
+		)
+
+	def encode(
+		self, text:str, _=None, max_tokens:int|None=None
+	) -> list[int]:
+		if max_tokens is None:
+			max_tokens = self.max_tokens
+		tokenizer = self.tokenizer
+
+		# Encode the text
+		encoding = tokenizer.encode(
+			text, max_length=max_tokens, truncation=True,
+			add_special_tokens=False
+		)
 		return encoding
 	
 
@@ -233,7 +263,7 @@ class SegmentSampler(Encoder):
 		self, tokenizer, min_tokens:int, max_tokens:int, sent_segmenter,
 		sent_encoder, preprocessor:TextProcessor|None=None,
 		add_special_tokens:bool=True, threshold:float=.7,
-		prob_boost:float=.01, seed:int|None=None
+		prob_boost:float=.02, seed:int|None=None
 	) -> None:
 		super().__init__(
 			tokenizer, min_tokens, max_tokens, preprocessor, add_special_tokens,
