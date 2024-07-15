@@ -3,6 +3,8 @@ from typing import Callable
 
 import numpy as np
 import torch
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.decomposition import LatentDirichletAllocation
 
 
 inf = float("inf")
@@ -41,11 +43,33 @@ def show_exception(exc: Exception) -> None:
 def clear_stdout(spaces: int = 100) -> None:
 	print(f"\r{" " * spaces}\r", end="")
 
+def get_keywords(
+	text: str,
+	num_words: int = 20,
+	stop_words: list[str] | None = None,
+	preprocessor: Callable[[str], str] | None = None
+) -> list[str]:
+	vectorizer = CountVectorizer(
+		stop_words=stop_words,
+		preprocessor=preprocessor
+	)
+	dtm = vectorizer.fit_transform([text])
+	lda = LatentDirichletAllocation(n_components=1)
+	lda.fit(dtm)
+	feature_names = vectorizer.get_feature_names_out()
+	topic_words = [
+		feature_names[i]
+		for i in lda.components_[0].argsort()[:-num_words-1:-1]
+	]
+	return topic_words
+
 
 
 class TextProcessor:
 
-	# Basic preprocessing
+	# Matches everything except words, numbers, and single quotes
+	_non_word_pat_sub = (r"[^\w\s']", "")
+
 	_preprocessing_pats_subs = [
 		# Non-ASCII quotes
 		(r"‘|’", "'"),
@@ -73,6 +97,12 @@ class TextProcessor:
 		(r"(\w)\s+([,.;:?!-])", r"\1\2"),
 		# Join broken sentences
 		(r"(\w[,;]?)\s+(\w)", r"\1 \2"),
+	]
+	# Remove numbers
+	_number_pat_sub = (r"(\b|\+)[\d+-]+\b", "")
+
+	# White spaces
+	_whitespace_pats_subs = [
 		# Replace multiple spaces and tabs
 		(r"[ \t]+", " "),
 		# Remove spaces around newline
@@ -80,28 +110,34 @@ class TextProcessor:
 		# Replace multiple newlines
 		(r"\n{3,}", "\n\n"),
 	]
-	# Remove numbers
-	_number_pat_sub = (r"[+?\d+-?]+", "")
 
 	def __init__(
 			self,
+			only_words_nums: bool = False,
 			preprocessing: bool = False,
 			remove_nums: bool = False,
 			ignore_tokens: list[str] | None = None
 		) -> None:
 		pats_subs = []
 
+		# Only words and numbers
+		if only_words_nums:
+			pats_subs.append(TextProcessor._non_word_pat_sub)
+
+		# Preprocessing
+		if preprocessing:
+			pats_subs.extend(TextProcessor._preprocessing_pats_subs)
+
+		# Remove numbers
+		if remove_nums:
+			pats_subs.append(TextProcessor._number_pat_sub)
+
 		# Ignore specific tokens
 		if ignore_tokens is not None:
 			pats_subs.append((re.compile(r"|".join(ignore_tokens)), ""))
 
-		# Include preprocessing patterns
-		if preprocessing:
-			pats_subs.extend(TextProcessor._preprocessing_pats_subs)
-
-		# Include numbers removal
-		if remove_nums:
-			pats_subs.append(TextProcessor._number_pat_sub)
+		# Fix white spaces
+		pats_subs.extend(TextProcessor._whitespace_pats_subs)
 
 		self.pats_subs = [
 			(re.compile(pat), sub) for pat, sub in pats_subs
@@ -110,7 +146,7 @@ class TextProcessor:
 	def __call__(
 		self,
 		texts: str | list[str]
-	) -> list[str]:
+	) -> str | list[str]:
 		if isinstance(texts, str):
 			return self.process(texts)
 		texts = [self.process(text) for text in texts]

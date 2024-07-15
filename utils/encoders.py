@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from warnings import filterwarnings
 
 import numpy as np
-from sklearn.metrics.pairwise import cosine_similarity
 from transformers.tokenization_utils_base import BatchEncoding
 
 from .helpers import TextProcessor, TextSegmenter
@@ -269,8 +268,8 @@ class UniformSampler(Encoder):
 		# Sample until segments fit in model
 		while True:
 			# Create sampling mask
-			sent_mask = np.random.rand(num_segments) <= p
-			sampled = segments[sent_mask]
+			segment_mask = np.random.rand(num_segments) <= p
+			sampled = segments[segment_mask]
 
 			# Join sampled segments with delimiter
 			sampled = SEG_DELIMITER.join(sampled)
@@ -349,21 +348,32 @@ class SegmentSampler(Encoder):
 		while True:
 			num_iters += 1
 			sampled = []
-			sampled_embedding = np.zeros((1, self.sent_embedding_dim))
+
+			# Initialize sampled embedding
 			num_sampled = 0
+			sampled_embedding = np.zeros(self.sent_embedding_dim)
 
 			for segment in segments:
+
+				# Randomly sample segments
 				if np.random.rand() > p:
 					continue
-				sent_embedding = sent_encoder.encode([segment])
-				similarity = cosine_similarity(
-					sampled_embedding, sent_embedding
-				)
+
+				# Get segment embedding
+				segment_embedding = sent_encoder.encode(segment)
+
+				# Calculate similarity between sampled and current segment
+				similarity = sampled_embedding @ segment_embedding
+
+				# Continue if current segment is similar
 				if self.threshold < similarity:
 					continue
+
 				sampled.append(segment)
+
+				# Update sampled embedding
 				sampled_embedding = (
-					(num_sampled * sampled_embedding + sent_embedding) /
+					(num_sampled * sampled_embedding + segment_embedding) /
 					(num_sampled + 1)
 				)
 				num_sampled += 1
@@ -442,7 +452,8 @@ class RemoveRedundancy(Encoder):
 
 		# Sum of number of tokens in segments
 		num_tokens = sum([
-			len(sent) for sent in tokenized_segments
+			len(segment)
+			for segment in tokenized_segments
 		])
 
 		# Approximate probability of picking a segment
@@ -453,8 +464,8 @@ class RemoveRedundancy(Encoder):
 
 		# Sample until segments fit in model
 		while True:
-			sent_mask = np.random.rand(num_segments) <= p
-			sampled = segments[sent_mask]
+			segment_mask = np.random.rand(num_segments) <= p
+			sampled = segments[segment_mask]
 
 			# Flatten segments
 			sampled = SEG_DELIMITER.join(sampled)
@@ -471,34 +482,34 @@ class RemoveRedundancy(Encoder):
 	
 	def remove_redundancy(
 		self,
-		sents: list[str]
+		segments: list[str]
 	) -> list[str]:
 		sent_encoder = self.sent_encoder
-		selected_sents = []
+		selected_segments = []
 
 		# Average embedding of selected segments
-		selected_embedding = np.zeros((1, self.sent_embedding_dim))
+		selected_embedding = np.zeros(self.sent_embedding_dim)
 
-		num_sents = 0
-		for sent in sents:
-			sent_embedding = sent_encoder.encode([sent])
+		num_segments = 0
+		for segment in segments:
+
+			# Get segment embedding
+			segment_embedding = sent_encoder.encode(segment)
 
 			# Calculate similarity between current segment and chosen segments
-			similarity = cosine_similarity(
-				selected_embedding, sent_embedding
-			)
+			similarity = selected_embedding @ segment_embedding
 
 			# Discard current segment and contnue if it is similar
 			if self.threshold < similarity:
 				continue
 
 			# Otherwise select it
-			selected_sents.append(sent)
+			selected_segments.append(segment)
 
 			# Update selected segments embedding
 			selected_embedding = (
-				(num_sents * selected_embedding + sent_embedding) /
-				(num_sents := num_sents + 1)
+				(num_segments * selected_embedding + segment_embedding) /
+				(num_segments := num_segments + 1)
 			)
 
-		return selected_sents
+		return selected_segments
