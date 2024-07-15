@@ -12,9 +12,12 @@ from .pipelines import Pipeline
 class Evaluator:
 
 	def __init__(
-		self, pipelines:list[Pipeline], device:str|torch.device="cpu",
-		rouge_metrics:list[str]|None=None, rougen_max_n:int=2,
-		rougew_weight_factor:int=1.2
+		self,
+		pipelines: list[Pipeline],
+		device: str | torch.device = "cpu",
+		rouge_metrics: list[str] | None = None,
+		rougen_max_n: int = 2,
+		rougew_weight_factor: int = 1.2
 	) -> None:
 		# Initialize pipelines
 		pipelines = self.pipelines = pipelines if \
@@ -29,7 +32,9 @@ class Evaluator:
 		if rouge_metrics is None:
 			rouge_metrics = ["rouge-n", "rouge-l", "rouge-w"]
 		self.rouge_scorer = Rouge(
-			metrics=rouge_metrics, max_n=rougen_max_n, limit_length=False,
+			metrics=rouge_metrics,
+			max_n=rougen_max_n,
+			limit_length=False,
 			weight_factor=rougew_weight_factor
 		)
 		if "rouge-n" in rouge_metrics:
@@ -46,8 +51,10 @@ class Evaluator:
 		self.summaries = None
 
 	def __call__(
-		self, texts:str|list[str], summaries:str|list[str],
-		batch_size:int|None=None
+		self,
+		texts: str | list[str],
+		summaries: str | list[str],
+		batch_size: int | None = None
 	) -> dict:
 		time_taken = self.generate_summaries(texts, batch_size)
 		bert_score = self.get_bert_score(summaries)
@@ -60,7 +67,9 @@ class Evaluator:
 		return scores
 
 	def generate_summaries(
-		self, texts:str|list[str], batch_size:int|None=None
+		self,
+		texts: str | list[str],
+		batch_size: int | None = None
 	) -> list[int]:
 		if isinstance(texts, str):
 			texts = [texts]
@@ -78,7 +87,8 @@ class Evaluator:
 	
 	# P, R, F
 	def get_bert_score(
-		self, summaries:str|list[str]
+		self,
+		summaries: str | list[str]
 	) -> list[list[float]]:
 		all_summaries = self.summaries
 		assert all_summaries is not None, "Summaries not generated"
@@ -96,7 +106,8 @@ class Evaluator:
 	
 	# F, P, R
 	def get_rouge_score(
-		self, summaries:str|list[str]
+		self,
+		summaries: str | list[str]
 	) -> list[dict[str, list[float]]]:
 		generated_summaries = self.summaries
 		assert generated_summaries is not None, "Summaries not generated"

@@ -16,8 +16,10 @@ OPENAI_DELAY = 3
 class Pipeline(ABC):
 
 	def __init__(
-		self, model, encoder:Encoder,
-		postprocessor:TextProcessor|None=None
+		self,
+		model,
+		encoder: Encoder,
+		postprocessor: TextProcessor | None = None
 	) -> None:
 		self.model = model
 		self.encoder = encoder
@@ -25,7 +27,9 @@ class Pipeline(ABC):
 
 	@abstractmethod
 	def __call__(
-		self, texts:str|list[str], batch_size:int|None=None
+		self,
+		texts: str | list[str],
+		batch_size: int | None = None
 	) -> list[str]:
 		pass
 
@@ -48,9 +52,13 @@ class SummarizationPipeline(Pipeline):
 	list[str]: The generated summaries.
 	"""
 	def __init__(
-		self, model, encoder:Encoder, postprocessor:TextProcessor|None=None,
-		summary_min_tokens:int|None=None, summary_max_tokens:int|None=None,
-		device:str|torch.device="cpu"
+		self,
+		model,
+		encoder: Encoder,
+		postprocessor: TextProcessor | None = None,
+		summary_min_tokens: int | None = None,
+		summary_max_tokens: int | None = None,
+		device: str | torch.device = "cpu"
 	) -> None:
 		super().__init__(model.to("cpu"), encoder, postprocessor)
 		self.summary_min_tokens = model.config.min_length \
@@ -60,7 +68,9 @@ class SummarizationPipeline(Pipeline):
 		self.device = device
 
 	def __call__(
-		self, texts:str|list[str], batch_size:int|None=None
+		self,
+		texts: str | list[str],
+		batch_size: int | None = None
 	) -> list[str]:
 		if isinstance(texts, str):
 			texts = [texts]
@@ -111,9 +121,12 @@ class SummarizationPipeline(Pipeline):
 class OpenAIPipeline(Pipeline):
 
 	def __init__(
-		self, model:str, encoder:Encoder,
-		postprocessor:TextProcessor|None=None,
-		prompt_template:str="", system_prompt:str=""
+		self,
+		model: str,
+		encoder: Encoder,
+		postprocessor: TextProcessor | None = None,
+		prompt_template: str = "",
+		system_prompt: str = ""
 	) -> None:
 		super().__init__(model, encoder, postprocessor)
 		self.max_tokens = encoder.max_tokens
@@ -122,7 +135,11 @@ class OpenAIPipeline(Pipeline):
 		self.call_inputs = None
 		self.response = None
 	
-	def __call__(self, texts:list[str], _=None) -> list[str]:
+	def __call__(
+		self,
+		texts: list[str],
+		_=None
+	) -> list[str]:
 		postprocessor = self.postprocessor
 
 		summaries = []
@@ -149,7 +166,10 @@ class OpenAIPipeline(Pipeline):
 
 		return summaries
 	
-	def create_inputs(self, text:str) -> int:
+	def create_inputs(
+		self,
+		text: str
+	) -> int:
 		encoder = self.encoder
 		max_tokens = self.max_tokens
 		prompt_template = self.prompt_template

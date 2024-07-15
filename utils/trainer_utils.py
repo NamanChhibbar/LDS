@@ -27,9 +27,15 @@ class SummarizationDataset:
 	`seed`: Manual seed for output reproducibility
 	"""
 	def __init__(
-		self, texts:list[str], encoder:Encoder, batch_size:int,
-		summaries:list[str]|None=None, summary_max_tokens:int|None=None,
-		use_cache:bool=False, shuffle:bool=False, seed:int|None=None
+		self,
+		texts: list[str],
+		encoder: Encoder,
+		batch_size: int,
+		summaries: list[str] | None = None,
+		summary_max_tokens: int | None = None,
+		use_cache: bool = False,
+		shuffle: bool = False,
+		seed: int | None = None
 	) -> None:
 		# This enables dynamic batching
 		perm = np.argsort([count_words(text) for text in texts])
@@ -65,7 +71,9 @@ class SummarizationDataset:
 	def __len__(self):
 		return self.num_batches
 	
-	def __getitem__(self, ind):
+	def __getitem__(
+		self, ind: int
+	) -> BatchEncoding:
 		encoder = self.encoder
 		cached = self.cached
 		# Check if input is cached
@@ -126,10 +134,15 @@ class SummarizationDataset:
 
 
 def train_model(
-	model, dataset:SummarizationDataset, epochs:int,
-	optimizer:Optimizer, scheduler:LRScheduler|None=None,
-	device:str|torch.device="cpu", flt_prec:int=4
+	model,
+	dataset: SummarizationDataset,
+	epochs: int,
+	optimizer: Optimizer,
+	scheduler: LRScheduler | None = None,
+	device: str | torch.device = "cpu",
+	flt_prec: int = 4
 ) -> list[int]:
+
 	# For clearing output
 	SPACES = 100
 
