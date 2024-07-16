@@ -6,13 +6,17 @@ from nltk import sent_tokenize
 from transformers import (
 	BartTokenizer, BartForConditionalGeneration,
 	T5Tokenizer, T5ForConditionalGeneration,
-	PegasusTokenizerFast, PegasusForConditionalGeneration,
+	PegasusTokenizerFast, PegasusForConditionalGeneration
 )
 from sentence_transformers import SentenceTransformer
 
-from utils.helpers import TextProcessor, TextSegmenter, get_device, count_words
+from utils.helpers import (
+	TextProcessor, TextSegmenter,
+	get_device, count_words
+)
 from utils.encoders import (
-	TruncateMiddle, UniformSampler, SegmentSampler, RemoveRedundancy,
+	TruncateMiddle, UniformSampler,
+	SegmentSampler, RemoveRedundancy,
 )
 from utils.pipelines import SummarizationPipeline
 from utils.evaluator_utils import Evaluator

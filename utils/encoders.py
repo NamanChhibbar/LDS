@@ -1,10 +1,9 @@
 from abc import ABC, abstractmethod
 from warnings import filterwarnings
+from typing import Callable
 
 import numpy as np
 from transformers.tokenization_utils_base import BatchEncoding
-
-from .helpers import TextProcessor, TextSegmenter
 
 
 filterwarnings("ignore")
@@ -32,7 +31,7 @@ class Encoder(ABC):
 		tokenizer,
 		min_tokens: int,
 		max_tokens: int,
-		preprocessor: TextProcessor | None = None,
+		preprocessor: Callable[[list[str]], list[str]] | None = None,
 		add_special_tokens: bool = True,
 		bos_id: int | None = None,
 		eos_id: int | None = None
@@ -95,11 +94,13 @@ class Encoder(ABC):
 		max_tokens: int | None = None
 	) -> list[int]:
 		"""
-		Creates encodings for a given text which fit in the model's context size.
+		Creates encoding for a given text with number of tokens
+		in the range [`min_tokens`, `max_tokens`].
 
 		## Parameters
 		`text`: Text to encode
-		`max_tokens`: Max tokens in text encodings
+		`min_tokens`: Minimum tokens in text encodings
+		`max_tokens`: Maximum tokens in text encodings
 
 		## Returns
 		`list[int]`: Text encodings
@@ -107,8 +108,11 @@ class Encoder(ABC):
 		pass
 
 	def _encode_wrapper(
-		self, text, min_tokens, max_tokens
-	):
+		self,
+		text: str,
+		min_tokens: int,
+		max_tokens: int
+	) -> list[int]:
 		if self.add_special_tokens:
 			max_tokens -= self.num_special_tokens
 		encoding = self.encode(text, min_tokens, max_tokens)
@@ -136,7 +140,7 @@ class VanillaEncoder(Encoder):
 		self,
 		tokenizer,
 		max_tokens: int,
-		preprocessor: TextProcessor | None = None,
+		preprocessor: Callable[[list[str]], list[str]] | None = None,
 		add_special_tokens: bool = True,
 		bos_id: int | None = None,
 		eos_id: int | None = None
@@ -172,7 +176,7 @@ class TruncateMiddle(Encoder):
 		tokenizer,
 		max_tokens: int,
 		head_size: float = .5,
-		preprocessor: TextProcessor | None = None,
+		preprocessor: Callable[[list[str]], list[str]] | None = None,
 		add_special_tokens: bool = True
 	) -> None:
 		super().__init__(
@@ -223,8 +227,8 @@ class UniformSampler(Encoder):
 		tokenizer,
 		min_tokens: int,
 		max_tokens: int,
-		text_segmenter: TextSegmenter,
-		preprocessor: TextProcessor | None = None,
+		text_segmenter: Callable[[str], list[str]],
+		preprocessor: Callable[[list[str]], list[str]] | None = None,
 		add_special_tokens: bool = True,
 		seed: int | None = None,
 	) -> None:
@@ -294,9 +298,9 @@ class SegmentSampler(Encoder):
 		tokenizer,
 		min_tokens: int,
 		max_tokens: int,
-		text_segmenter: TextSegmenter,
+		text_segmenter: Callable[[str], list[str]],
 		sent_encoder,
-		preprocessor: TextProcessor | None = None,
+		preprocessor: Callable[[list[str]], list[str]] | None = None,
 		add_special_tokens: bool = True,
 		threshold: float = .7,
 		prob_boost: float = .02,
@@ -400,9 +404,9 @@ class RemoveRedundancy(Encoder):
 		tokenizer,
 		min_tokens: int,
 		max_tokens: int,
-		text_segmenter: TextSegmenter,
+		text_segmenter: Callable[[str], list[str]],
 		sent_encoder,
-		preprocessor: TextProcessor | None = None,
+		preprocessor: Callable[[list[str]], list[str]] | None = None,
 		add_special_tokens: bool = True,
 		threshold: float = .7,
 		seed: int | None = None

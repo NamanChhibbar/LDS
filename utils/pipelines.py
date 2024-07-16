@@ -1,10 +1,11 @@
 from time import sleep
 from abc import ABC, abstractmethod
+from typing import Callable
 
 import torch
 import openai
 
-from .helpers import TextProcessor, count_tokens, show_exception
+from .helpers import count_tokens, show_exception
 from .encoders import Encoder
 from .trainer_utils import SummarizationDataset
 
@@ -19,7 +20,7 @@ class Pipeline(ABC):
 		self,
 		model,
 		encoder: Encoder,
-		postprocessor: TextProcessor | None = None
+		postprocessor: Callable[[list[str]], list[str]] | None = None
 	) -> None:
 		self.model = model
 		self.encoder = encoder
@@ -32,7 +33,6 @@ class Pipeline(ABC):
 		batch_size: int | None = None
 	) -> list[str]:
 		pass
-
 
 
 
@@ -55,7 +55,7 @@ class SummarizationPipeline(Pipeline):
 		self,
 		model,
 		encoder: Encoder,
-		postprocessor: TextProcessor | None = None,
+		postprocessor: Callable[[list[str]], list[str]] | None = None,
 		summary_min_tokens: int | None = None,
 		summary_max_tokens: int | None = None,
 		device: str | torch.device = "cpu"
@@ -124,7 +124,7 @@ class OpenAIPipeline(Pipeline):
 		self,
 		model: str,
 		encoder: Encoder,
-		postprocessor: TextProcessor | None = None,
+		postprocessor: Callable[[list[str]], list[str]] | None = None,
 		prompt_template: str = "",
 		system_prompt: str = ""
 	) -> None:

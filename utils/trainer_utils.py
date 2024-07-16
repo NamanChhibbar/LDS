@@ -22,8 +22,8 @@ class SummarizationDataset:
 	`batch_size`: Maximum number of text encodings in a batch
 	`summaries`: List of summaries
 	`summary_max_tokens`: Maximum tokens in summary encodings
-	`use_cache`: Use a cache to store already processed encodings while iterating
-	`shuffle`: Shuffle dataset before iterating
+	`use_cache`: Use a cache to store already processed batches while iterating
+	`shuffle`: Shuffle batches before iterating
 	`seed`: Manual seed for output reproducibility
 	"""
 	def __init__(
@@ -32,7 +32,7 @@ class SummarizationDataset:
 		encoder: Encoder,
 		batch_size: int,
 		summaries: list[str] | None = None,
-		summary_max_tokens: int | None = None,
+		summary_max_tokens: int = 0,
 		use_cache: bool = False,
 		shuffle: bool = False,
 		seed: int | None = None
