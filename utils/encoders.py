@@ -6,7 +6,7 @@ import numpy as np
 from transformers.tokenization_utils_base import BatchEncoding
 from sentence_transformers import SentenceTransformer
 
-from .helpers import count_tokens
+from .helpers import count_tokens, get_keywords
 
 
 filterwarnings("ignore")
@@ -53,7 +53,7 @@ class Encoder(ABC):
 		min_tokens: int | None = None,
 		max_tokens: int | None = None,
 		return_batch: bool = True
-	) -> BatchEncoding:
+	) -> list[int] | list[list[int]] | BatchEncoding:
 		"""
 		Encodes texts to fit in the model's context size and creates a BatchEncoding.
 
@@ -487,5 +487,88 @@ class RemoveRedundancy(Encoder):
 				(num_segments * selected_embedding + segment_embedding) /
 				(num_segments := num_segments + 1)
 			)
-
 		return selected_segments
+	
+
+
+class KeywordScorer(Encoder):
+
+	def __init__(
+		self,
+		tokenizer,
+		max_tokens: int,
+		text_segmenter: Callable[[str], list[str]],
+		sent_encoder: SentenceTransformer,
+		preprocessor: Callable[[list[str]], list[str]] | None = None,
+		keywords_preprocessor: Callable[[list[str]], list[str]] | None = None,
+		stop_words: list[str] | None = None,
+		add_special_tokens: bool = True,
+		segment_delimiter: str = " "
+	) -> None:
+		super().__init__(
+			tokenizer, 0, max_tokens, preprocessor,
+			add_special_tokens, tokenizer.bos_token_id,
+			tokenizer.eos_token_id
+		)
+		self.text_segmenter = text_segmenter
+		self.sent_encoder = sent_encoder
+		self.keywords_preprocessor = keywords_preprocessor
+		self.stop_words = stop_words
+		self.segment_delimiter = segment_delimiter
+
+	def encode(
+		self,
+		text: str,
+		_ = None,
+		max_tokens: int | None = None
+	) -> list[str]:
+		tokenizer = self.tokenizer
+		max_tokens = max_tokens or self.max_tokens
+		sent_encoder = self.sent_encoder
+
+		# Extract keywords from the text
+		keywords = get_keywords(
+			text,
+			stop_words = self.stop_words,
+			preprocessor = self.keywords_preprocessor
+		)
+		# Create keywords embedding
+		keywords_emb = sent_encoder.encode(" ".join(keywords))
+
+		# Extract segments from the text
+		segments = self.text_segmenter(text)
+
+		# Get segment embeddings
+		segment_embeddings = sent_encoder.encode(segments)
+		
+		# Calculate similarity of keywords with each segment
+		segment_similarities = []
+		for embedding in segment_embeddings:
+			similarity = keywords_emb @ embedding
+			segment_similarities.append(similarity)
+		
+		# Argument sort the similarities
+		best_segments = np.argsort(segment_similarities)[::-1]
+
+		# Get number of tokens in segments
+		segment_lengths = [
+			count_tokens(seg, tokenizer)[0]
+			for seg in segments
+		]
+
+		# Select maximum segments with highest scores
+		selected_segments = []
+		tokens_used = 0
+		for i in best_segments:
+			if tokens_used + segment_lengths[i] > max_tokens:
+				continue
+			selected_segments.append(segments[i])
+			tokens_used += segment_lengths[i]
+		
+		# Flatten and tokenize selected segments
+		flattened = self.segment_delimiter.join(selected_segments)
+		flattened = tokenizer.encode(
+			flattened,
+			add_special_tokens=False
+		)
+		return flattened
