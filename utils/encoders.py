@@ -4,11 +4,12 @@ from typing import Callable
 
 import numpy as np
 from transformers.tokenization_utils_base import BatchEncoding
+from sentence_transformers import SentenceTransformer
+
+from .helpers import count_tokens
 
 
 filterwarnings("ignore")
-
-SEG_DELIMITER = " "
 
 
 
@@ -114,7 +115,9 @@ class Encoder(ABC):
 	) -> list[int]:
 		if self.add_special_tokens:
 			max_tokens -= self.num_special_tokens
-		encoding = self.encode(text, min_tokens, max_tokens)
+		num_tokens, encoding = count_tokens(text, self.tokenizer)
+		if num_tokens > max_tokens:
+			encoding = self.encode(text, min_tokens, max_tokens)
 		if self.add_special_tokens:
 			encoding = self.add_tokens(encoding)
 		return encoding
@@ -160,7 +163,9 @@ class VanillaEncoder(Encoder):
 
 		# Encode the text
 		encoding = tokenizer.encode(
-			text, max_length=max_tokens, truncation=True,
+			text,
+			max_length=max_tokens,
+			truncation=True,
 			add_special_tokens=False
 		)
 		return encoding
@@ -194,18 +199,11 @@ class TruncateMiddle(Encoder):
 		max_tokens = max_tokens or self.max_tokens
 
 		# Encode the text
-		encoding = tokenizer.encode(
-			text, add_special_tokens=False
-		)
-		encoding_size = len(encoding)
-
-		# Check if encodings fit in the model
-		if encoding_size <= max_tokens:
-			return encoding
+		num_tokens, encoding = count_tokens(text, tokenizer)
 
 		# Calculate indices of head and tail
 		head_idx = int(max_tokens * self.head_size)
-		tail_idx = encoding_size - max_tokens + head_idx
+		tail_idx = num_tokens - max_tokens + head_idx
 
 		# Truncate the middle and concatenate head and tail
 		encoding = np.concatenate([
@@ -227,6 +225,7 @@ class UniformSampler(Encoder):
 		text_segmenter: Callable[[str], list[str]],
 		preprocessor: Callable[[list[str]], list[str]] | None = None,
 		add_special_tokens: bool = True,
+		segment_delimiter: str = " ",
 		seed: int | None = None,
 	) -> None:
 		super().__init__(
@@ -235,6 +234,7 @@ class UniformSampler(Encoder):
 			tokenizer.bos_token_id, tokenizer.eos_token_id
 		)
 		self.text_segmenter = text_segmenter
+		self.segment_delimiter = segment_delimiter
 		self.seed = seed
 		np.random.seed(seed)
 
@@ -249,12 +249,7 @@ class UniformSampler(Encoder):
 		max_tokens = max_tokens or self.max_tokens
 
 		# Check if encodings fit in the model
-		encoding = tokenizer.encode(
-			text, add_special_tokens=False
-		)
-		encoding_size = len(encoding)
-		if encoding_size <= max_tokens:
-			return encoding
+		encoding_size, _ = count_tokens(text, tokenizer)
 
 		# Extract and tokenize segments
 		segments = self.text_segmenter(text)
@@ -270,15 +265,13 @@ class UniformSampler(Encoder):
 			segment_mask = np.random.rand(num_segments) <= p
 			sampled = segments[segment_mask]
 
-			# Join sampled segments with delimiter
-			sampled = SEG_DELIMITER.join(sampled)
-
-			# Tokenize sampled segments
-			sampled = tokenizer.encode(
-				sampled, add_special_tokens=False
+			# Flatten and tokenize sampled segments
+			flattened = self.segment_delimiter.join(sampled)
+			flattened = tokenizer.encode(
+				flattened, add_special_tokens=False
 			)
 
-			# Check if sampled segments fit in model
+			# Break if number of tokens is in range
 			if min_tokens <= len(sampled) <= max_tokens:
 				break
 
@@ -294,11 +287,12 @@ class SegmentSampler(Encoder):
 		min_tokens: int,
 		max_tokens: int,
 		text_segmenter: Callable[[str], list[str]],
-		sent_encoder,
+		sent_encoder: SentenceTransformer,
 		preprocessor: Callable[[list[str]], list[str]] | None = None,
 		add_special_tokens: bool = True,
 		threshold: float = .7,
 		prob_boost: float = .02,
+		segment_delimiter: str = " ",
 		seed: int | None = None
 	) -> None:
 		super().__init__(
@@ -311,6 +305,7 @@ class SegmentSampler(Encoder):
 		self.sent_embedding_dim = sent_encoder.get_sentence_embedding_dimension()
 		self.threshold = threshold
 		self.prob_boost = prob_boost
+		self.segment_delimiter = segment_delimiter
 		self.seed = seed
 		np.random.seed(seed)
 
@@ -326,25 +321,18 @@ class SegmentSampler(Encoder):
 		min_tokens = min_tokens or self.min_tokens
 		max_tokens = max_tokens or self.max_tokens
 
-		# Check if encodings fit in the model
-		encodings = tokenizer.encode(
-			text, add_special_tokens=False
-		)
-		num_tokens = len(encodings)
-		if num_tokens <= max_tokens:
-			return encodings
-
 		# Extract and tokenize segments
 		segments = text_segmenter(text)
 
 		# Approximate probability of picking a segment
+		num_tokens, _ = count_tokens(text, tokenizer)
 		p = (1 + self.prob_boost) * max_tokens / num_tokens
 
 		# Sample until segments fit in model
 		num_iters = 0
 		while True:
 			num_iters += 1
-			sampled = []
+			flattened = []
 
 			# Initialize sampled embedding
 			num_sampled = 0
@@ -366,7 +354,7 @@ class SegmentSampler(Encoder):
 				if self.threshold < similarity:
 					continue
 
-				sampled.append(segment)
+				flattened.append(segment)
 
 				# Update sampled embedding
 				sampled_embedding = (
@@ -375,18 +363,17 @@ class SegmentSampler(Encoder):
 				)
 				num_sampled += 1
 			
-			# Flatten segments
-			sampled = SEG_DELIMITER.join(sampled)
-
-			# Tokenize sampled segments
-			sampled = tokenizer.encode(
-				sampled, add_special_tokens=False
+			# Flatten and tokenize sampled segments
+			flattened = self.segment_delimiter.join(flattened)
+			flattened = tokenizer.encode(
+				flattened, add_special_tokens=False
 			)
 
-			if min_tokens <= len(sampled) <= max_tokens:
+			# Break if number of tokens is in range
+			if min_tokens <= len(flattened) <= max_tokens:
 				break
 
-		return sampled
+		return flattened
 	
 
 
@@ -398,10 +385,11 @@ class RemoveRedundancy(Encoder):
 		min_tokens: int,
 		max_tokens: int,
 		text_segmenter: Callable[[str], list[str]],
-		sent_encoder,
+		sent_encoder: SentenceTransformer,
 		preprocessor: Callable[[list[str]], list[str]] | None = None,
 		add_special_tokens: bool = True,
 		threshold: float = .7,
+		segment_delimiter: str = " ",
 		seed: int | None = None
 	) -> None:
 		super().__init__(
@@ -413,6 +401,7 @@ class RemoveRedundancy(Encoder):
 		self.sent_encoder = sent_encoder
 		self.sent_embedding_dim = sent_encoder.get_sentence_embedding_dimension()
 		self.threshold = threshold
+		self.segment_delimiter = segment_delimiter
 		self.seed = seed
 		np.random.seed(seed)
 
@@ -425,13 +414,6 @@ class RemoveRedundancy(Encoder):
 		tokenizer = self.tokenizer
 		min_tokens = min_tokens or self.min_tokens
 		max_tokens = max_tokens or self.max_tokens
-
-		# Check if encodings fit in the model
-		encodings = tokenizer.encode(
-			text, add_special_tokens=False
-		)
-		if len(encodings) <= max_tokens:
-			return encodings
 
 		# Extract segments
 		segments = self.text_segmenter(text)
@@ -463,17 +445,16 @@ class RemoveRedundancy(Encoder):
 			sampled = segments[segment_mask]
 
 			# Flatten segments
-			sampled = SEG_DELIMITER.join(sampled)
-
-			# Tokenize sampled segments
-			sampled = tokenizer.encode(
-				sampled, add_special_tokens=False
+			flattened = self.segment_delimiter.join(sampled)
+			flattened = tokenizer.encode(
+				flattened, add_special_tokens=False
 			)
 
-			if min_tokens <= len(sampled) <= max_tokens:
+			# Break if number of tokens is in range
+			if min_tokens <= len(flattened) <= max_tokens:
 				break
 
-		return sampled
+		return flattened
 	
 	def remove_redundancy(
 		self,

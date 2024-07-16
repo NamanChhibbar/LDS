@@ -12,21 +12,19 @@ inf = float("inf")
 
 
 def count_words(text: str) -> int:
-	return len(text.split())
+	words = text.split()
+	num_words = len(words)
+	return num_words
 
 def count_tokens(
-	texts: str | list[str],
+	text: str,
 	tokenizer
-) -> int:
-	if isinstance(texts, str):
-		texts = [texts]
-	encodings = tokenizer(
-		texts, add_special_tokens=False
-	)["input_ids"]
-	num_tokens = np.sum([
-		len(encoding) for encoding in encodings
-	])
-	return num_tokens
+) -> tuple[int, list[int]]:
+	encoding = tokenizer.encode(
+		text, add_special_tokens=False
+	)
+	num_tokens = len(encoding)
+	return num_tokens, encoding
 
 def get_device() -> str:
 	if torch.cuda.is_available():
