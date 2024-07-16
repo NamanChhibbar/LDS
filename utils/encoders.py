@@ -36,7 +36,6 @@ class Encoder(ABC):
 		bos_id: int | None = None,
 		eos_id: int | None = None
 	) -> None:
-		super().__init__()
 		self.tokenizer = tokenizer
 		self.min_tokens = min_tokens
 		self.max_tokens = max_tokens
@@ -156,8 +155,7 @@ class VanillaEncoder(Encoder):
 		_ = None,
 		max_tokens: int | None = None
 	) -> list[int]:
-		if max_tokens is None:
-			max_tokens = self.max_tokens
+		max_tokens = max_tokens or self.max_tokens
 		tokenizer = self.tokenizer
 
 		# Encode the text
@@ -193,8 +191,7 @@ class TruncateMiddle(Encoder):
 		max_tokens: int | None = None
 	) -> list[int]:
 		tokenizer = self.tokenizer
-		if max_tokens is None:
-			max_tokens = self.max_tokens
+		max_tokens = max_tokens or self.max_tokens
 
 		# Encode the text
 		encoding = tokenizer.encode(
@@ -248,10 +245,8 @@ class UniformSampler(Encoder):
 		max_tokens: int | None = None
 	) -> list[int]:
 		tokenizer = self.tokenizer
-		if min_tokens is None:
-			min_tokens = self.min_tokens
-		if max_tokens is None:
-			max_tokens = self.max_tokens
+		min_tokens = min_tokens or self.min_tokens
+		max_tokens = max_tokens or self.max_tokens
 
 		# Check if encodings fit in the model
 		encoding = tokenizer.encode(
@@ -325,13 +320,11 @@ class SegmentSampler(Encoder):
 		min_tokens: int | None = None,
 		max_tokens: int | None = None
 	) -> list[int]:
+		tokenizer = self.tokenizer
 		text_segmenter = self.text_segmenter
 		sent_encoder = self.sent_encoder
-		if min_tokens is None:
-			min_tokens = self.min_tokens
-		if max_tokens is None:
-			max_tokens = self.max_tokens
-		tokenizer = self.tokenizer
+		min_tokens = min_tokens or self.min_tokens
+		max_tokens = max_tokens or self.max_tokens
 
 		# Check if encodings fit in the model
 		encodings = tokenizer.encode(
@@ -430,10 +423,8 @@ class RemoveRedundancy(Encoder):
 		max_tokens: int | None = None
 	) -> list[int]:
 		tokenizer = self.tokenizer
-		if min_tokens is None:
-			min_tokens = self.min_tokens
-		if max_tokens is None:
-			max_tokens = self.max_tokens
+		min_tokens = min_tokens or self.min_tokens
+		max_tokens = max_tokens or self.max_tokens
 
 		# Check if encodings fit in the model
 		encodings = tokenizer.encode(

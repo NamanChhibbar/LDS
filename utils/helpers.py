@@ -192,8 +192,8 @@ class TextSegmenter:
 				segments else inf
 			next_text_words = count_words(parts[i+1]) if \
 				i + 1 < num_parts else inf
-			if next_text_words < prev_text_words:
-				parts[i + 1] = f"{sent}{sent_delimiter}{parts[i+1]}"
-			else:
+			if prev_text_words < next_text_words:
 				segments[-1] = f"{segments[-1]}{sent_delimiter}{sent}"
+			else:
+				parts[i + 1] = f"{sent}{sent_delimiter}{parts[i+1]}"
 		return segments

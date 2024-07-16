@@ -33,18 +33,18 @@ def main() -> None:
 
 	# Use the command line arguments
 	# See function get_arguments for descriptions
-	max_words = float("inf") if args.max_words is None else args.max_words
+	max_words = args.max_words or float("inf")
 	shuffle = args.no_shuffle
 	batch_size = args.batch_size
 	use_cache = args.no_use_cache
-	threshold = .7 if args.threshold is None else args.threshold
-	lr = 1e-3 if args.learning_rate is None else args.learning_rate
-	factor = .1 if args.factor is None else args.factor
-	patience = 5 if args.patience is None else args.patience
+	threshold = args.threshold or .7
+	lr = args.learning_rate or 1e-3
+	factor = args.factor or .1
+	patience = args.patience or 5
 	epochs = args.epochs
 	device = get_device() if args.use_gpu else "cpu"
 	seed = args.seed
-	flt_prec = 4 if args.float_precision is None else args.float_precision
+	flt_prec = args.float_precision or 4
 
 	print("Loading tokenizer and model...")
 	# BART

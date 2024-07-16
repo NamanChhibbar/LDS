@@ -29,8 +29,7 @@ class Evaluator:
 		self.device = device
 
 		# Initialise ROUGE scorer
-		if rouge_metrics is None:
-			rouge_metrics = ["rouge-n", "rouge-l", "rouge-w"]
+		rouge_metrics = rouge_metrics or ["rouge-n", "rouge-l", "rouge-w"]
 		self.rouge_scorer = Rouge(
 			metrics=rouge_metrics,
 			max_n=rougen_max_n,
@@ -39,12 +38,11 @@ class Evaluator:
 		)
 		if "rouge-n" in rouge_metrics:
 			rouge_metrics.remove("rouge-n")
-			self.rouge_metrics = [
-				f"rouge-{i+1}" for i in range(rougen_max_n)
-			]
-			self.rouge_metrics.extend(rouge_metrics)
-		else:
-			self.rouge_metrics = rouge_metrics
+			rouge_metrics = [
+				f"rouge-{i + 1}"
+				for i in range(rougen_max_n)
+			] + rouge_metrics
+		self.rouge_metrics = rouge_metrics
 		self.rougen_max_n = rougen_max_n
 		self.rougew_weight_factor = rougew_weight_factor
 

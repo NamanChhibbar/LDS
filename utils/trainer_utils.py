@@ -37,6 +37,12 @@ class SummarizationDataset:
 		shuffle: bool = False,
 		seed: int | None = None
 	) -> None:
+		# Check if texts and summaries are of same length
+		# if summaries are provided
+		if summaries is not None:
+			assert len(texts) == len(summaries), \
+				"Length of texts and summaries must be equal"
+
 		# This enables dynamic batching
 		perm = np.argsort([count_words(text) for text in texts])
 		texts = np.array(texts)[perm]
@@ -46,8 +52,7 @@ class SummarizationDataset:
 		# Store batches of texts and summaries in a numpy array
 		num_batches = self.num_batches = ceil(len(texts) / batch_size)
 		self.text_batches = np.zeros(num_batches, dtype=object)
-		self.summary_batches = None if summaries is None else \
-			np.zeros(num_batches, dtype=object)
+		self.summary_batches = summaries and np.zeros(num_batches, dtype=object)
 		for i in range(self.num_batches):
 			text_batch = texts[i*batch_size:(i+1)*batch_size].tolist()
 			self.text_batches[i] = text_batch
@@ -56,7 +61,7 @@ class SummarizationDataset:
 				self.summary_batches[i] = summary_batch
 
 		# Use numpy array as a cache, if specified
-		self.cached = np.zeros(
+		self.cache = np.zeros(
 			self.num_batches, dtype=object
 		) if use_cache else None
 
@@ -68,17 +73,18 @@ class SummarizationDataset:
 		np.random.seed(seed)
 		self.it = None
 
-	def __len__(self):
+	def __len__(self) -> int:
 		return self.num_batches
 	
 	def __getitem__(
 		self, ind: int
 	) -> BatchEncoding:
 		encoder = self.encoder
-		cached = self.cached
+		cache = self.cache
+
 		# Check if input is cached
-		if cached is not None and cached[ind]:
-			return cached[ind]
+		if cache is not None and cache[ind]:
+			return cache[ind]
 		
 		# Encode texts using encoder and summaries using tokenizer
 		text_batches = self.text_batches
@@ -102,8 +108,8 @@ class SummarizationDataset:
 		batch_encodings = BatchEncoding(encodings)
 
 		# Save to cache and delete text batch if using cache
-		if cached is not None:
-			cached[ind] = batch_encodings
+		if cache is not None:
+			cache[ind] = batch_encodings
 			text_batches[ind] = 0
 			if summary_batches is not None:
 				summary_batches[ind] = 0
@@ -112,13 +118,16 @@ class SummarizationDataset:
 
 	def __iter__(self):
 		self.it = 0
+
+		# Shuffle batches if specified
 		if self.shuffle:
 			permutation = np.random.permutation(self.num_batches)
 			self.text_batches = self.text_batches[permutation]
 			if self.summary_batches is not None:
 				self.summary_batches = self.summary_batches[permutation]
-			if self.cached is not None:
-				self.cached = self.cached[permutation]
+			if self.cache is not None:
+				self.cache = self.cache[permutation]
+
 		return self
 	
 	def __next__(self) -> BatchEncoding:
