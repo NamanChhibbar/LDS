@@ -78,7 +78,7 @@ class Evaluator:
 			start = perf_counter()
 			summaries = pipeline(texts, batch_size)
 			time = perf_counter() - start
-			print(f"Pipeline {i+1} took {time}s")
+			print(f"Took {time}s")
 			all_summaries.extend(summaries)
 			time_taken.append(time)
 		return time_taken

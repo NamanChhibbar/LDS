@@ -108,19 +108,19 @@ def main() -> None:
 		),
 		UniformSampler(
 			tokenizer, min_tokens, context_size, text_segmenter,
-			preprocessor, seed=seed
+			preprocessor, seed
 		),
 		SegmentSampler(
 			tokenizer, min_tokens, context_size, text_segmenter,
-			sent_encoder, preprocessor, True, threshold, boost, seed
+			sent_encoder, preprocessor, threshold, boost, seed
 		),
 		RemoveRedundancy(
 			tokenizer, min_tokens, context_size, text_segmenter,
-			sent_encoder, preprocessor, True, threshold, seed
+			sent_encoder, preprocessor, threshold, seed
 		),
 		KeywordScorer(
-			tokenizer, context_size, num_keywords, text_segmenter,
-			sent_encoder, preprocessor, keywords_preprocessor,
+			tokenizer, context_size, text_segmenter, sent_encoder,
+			preprocessor, num_keywords, keywords_preprocessor,
 			stop_words
 		)
 	]

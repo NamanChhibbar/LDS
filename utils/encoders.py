@@ -70,10 +70,8 @@ class Encoder(ABC):
 		preprocessor = self.preprocessor
 		if isinstance(texts, str):
 			texts = [texts]
-		if min_tokens is None:
-			min_tokens = self.min_tokens
-		if max_tokens is None:
-			max_tokens = self.max_tokens
+		min_tokens = min_tokens or self.min_tokens
+		max_tokens = max_tokens or self.max_tokens
 		if preprocessor is not None:
 			texts = preprocessor(texts)
 		encodings = [
@@ -223,9 +221,9 @@ class UniformSampler(Encoder):
 		max_tokens: int,
 		text_segmenter: Callable[[str], list[str]],
 		preprocessor: Callable[[list[str]], list[str]] | None = None,
-		add_special_tokens: bool = True,
-		segment_delimiter: str = " ",
 		seed: int | None = None,
+		segment_delimiter: str = " ",
+		add_special_tokens: bool = True
 	) -> None:
 		super().__init__(
 			tokenizer, min_tokens, max_tokens,
@@ -233,8 +231,8 @@ class UniformSampler(Encoder):
 			tokenizer.bos_token_id, tokenizer.eos_token_id
 		)
 		self.text_segmenter = text_segmenter
-		self.segment_delimiter = segment_delimiter
 		self.seed = seed
+		self.segment_delimiter = segment_delimiter
 		np.random.seed(seed)
 
 	def encode(
@@ -248,7 +246,7 @@ class UniformSampler(Encoder):
 		max_tokens = max_tokens or self.max_tokens
 
 		# Check if encodings fit in the model
-		encoding_size, _ = count_tokens(text, tokenizer)
+		len_encoding, _ = count_tokens(text, tokenizer)
 
 		# Extract and tokenize segments
 		segments = self.text_segmenter(text)
@@ -256,7 +254,7 @@ class UniformSampler(Encoder):
 		num_segments = len(segments)
 
 		# Approximate probability of picking a segment
-		p = max_tokens / encoding_size
+		p = max_tokens / len_encoding
 
 		# Sample until segments fit in model
 		while True:
@@ -271,10 +269,10 @@ class UniformSampler(Encoder):
 			)
 
 			# Break if number of tokens is in range
-			if min_tokens <= len(sampled) <= max_tokens:
+			if min_tokens <= len(flattened) <= max_tokens:
 				break
 
-		return sampled
+		return flattened
 	
 
 
@@ -288,11 +286,11 @@ class SegmentSampler(Encoder):
 		text_segmenter: Callable[[str], list[str]],
 		sent_encoder: SentenceTransformer,
 		preprocessor: Callable[[list[str]], list[str]] | None = None,
-		add_special_tokens: bool = True,
 		threshold: float = .7,
 		prob_boost: float = .02,
+		seed: int | None = None,
 		segment_delimiter: str = " ",
-		seed: int | None = None
+		add_special_tokens: bool = True
 	) -> None:
 		super().__init__(
 			tokenizer, min_tokens, max_tokens, preprocessor,
@@ -304,8 +302,8 @@ class SegmentSampler(Encoder):
 		self.sent_embedding_dim = sent_encoder.get_sentence_embedding_dimension()
 		self.threshold = threshold
 		self.prob_boost = prob_boost
-		self.segment_delimiter = segment_delimiter
 		self.seed = seed
+		self.segment_delimiter = segment_delimiter
 		np.random.seed(seed)
 
 	def encode(
@@ -386,10 +384,10 @@ class RemoveRedundancy(Encoder):
 		text_segmenter: Callable[[str], list[str]],
 		sent_encoder: SentenceTransformer,
 		preprocessor: Callable[[list[str]], list[str]] | None = None,
-		add_special_tokens: bool = True,
 		threshold: float = .7,
+		seed: int | None = None,
 		segment_delimiter: str = " ",
-		seed: int | None = None
+		add_special_tokens: bool = True
 	) -> None:
 		super().__init__(
 			tokenizer, min_tokens, max_tokens, preprocessor,
@@ -400,8 +398,8 @@ class RemoveRedundancy(Encoder):
 		self.sent_encoder = sent_encoder
 		self.sent_embedding_dim = sent_encoder.get_sentence_embedding_dimension()
 		self.threshold = threshold
-		self.segment_delimiter = segment_delimiter
 		self.seed = seed
+		self.segment_delimiter = segment_delimiter
 		np.random.seed(seed)
 
 	def encode(
@@ -496,23 +494,23 @@ class KeywordScorer(Encoder):
 		self,
 		tokenizer,
 		max_tokens: int,
-		num_keywords: int,
 		text_segmenter: Callable[[str], list[str]],
 		sent_encoder: SentenceTransformer,
 		preprocessor: Callable[[list[str]], list[str]] | None = None,
+		num_keywords: int = 20,
 		keywords_preprocessor: Callable[[list[str]], list[str]] | None = None,
 		stop_words: list[str] | None = None,
-		add_special_tokens: bool = True,
-		segment_delimiter: str = " "
+		segment_delimiter: str = " ",
+		add_special_tokens: bool = True
 	) -> None:
 		super().__init__(
 			tokenizer, 0, max_tokens, preprocessor,
 			add_special_tokens, tokenizer.bos_token_id,
 			tokenizer.eos_token_id
 		)
-		self.num_keywords = num_keywords
 		self.text_segmenter = text_segmenter
 		self.sent_encoder = sent_encoder
+		self.num_keywords = num_keywords
 		self.keywords_preprocessor = keywords_preprocessor
 		self.stop_words = stop_words
 		self.segment_delimiter = segment_delimiter
