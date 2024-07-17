@@ -62,7 +62,7 @@ class SummarizationPipeline(Pipeline):
 	) -> None:
 		super().__init__(model.to("cpu"), encoder, postprocessor)
 		self.summary_min_tokens = summary_min_tokens or model.config.min_length
-		self.summary_min_tokens = summary_max_tokens or encoder.max_tokens
+		self.summary_max_tokens = summary_max_tokens or encoder.max_tokens
 		self.device = device
 
 	def __call__(

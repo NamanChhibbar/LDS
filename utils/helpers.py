@@ -5,9 +5,16 @@ import numpy as np
 import torch
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.decomposition import LatentDirichletAllocation
+from nltk.corpus import stopwords
 
 
 inf = float("inf")
+
+STOP_WORDS = [
+	"also", "however", "therefore", "thus", "hence", "moreover",
+	"must", "may", "might", "could", "would", "shall", "need",
+	"needs", "given", "since", "though",
+]
 
 
 
@@ -60,6 +67,24 @@ def get_keywords(
 		for i in lda.components_[0].argsort()[:-num_words-1:-1]
 	]
 	return topic_words
+
+def get_stop_words(
+	lang: str = "english",
+	extra_stop_words: list[str] | None = None
+) -> list[str]:
+	stop_words = stopwords.words(lang)
+	if extra_stop_words is not None:
+		stop_words += [
+			word.lower()
+			for word in extra_stop_words
+			if word not in stop_words
+		]
+	stop_words += [
+		word.capitalize()
+		for word in stop_words
+		if not word.istitle()
+	]
+	return stop_words
 
 
 

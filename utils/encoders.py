@@ -143,13 +143,12 @@ class VanillaEncoder(Encoder):
 		tokenizer,
 		max_tokens: int,
 		preprocessor: Callable[[list[str]], list[str]] | None = None,
-		add_special_tokens: bool = True,
-		bos_id: int | None = None,
-		eos_id: int | None = None
+		add_special_tokens: bool = True
 	) -> None:
 		super().__init__(
 			tokenizer, 0, max_tokens, preprocessor,
-			add_special_tokens, bos_id, eos_id
+			add_special_tokens, tokenizer.bos_token_id,
+			tokenizer.eos_token_id
 		)
 
 	def encode(
@@ -497,6 +496,7 @@ class KeywordScorer(Encoder):
 		self,
 		tokenizer,
 		max_tokens: int,
+		num_keywords: int,
 		text_segmenter: Callable[[str], list[str]],
 		sent_encoder: SentenceTransformer,
 		preprocessor: Callable[[list[str]], list[str]] | None = None,
@@ -510,6 +510,7 @@ class KeywordScorer(Encoder):
 			add_special_tokens, tokenizer.bos_token_id,
 			tokenizer.eos_token_id
 		)
+		self.num_keywords = num_keywords
 		self.text_segmenter = text_segmenter
 		self.sent_encoder = sent_encoder
 		self.keywords_preprocessor = keywords_preprocessor
@@ -528,9 +529,8 @@ class KeywordScorer(Encoder):
 
 		# Extract keywords from the text
 		keywords = get_keywords(
-			text,
-			stop_words = self.stop_words,
-			preprocessor = self.keywords_preprocessor
+			text, self.num_keywords, self.stop_words,
+			self.keywords_preprocessor
 		)
 		# Create keywords embedding
 		keywords_emb = sent_encoder.encode(" ".join(keywords))
