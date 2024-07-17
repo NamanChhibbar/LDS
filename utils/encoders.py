@@ -556,17 +556,21 @@ class KeywordScorer(Encoder):
 			for seg in segments
 		]
 
-		# Select maximum segments with highest scores
-		selected_segments = []
+		# Select maximum segment indices with highest scores
+		selected_indices = []
 		tokens_used = 0
 		for i in best_segments:
 			if tokens_used + segment_lengths[i] > max_tokens:
 				continue
-			selected_segments.append(segments[i])
+			selected_indices.append(i)
 			tokens_used += segment_lengths[i]
+		selected_indices.sort()
 		
 		# Flatten and tokenize selected segments
-		flattened = self.segment_delimiter.join(selected_segments)
+		flattened = self.segment_delimiter.join([
+			segments[i]
+			for i in selected_indices
+		])
 		flattened = tokenizer.encode(
 			flattened,
 			add_special_tokens=False
