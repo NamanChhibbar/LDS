@@ -94,30 +94,18 @@ class TextProcessor:
 	_non_word_pat_sub = (r"[^\w\s']", "")
 
 	_preprocessing_pats_subs = [
-		# Non-ASCII quotes
-		(r"‘|’", "'"),
-		(r"“|”", '"'),
-		# Non-ASCII characters
-		(r"[^\x00-\x7f]+", ""),
-		# Emails
-		(r"\S+@\S+\.\S+", ""),
-		# Hyperlinks
-		(r"\S+://\S+\.\S+", ""),
-		# Hashtags
-		(r"#\S+", ""),
-		# HTML tags
-		(r"<[^\n>]+>", ""),
 		# Remove unecessary periods
 		(r"\.\s*([,;:?!-])", r"\1"),
 		(r"([,;:?!-])\s*\.", r"\1"),
-		(r"\.\s+([a-z])", r" \1"),
+		(r"(\d)\.(\s)+([^A-Z\d])", r"\1\2\3"),
 		# Remove ending period of abbreviations
 		# (due to difficulties in sentence segmentation)
 		(r"(\w\.\w+)\.(\s)", r"\1\2"),
-		# Remove unecessary decimal points
-		(r"(\d+)\.(\s)", r"\1\2"),
-		# Repair punctuations
+		# Remove spaces before punctuation
 		(r"(\w)\s+([,.;:?!-])", r"\1\2"),
+		# Remove spaces within brackets and quotes
+		(r"([“([])\s+", r"\1"),
+		(r"\s+([”\)\]])", r"\1"),
 		# Join broken sentences
 		(r"(\w[,;]?)\s+(\w)", r"\1 \2"),
 	]

@@ -26,11 +26,13 @@ def main() -> None:
 	filterwarnings("ignore")
 	inf = float("inf")
 
+	name = "bart"
+
 	data_dir = "/Users/naman/Workspace/Data/Long-Document-Summarization"
 	data_dir = "/home/nchibbar/Data"
-	out_dir = f"{data_dir}/GovReport/processed"
-	crs_files = os.listdir(f"{data_dir}/GovReport/crs")
-	results_path = f"{data_dir}/govreport-results.json"
+	govreport_dir = f"{data_dir}/GovReport/processed"
+	govreport_files = os.listdir(govreport_dir)
+	results_path = f"{data_dir}/govreport-{name}.json"
 	sent_dir = f"{data_dir}/Models/Sent-Transformer"
 	bart_dir = f"{data_dir}/Models/BART"
 	t5_dir = f"{data_dir}/Models/T5"
@@ -40,20 +42,22 @@ def main() -> None:
 	# Automatically loads into gpu if available
 	sent_encoder = SentenceTransformer(sent_dir)
 
-	# BART
-	# tokenizer = BartTokenizer.from_pretrained(bart_dir)
-	# model = BartForConditionalGeneration.from_pretrained(bart_dir)
-	# context_size = model.config.max_position_embeddings
+	match name:
 
-	# T5
-	# tokenizer = T5Tokenizer.from_pretrained(t5_dir)
-	# model = T5ForConditionalGeneration.from_pretrained(t5_dir)
-	# context_size = model.config.n_positions
+		case "bart":
+			tokenizer = BartTokenizer.from_pretrained(bart_dir)
+			model = BartForConditionalGeneration.from_pretrained(bart_dir)
+			context_size = model.config.max_position_embeddings
 
-	# Pegasus
-	tokenizer = PegasusTokenizerFast.from_pretrained(pegasus_dir)
-	model = PegasusForConditionalGeneration.from_pretrained(pegasus_dir)
-	context_size = model.config.max_position_embeddings
+		case "t5":
+			tokenizer = T5Tokenizer.from_pretrained(t5_dir)
+			model = T5ForConditionalGeneration.from_pretrained(t5_dir)
+			context_size = model.config.n_positions
+
+		case "pegasus":
+			tokenizer = PegasusTokenizerFast.from_pretrained(pegasus_dir)
+			model = PegasusForConditionalGeneration.from_pretrained(pegasus_dir)
+			context_size = model.config.max_position_embeddings
 
 	# Preprocessors and postprocessor
 	preprocessor = TextProcessor(preprocessing=True)
@@ -67,14 +71,14 @@ def main() -> None:
 	stop_words = get_stop_words(extra_stop_words=STOP_WORDS)
 
 	# Load data
-	min_words = 30_000
+	min_words = 20_000
 	max_words = inf
 	max_texts = 1000
 
 	texts, summaries = [], []
 	num_texts = 0
-	for file in crs_files:
-		with open(f"{out_dir}/{file}") as fp:
+	for file in govreport_files:
+		with open(f"{govreport_dir}/{file}") as fp:
 			data = json.load(fp)
 		if min_words < count_words(data["text"]) < max_words:
 			texts.append(data["text"])
