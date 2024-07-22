@@ -68,8 +68,8 @@ def main() -> None:
 	# Preprocessors and postprocessor
 	preprocessor = TextProcessor(preprocessing=True)
 	keywords_preprocessor = TextProcessor(
-		only_words_nums=True,
-		remove_nums=True
+		only_words_nums = True,
+		remove_nums = True
 	)
 	postprocessor = None
 
@@ -79,7 +79,7 @@ def main() -> None:
 	# Load data
 	min_words = 20_000
 	max_words = inf
-	max_texts = 1000
+	max_texts = inf
 
 	texts, summaries = [], []
 	num_texts = 0

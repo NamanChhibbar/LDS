@@ -27,9 +27,11 @@ def count_tokens(
 	text: str,
 	tokenizer
 ) -> tuple[int, list[int]]:
-	encoding = tokenizer.encode(
-		text, add_special_tokens=False
-	)
+	encoding = tokenizer(
+		text,
+		add_special_tokens = False,
+		verbose = False
+	)["input_ids"]
 	num_tokens = len(encoding)
 	return num_tokens, encoding
 

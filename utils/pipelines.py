@@ -77,6 +77,7 @@ class SummarizationPipeline(Pipeline):
 		model = self.model.to(device)
 		encoder = self.encoder
 		summary_max_tokens = self.summary_max_tokens
+		summary_min_tokens = self.summary_min_tokens
 		postprocessor = self.postprocessor
 		batch_size = batch_size or len(texts)
 
@@ -86,12 +87,15 @@ class SummarizationPipeline(Pipeline):
 		# Generate summaries
 		all_summaries = []
 		for encoding in batches:
+
 			# Send encodings to device
 			encoding = encoding.to(device)
 
 			# Generate summaries' encodings
 			output = self.model.generate(
-				**encoding, max_length=summary_max_tokens
+				**encoding,
+				min_length = summary_min_tokens,
+				max_length = summary_max_tokens
 			)
 
 			# Decode summaries' encodings
@@ -138,6 +142,7 @@ class OpenAIPipeline(Pipeline):
 
 		summaries = []
 		for text in texts:
+
 			# Create call inputs
 			self.create_inputs(text)
 

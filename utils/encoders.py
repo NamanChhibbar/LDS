@@ -79,9 +79,11 @@ class Encoder(ABC):
 			for text in texts
 		]
 		if return_batch:
-			encodings = self.tokenizer.pad({
-				"input_ids": encodings
-			}, return_tensors="pt")
+			encodings = self.tokenizer.pad(
+				{"input_ids": encodings},
+			return_tensors = "pt",
+			verbose = False
+		)
 		return encodings
 	
 	@abstractmethod
@@ -159,12 +161,13 @@ class VanillaEncoder(Encoder):
 		tokenizer = self.tokenizer
 
 		# Encode the text
-		encoding = tokenizer.encode(
+		encoding = tokenizer(
 			text,
-			max_length=max_tokens,
-			truncation=True,
-			add_special_tokens=False
-		)
+			max_length = max_tokens,
+			truncation = True,
+			add_special_tokens = False,
+			verbose = False
+		)["input_ids"]
 		return encoding
 	
 
@@ -264,9 +267,11 @@ class UniformSampler(Encoder):
 
 			# Flatten and tokenize sampled segments
 			flattened = self.segment_delimiter.join(sampled)
-			flattened = tokenizer.encode(
-				flattened, add_special_tokens=False
-			)
+			flattened = tokenizer(
+				flattened,
+				add_special_tokens = False,
+				verbose = False
+			)["input_ids"]
 
 			# Break if number of tokens is in range
 			if min_tokens <= len(flattened) <= max_tokens:
@@ -362,9 +367,11 @@ class SegmentSampler(Encoder):
 			
 			# Flatten and tokenize sampled segments
 			flattened = self.segment_delimiter.join(flattened)
-			flattened = tokenizer.encode(
-				flattened, add_special_tokens=False
-			)
+			flattened = tokenizer(
+				flattened,
+				add_special_tokens = False,
+				verbose = False
+			)["input_ids"]
 
 			# Break if number of tokens is in range
 			if min_tokens <= len(flattened) <= max_tokens:
@@ -421,7 +428,9 @@ class RemoveRedundancy(Encoder):
 
 		# Tokenize segments
 		tokenized_segments = tokenizer(
-			segments, add_special_tokens=False
+			segments,
+			add_special_tokens = False,
+			verbose = False
 		)["input_ids"]
 
 		# Sum of number of tokens in segments
@@ -443,9 +452,11 @@ class RemoveRedundancy(Encoder):
 
 			# Flatten segments
 			flattened = self.segment_delimiter.join(sampled)
-			flattened = tokenizer.encode(
-				flattened, add_special_tokens=False
-			)
+			flattened = tokenizer(
+				flattened,
+				add_special_tokens = False,
+				verbose = False
+			)["input_ids"]
 
 			# Break if number of tokens is in range
 			if min_tokens <= len(flattened) <= max_tokens:
@@ -566,11 +577,12 @@ class KeywordScorer(Encoder):
 		
 		# Flatten and tokenize selected segments
 		flattened = self.segment_delimiter.join([
-			segments[i]
-			for i in selected_indices
+			segments[i] for i in selected_indices
 		])
-		flattened = tokenizer.encode(
+		flattened = tokenizer(
 			flattened,
-			add_special_tokens=False
-		)
+			add_special_tokens = False,
+			verbose = False
+		)["input_ids"]
+
 		return flattened
