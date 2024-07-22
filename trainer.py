@@ -23,7 +23,7 @@ def main() -> None:
 
 	# All paths that are needed to be hard coded
 	data_dir = "/home/nchibbar/Data"
-	crs_dir = f"{data_dir}/GovReport/crs-processed"
+	govreport_dir = f"{data_dir}/GovReport/processed"
 	sent_dir = f"{data_dir}/Models/Sent-Transformer"
 	bart_dir = f"{data_dir}/Models/BART"
 	save_dir = f"{data_dir}/Models/BART-GovReport-SegmentSampler"
@@ -58,11 +58,11 @@ def main() -> None:
 	# context_size = model.config.n_positions
 
 	print("Loading data...")
-	crs_files = os.listdir(crs_dir)
+	govreport_files = os.listdir(govreport_dir)
 	texts, summaries = [], []
-	for file in crs_files:
-		file = os.path.join(crs_dir, file)
-		with open(file) as fp:
+	for file in govreport_files:
+		file_path = f"{govreport_dir}/{file}"
+		with open(file_path) as fp:
 			data = json.load(fp)
 		if count_words(data["text"]) < max_words:
 			texts.append(data["text"])

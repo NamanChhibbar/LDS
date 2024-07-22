@@ -1,6 +1,7 @@
 import os
 import json
 from warnings import filterwarnings
+from argparse import ArgumentParser, Namespace
 
 from nltk import sent_tokenize
 from transformers import (
@@ -26,7 +27,9 @@ def main() -> None:
 	filterwarnings("ignore")
 	inf = float("inf")
 
-	name = "bart"
+	args = get_arguments()
+
+	name = args.model.lower()
 
 	data_dir = "/Users/naman/Workspace/Data/Long-Document-Summarization"
 	data_dir = "/home/nchibbar/Data"
@@ -58,6 +61,9 @@ def main() -> None:
 			tokenizer = PegasusTokenizerFast.from_pretrained(pegasus_dir)
 			model = PegasusForConditionalGeneration.from_pretrained(pegasus_dir)
 			context_size = model.config.max_position_embeddings
+		
+		case _:
+			raise ValueError(f"Invalid model name: {name}")
 
 	# Preprocessors and postprocessor
 	preprocessor = TextProcessor(preprocessing=True)
@@ -78,7 +84,8 @@ def main() -> None:
 	texts, summaries = [], []
 	num_texts = 0
 	for file in govreport_files:
-		with open(f"{govreport_dir}/{file}") as fp:
+		file_path = f"{govreport_dir}/{file}"
+		with open(file_path) as fp:
 			data = json.load(fp)
 		if min_words < count_words(data["text"]) < max_words:
 			texts.append(data["text"])
@@ -100,7 +107,6 @@ def main() -> None:
 	seed = 69
 	device = get_device()
 	# device = "cpu"
-
 	min_tokens = int(min_token_frac * context_size)
 
 	encoders = [
@@ -128,7 +134,7 @@ def main() -> None:
 			stop_words
 		)
 	]
-	min_summary_tokens = 400
+	min_summary_tokens = 500
 	pipelines = [
 		SummarizationPipeline(
 			model, enc, postprocessor, min_summary_tokens,
@@ -137,12 +143,22 @@ def main() -> None:
 	]
 
 	batch_size = 5
-
 	evaluator = Evaluator(pipelines, device)
 	results = evaluator(texts, summaries, batch_size)
 
 	with open(results_path, "w") as fp:
 		json.dump(results, fp, indent=2)
+
+
+def get_arguments() -> Namespace:
+	parser = ArgumentParser(description="Training script")
+
+	parser.add_argument(
+		"--model", action="store", type=str, required=True,
+		help="Model to use"
+	)
+	args = parser.parse_args()
+	return args
 
 
 

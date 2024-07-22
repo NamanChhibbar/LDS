@@ -94,21 +94,43 @@ class TextProcessor:
 	_non_word_pat_sub = (r"[^\w\s']", "")
 
 	_preprocessing_pats_subs = [
+		# Remove hyperlinks
+		(r"https?://[^\s]+", ""),
 		# Remove unecessary periods
 		(r"\.\s*([,;:?!-])", r"\1"),
 		(r"([,;:?!-])\s*\.", r"\1"),
-		(r"(\d)\.(\s)+([^A-Z\d])", r"\1\2\3"),
+		(r"\.(\s+)([a-z])", r"\1\2"),
 		# Remove ending period of abbreviations
 		# (due to difficulties in sentence segmentation)
-		(r"(\w\.\w+)\.(\s)", r"\1\2"),
-		# Remove spaces before punctuation
-		(r"(\w)\s+([,.;:?!-])", r"\1\2"),
+		(r"(\.\w+)\.(\s)", r"\1\2"),
+		# Fix spaces before and after punctuations
+		(r"\s+([,.;:?!])", r"\1"),
+		(r",([^\s\d])", r", \1"),
+		(r"([;:?!])(\S)", r"\1 \2"),
 		# Remove spaces within brackets and quotes
-		(r"([“([])\s+", r"\1"),
-		(r"\s+([”\)\]])", r"\1"),
+		(
+			r'"([^"]*)"',
+			lambda m: f'"{m.group(1).strip()}"'
+		), (
+			r"'([^']*)'",
+			lambda m: f"'{m.group(1).strip()}'"
+		), (
+			r"“([^”]*)”",
+			lambda m: f"“{m.group(1).strip()}”"
+		), (
+			r"‘([^’]*)’",
+			lambda m: f"‘{m.group(1).strip()}’"
+		), (
+			r"\[([^\]]*)\]",
+			lambda m: f"[{m.group(1).strip()}]"
+		), (
+			r"\(([^\)]*)\)",
+			lambda m: f"({m.group(1).strip()})"
+		),
 		# Join broken sentences
 		(r"(\w[,;]?)\s+(\w)", r"\1 \2"),
 	]
+
 	# Remove numbers
 	_number_pat_sub = (r"(\b|\+)[\d+-]+\b", "")
 
@@ -193,18 +215,24 @@ class TextSegmenter:
 		min_words = self.min_words
 		sent_delimiter = self.sent_delimiter
 		parts = self.base_tokenizer(text)
+		new_parts = []
+		for part in parts:
+			new_parts.extend(part.split(";"))
+		parts = new_parts
 		num_parts = len(parts)
 		segments = []
 		for i, sent in enumerate(parts):
-			if count_words(sent) >= min_words:
-				segments.append(sent)
-				continue
 			prev_text_words = count_words(segments[-1]) if \
 				segments else inf
-			next_text_words = count_words(parts[i+1]) if \
+			next_text_words = count_words(parts[i + 1]) if \
 				i + 1 < num_parts else inf
-			if prev_text_words < next_text_words:
+			if (
+				count_words(sent) >= min_words or
+				prev_text_words == next_text_words == inf
+			):
+				segments.append(sent)
+			elif prev_text_words < next_text_words:
 				segments[-1] = f"{segments[-1]}{sent_delimiter}{sent}"
 			else:
-				parts[i + 1] = f"{sent}{sent_delimiter}{parts[i+1]}"
+				parts[i + 1] = f"{sent}{sent_delimiter}{parts[i + 1]}"
 		return segments
