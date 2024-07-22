@@ -265,6 +265,26 @@
   url="https://arxiv.org/abs/2208.04347"
 }
 
+@article{du2023improving,
+  author = {Du, Jiangsu and Jiang, Jiazhi and Zheng, Jiang and Zhang, Hongbin and Huang, Dan and Lu, Yutong},
+  title = {Improving Computation and Memory Efficiency for Real-world Transformer Inference on GPUs},
+  year = {2023},
+  issue_date = {December 2023},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  volume = {20},
+  number = {4},
+  issn = {1544-3566},
+  url = {https://doi.org/10.1145/3617689},
+  doi = {10.1145/3617689},
+  abstract = {Transformer models have emerged as a leading approach in the field of natural language processing (NLP) and are increasingly being deployed in production environments. Graphic processing units (GPUs) have become a popular choice for the transformer deployment and often rely on the batch processing technique to ensure high hardware performance. Nonetheless, the current practice for transformer inference encounters computational and memory redundancy due to the heavy-tailed distribution of sequence lengths in NLP scenarios, resulting in low practical performance. In this article, we propose a unified solution for improving both computation and memory efficiency of the real-world transformer inference on GPUs. The solution eliminates the redundant computation and memory footprint across a transformer model. At first, a GPU-oriented computation approach is proposed to process the self-attention module in a fine-grained manner, eliminating its redundant computation. Next, the multi-layer perceptron module continues to use the word-accumulation approach to eliminate its redundant computation. Then, to better unify the fine-grained approach and the word-accumulation approach, it organizes the data layout of the self-attention module in block granularity. Since aforementioned approaches make the required memory size largely reduce and constantly fluctuate, we propose the chunk-based approach to enable a better balance between memory footprint and allocation/free efficiency. Our experimental results show that our unified solution achieves a decrease of average latency by 28\% on the entire transformer model, 63.8\% on the self-attention module, and reduces memory footprint of intermediate results by 7.8\texttimes{}, compared with prevailing frameworks.},
+  journal = {ACM Trans. Archit. Code Optim.},
+  month = {oct},
+  articleno = {46},
+  numpages = {22},
+  keywords = {Parallel computing, graphics processing unit, natural language processing, transformer inference}
+}
+
 
 % Datasets
 
