@@ -557,22 +557,19 @@ class KeywordScorer(Encoder):
 			segment_similarities.append(similarity)
 		
 		# Argument sort the similarities
-		best_segments = np.argsort(segment_similarities)[::-1]
-
-		# Get number of tokens in segments
-		segment_lengths = [
-			count_tokens(seg, tokenizer)[0]
-			for seg in segments
-		]
+		best_indices = np.argsort(segment_similarities)[::-1]
 
 		# Select maximum segment indices with highest scores
 		selected_indices = []
 		tokens_used = 0
-		for i in best_segments:
-			if tokens_used + segment_lengths[i] > max_tokens:
+		for i in best_indices:
+			segment_len, _ = count_tokens(segments[i], tokenizer)
+			if tokens_used + segment_len + 1 > max_tokens:
 				continue
 			selected_indices.append(i)
-			tokens_used += segment_lengths[i]
+			tokens_used += segment_len + 1
+
+		# Sort the selected indices to maintain segment order
 		selected_indices.sort()
 		
 		# Flatten and tokenize selected segments

@@ -86,14 +86,14 @@ class SummarizationPipeline(Pipeline):
 
 		# Generate summaries
 		all_summaries = []
-		for encoding in batches:
+		for encodings in batches:
 
 			# Send encodings to device
-			encoding = encoding.to(device)
+			encodings = encodings.to(device)
 
 			# Generate summaries' encodings
 			output = self.model.generate(
-				**encoding,
+				**encodings,
 				min_length = summary_min_tokens,
 				max_length = summary_max_tokens
 			)
