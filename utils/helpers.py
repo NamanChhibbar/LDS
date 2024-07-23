@@ -1,7 +1,8 @@
 import re
 from typing import Callable
+import subprocess
 
-import numpy as np
+from numpy import argmin
 import torch
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.decomposition import LatentDirichletAllocation
@@ -17,6 +18,34 @@ STOP_WORDS = [
 ]
 
 
+def gpu_usage() -> list[int]:
+	"""
+	Get the current GPU memory usage.
+	"""
+	# Get output from nvidia-smi
+	result = subprocess.check_output([
+		"nvidia-smi",
+		"--query-gpu=memory.used",
+		"--format=csv,nounits,noheader"
+	]).decode("utf-8").strip()
+
+	# Extract memory used by GPUs in MiB
+	gpu_memory = [int(mem) for mem in result.split("\n")]
+	return gpu_memory
+
+def get_device(threshold: int = 300) -> str:
+	"""
+	Returns a device with memory usage below a threshold.
+	"""
+	if torch.cuda.is_available():
+		usage = gpu_usage()
+		cuda_ind = argmin(usage)
+		return f"cuda:{cuda_ind}" if usage[cuda_ind] < threshold \
+			else "cpu"
+	if torch.backends.mps.is_available():
+		usage = torch.mps.driver_allocated_memory() / 1e6
+		return "mps" if usage < threshold else "cpu"
+	return "cpu"
 
 def count_words(text: str) -> int:
 	words = text.split()
@@ -34,13 +63,6 @@ def count_tokens(
 	)["input_ids"]
 	num_tokens = len(encoding)
 	return num_tokens, encoding
-
-def get_device() -> str:
-	if torch.cuda.is_available():
-		return "cuda"
-	if torch.backends.mps.is_available():
-		return "mps"
-	return "cpu"
 
 def show_exception(exc: Exception) -> None:
 	exc_class = exc.__class__.__name__

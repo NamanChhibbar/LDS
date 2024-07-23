@@ -110,8 +110,8 @@ def main() -> None:
 	min_tokens = int(min_token_frac * context_size)
 
 	encoders = [
-		VanillaEncoder(
-			tokenizer, context_size, preprocessor
+		TruncateMiddle(
+			tokenizer, context_size, 1, preprocessor
 		),
 		TruncateMiddle(
 			tokenizer, context_size, head_size, preprocessor
@@ -134,7 +134,7 @@ def main() -> None:
 			stop_words
 		)
 	]
-	min_summary_tokens = 500
+	min_summary_tokens = 300
 	pipelines = [
 		SummarizationPipeline(
 			model, enc, postprocessor, min_summary_tokens,

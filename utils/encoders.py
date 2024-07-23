@@ -68,8 +68,10 @@ class Encoder(ABC):
 		`BatchEncoding`: Batched text encodings
 		"""
 		preprocessor = self.preprocessor
+		single_text = False
 		if isinstance(texts, str):
 			texts = [texts]
+			single_text = True
 		min_tokens = min_tokens or self.min_tokens
 		max_tokens = max_tokens or self.max_tokens
 		if preprocessor is not None:
@@ -78,12 +80,14 @@ class Encoder(ABC):
 			self._encode_wrapper(text, min_tokens, max_tokens)
 			for text in texts
 		]
+		if single_text:
+			encodings = encodings[0]
 		if return_batch:
 			encodings = self.tokenizer.pad(
 				{"input_ids": encodings},
-			return_tensors = "pt",
-			verbose = False
-		)
+				return_tensors = "pt",
+				verbose = False
+			)
 		return encodings
 	
 	@abstractmethod
@@ -136,42 +140,6 @@ class Encoder(ABC):
 	
 
 
-class VanillaEncoder(Encoder):
-
-	def __init__(
-		self,
-		tokenizer,
-		max_tokens: int,
-		preprocessor: Callable[[list[str]], list[str]] | None = None,
-		add_special_tokens: bool = True
-	) -> None:
-		super().__init__(
-			tokenizer, 0, max_tokens, preprocessor,
-			add_special_tokens, tokenizer.bos_token_id,
-			tokenizer.eos_token_id
-		)
-
-	def encode(
-		self,
-		text: str,
-		_ = None,
-		max_tokens: int | None = None
-	) -> list[int]:
-		max_tokens = max_tokens or self.max_tokens
-		tokenizer = self.tokenizer
-
-		# Encode the text
-		encoding = tokenizer(
-			text,
-			max_length = max_tokens,
-			truncation = True,
-			add_special_tokens = False,
-			verbose = False
-		)["input_ids"]
-		return encoding
-	
-
-
 class TruncateMiddle(Encoder):
 
 	def __init__(
@@ -209,7 +177,7 @@ class TruncateMiddle(Encoder):
 		encoding = np.concatenate([
 			encoding[:head_idx],
 			encoding[tail_idx:]
-		]).tolist()
+		]).astype(int).tolist()
 
 		return encoding
 

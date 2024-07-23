@@ -68,7 +68,10 @@ class SummarizationPipeline(Pipeline):
 	def __call__(
 		self,
 		texts: str | list[str],
-		batch_size: int | None = None
+		batch_size: int | None = None,
+		temperature: float = 1.,
+		repetition_penalty: float = 1.,
+		top_p: float = .95
 	) -> list[str]:
 		if isinstance(texts, str):
 			texts = [texts]
@@ -76,8 +79,8 @@ class SummarizationPipeline(Pipeline):
 		device = self.device
 		model = self.model.to(device)
 		encoder = self.encoder
-		summary_max_tokens = self.summary_max_tokens
 		summary_min_tokens = self.summary_min_tokens
+		summary_max_tokens = self.summary_max_tokens
 		postprocessor = self.postprocessor
 		batch_size = batch_size or len(texts)
 
@@ -95,7 +98,11 @@ class SummarizationPipeline(Pipeline):
 			output = self.model.generate(
 				**encodings,
 				min_length = summary_min_tokens,
-				max_length = summary_max_tokens
+				max_length = summary_max_tokens,
+				temperature = temperature,
+				repetition_penalty = repetition_penalty,
+				top_p = top_p,
+				early_stopping = True
 			)
 
 			# Decode summaries' encodings
