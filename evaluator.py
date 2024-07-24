@@ -29,13 +29,13 @@ def main() -> None:
 
 	args = get_arguments()
 
-	name = args.model.lower()
+	model_name = args.model.lower()
 
 	data_dir = "/Users/naman/Workspace/Data/Long-Document-Summarization"
 	data_dir = "/home/nchibbar/Data"
 	govreport_dir = f"{data_dir}/GovReport/processed"
 	govreport_files = os.listdir(govreport_dir)
-	results_path = f"{data_dir}/govreport-{name}.json"
+	results_path = f"{data_dir}/govreport-{model_name}.json"
 	sent_dir = f"{data_dir}/Models/Sent-Transformer"
 	bart_dir = f"{data_dir}/Models/BART"
 	t5_dir = f"{data_dir}/Models/T5"
@@ -45,7 +45,7 @@ def main() -> None:
 	# Automatically loads into gpu if available
 	sent_encoder = SentenceTransformer(sent_dir)
 
-	match name:
+	match model_name:
 
 		case "bart":
 			tokenizer = BartTokenizer.from_pretrained(bart_dir)
@@ -63,7 +63,7 @@ def main() -> None:
 			context_size = model.config.max_position_embeddings
 		
 		case _:
-			raise ValueError(f"Invalid model name: {name}")
+			raise ValueError(f"Invalid model name: {model_name}")
 
 	# Preprocessors and postprocessor
 	preprocessor = TextProcessor(preprocessing=True)

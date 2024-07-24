@@ -47,6 +47,9 @@ class SummarizationPipeline(Pipeline):
 	`summary_max_tokens`: The maximum number of tokens in the summary.
 	`postprocessor`: The postprocessor for the generated summaries.
 	`device`: The device to use for computation.
+	`temperature`: The temperature for sampling.
+	`repetition_penalty`: The repetition penalty.
+	`top_p`: The nucleus sampling threshold.
 
 	## Returns
 	list[str]: The generated summaries.
@@ -58,31 +61,40 @@ class SummarizationPipeline(Pipeline):
 		postprocessor: Callable[[list[str]], list[str]] | None = None,
 		summary_min_tokens: int | None = None,
 		summary_max_tokens: int | None = None,
-		device: str | torch.device = "cpu"
+		device: str | torch.device = "cpu",
+		temperature: float = 1.,
+		repetition_penalty: float = 1.,
+		top_p: float = .9
 	) -> None:
 		super().__init__(model.to("cpu"), encoder, postprocessor)
 		self.summary_min_tokens = summary_min_tokens or model.config.min_length
 		self.summary_max_tokens = summary_max_tokens or encoder.max_tokens
 		self.device = device
+		self.temperature = temperature
+		self.repetition_penalty = repetition_penalty
+		self.top_p = top_p
 
 	def __call__(
 		self,
 		texts: str | list[str],
-		batch_size: int | None = None,
-		temperature: float = 1.,
-		repetition_penalty: float = 1.,
-		top_p: float = .95
+		batch_size: int = 1,
+		**kwargs
 	) -> list[str]:
-		if isinstance(texts, str):
-			texts = [texts]
-		
+
 		device = self.device
 		model = self.model.to(device)
-		encoder = self.encoder
+		postprocessor = self.postprocessor
 		summary_min_tokens = self.summary_min_tokens
 		summary_max_tokens = self.summary_max_tokens
-		postprocessor = self.postprocessor
-		batch_size = batch_size or len(texts)
+		temperature = kwargs.get("temperature", self.temperature)
+		repetition_penalty = kwargs.get(
+			"repetition_penalty", self.repetition_penalty
+		)
+		top_p = kwargs.get("top_p", self.top_p)
+		encoder = self.encoder
+
+		if isinstance(texts, str):
+			texts = [texts]
 
 		# Generate encodings in batches
 		batches = SummarizationDataset(texts, encoder, batch_size)
@@ -145,6 +157,7 @@ class OpenAIPipeline(Pipeline):
 		texts: list[str],
 		_ = None
 	) -> list[str]:
+
 		postprocessor = self.postprocessor
 
 		summaries = []
@@ -174,6 +187,7 @@ class OpenAIPipeline(Pipeline):
 		self,
 		text: str
 	) -> int:
+
 		encoder = self.encoder
 		max_tokens = self.max_tokens
 		tokenizer = encoder.tokenizer

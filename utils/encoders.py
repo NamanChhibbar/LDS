@@ -50,30 +50,27 @@ class Encoder(ABC):
 	def __call__(
 		self,
 		texts: str | list[str],
-		min_tokens: int | None = None,
-		max_tokens: int | None = None,
-		return_batch: bool = True
+		return_batch: bool = True,
+		**kwargs
 	) -> list[int] | list[list[int]] | BatchEncoding:
 		"""
 		Encodes texts to fit in the model's context size and creates a BatchEncoding.
 
 		## Parameters
-		`texts`: Texts (or text) to encode
-		`min_tokens`: Min tokens in text encodings; overrides the default
-		value of `min_tokens` if specified
-		`max_tokens`: Max tokens in text encodings; overrides the default
-		value of `max_tokens` if specified
+		`texts`: Texts (or text) to encode.
+		`return_batch`: Whether to return a BatchEncoding or not.
+		`kwargs`: Override default `min_tokens` or `max_tokens`.
 
 		## Returns
-		`BatchEncoding`: Batched text encodings
+		Batched text encodings.
 		"""
 		preprocessor = self.preprocessor
+		min_tokens = kwargs.get("min_tokens", self.min_tokens)
+		max_tokens = kwargs.get("max_tokens", self.max_tokens)
 		single_text = False
 		if isinstance(texts, str):
 			texts = [texts]
 			single_text = True
-		min_tokens = min_tokens or self.min_tokens
-		max_tokens = max_tokens or self.max_tokens
 		if preprocessor is not None:
 			texts = preprocessor(texts)
 		encodings = [
@@ -94,8 +91,7 @@ class Encoder(ABC):
 	def encode(
 		self,
 		text: str,
-		min_tokens: int | None = None,
-		max_tokens: int | None = None
+		**kwargs
 	) -> list[int]:
 		"""
 		Creates encoding for a given text with number of tokens
@@ -121,7 +117,11 @@ class Encoder(ABC):
 			max_tokens -= self.num_special_tokens
 		num_tokens, encoding = count_tokens(text, self.tokenizer)
 		if num_tokens > max_tokens:
-			encoding = self.encode(text, min_tokens, max_tokens)
+			encoding = self.encode(
+				text,
+				min_tokens = min_tokens,
+				max_tokens = max_tokens
+			)
 		if self.add_special_tokens:
 			encoding = self.add_tokens(encoding)
 		return encoding
@@ -160,11 +160,10 @@ class TruncateMiddle(Encoder):
 	def encode(
 		self,
 		text: str,
-		_ = None,
-		max_tokens: int | None = None
+		**kwargs
 	) -> list[int]:
 		tokenizer = self.tokenizer
-		max_tokens = max_tokens or self.max_tokens
+		max_tokens = kwargs.get("max_tokens", self.max_tokens)
 
 		# Encode the text
 		num_tokens, encoding = count_tokens(text, tokenizer)
@@ -209,12 +208,12 @@ class UniformSampler(Encoder):
 	def encode(
 		self,
 		text: str,
-		min_tokens: int | None = None,
-		max_tokens: int | None = None
+		**kwargs
 	) -> list[int]:
+
 		tokenizer = self.tokenizer
-		min_tokens = min_tokens or self.min_tokens
-		max_tokens = max_tokens or self.max_tokens
+		min_tokens = kwargs.get("min_tokens", self.min_tokens)
+		max_tokens = kwargs.get("max_tokens", self.max_tokens)
 
 		# Check if encodings fit in the model
 		len_encoding, _ = count_tokens(text, tokenizer)
@@ -282,14 +281,14 @@ class SegmentSampler(Encoder):
 	def encode(
 		self,
 		text: str,
-		min_tokens: int | None = None,
-		max_tokens: int | None = None
+		**kwargs
 	) -> list[int]:
+
 		tokenizer = self.tokenizer
 		text_segmenter = self.text_segmenter
 		sent_encoder = self.sent_encoder
-		min_tokens = min_tokens or self.min_tokens
-		max_tokens = max_tokens or self.max_tokens
+		min_tokens = kwargs.get("min_tokens", self.min_tokens)
+		max_tokens = kwargs.get("max_tokens", self.max_tokens)
 
 		# Extract and tokenize segments
 		segments = text_segmenter(text)
@@ -380,12 +379,12 @@ class RemoveRedundancy(Encoder):
 	def encode(
 		self,
 		text: str,
-		min_tokens: int | None = None,
-		max_tokens: int | None = None
+		*kwargs
 	) -> list[int]:
+		
 		tokenizer = self.tokenizer
-		min_tokens = min_tokens or self.min_tokens
-		max_tokens = max_tokens or self.max_tokens
+		min_tokens = kwargs.get("min_tokens", self.min_tokens)
+		max_tokens = kwargs.get("max_tokens", self.max_tokens)
 
 		# Extract segments
 		segments = self.text_segmenter(text)
@@ -436,6 +435,7 @@ class RemoveRedundancy(Encoder):
 		self,
 		segments: list[str]
 	) -> list[str]:
+
 		sent_encoder = self.sent_encoder
 		selected_segments = []
 
@@ -497,11 +497,11 @@ class KeywordScorer(Encoder):
 	def encode(
 		self,
 		text: str,
-		_ = None,
-		max_tokens: int | None = None
+		**kwargs
 	) -> list[str]:
+
 		tokenizer = self.tokenizer
-		max_tokens = max_tokens or self.max_tokens
+		max_tokens = kwargs.get("max_tokens", self.max_tokens)
 		sent_encoder = self.sent_encoder
 
 		# Extract keywords from the text
@@ -509,6 +509,7 @@ class KeywordScorer(Encoder):
 			text, self.num_keywords, self.stop_words,
 			self.keywords_preprocessor
 		)
+
 		# Create keywords embedding
 		keywords_emb = sent_encoder.encode(" ".join(keywords))
 

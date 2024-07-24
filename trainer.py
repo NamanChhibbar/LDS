@@ -5,7 +5,7 @@ from argparse import ArgumentParser, Namespace
 from nltk import sent_tokenize
 from transformers import (
 	BartTokenizer, BartForConditionalGeneration,
-	# T5Tokenizer, T5ForConditionalGeneration
+	T5Tokenizer, T5ForConditionalGeneration
 )
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -18,6 +18,7 @@ from utils.trainer_utils import SummarizationDataset, train_model
 
 
 def main() -> None:
+
 	# Get command line arguments
 	args = get_arguments()
 
@@ -27,12 +28,13 @@ def main() -> None:
 	sent_dir = f"{data_dir}/Models/Sent-Transformer"
 	bart_dir = f"{data_dir}/Models/BART"
 	save_dir = f"{data_dir}/Models/BART-GovReport-SegmentSampler"
-	# t5_dir = f"{data_dir}/Models/T5"
-	# save_dir = f"{data_dir}/Models/T5-GovReport-SegmentSampler"
+	t5_dir = f"{data_dir}/Models/T5"
+	save_dir = f"{data_dir}/Models/T5-GovReport-SegmentSampler"
 	train_history_path = f"{data_dir}/train-history/bart-history.json"
 
-	# Use the command line arguments
+	# Get command line arguments
 	# See function get_arguments for descriptions
+	model_name = args.model.lower()
 	max_words = args.max_words or float("inf")
 	shuffle = args.no_shuffle
 	batch_size = args.batch_size
@@ -47,15 +49,20 @@ def main() -> None:
 	flt_prec = args.float_precision or 4
 
 	print("Loading tokenizer and model...")
-	# BART
-	tokenizer = BartTokenizer.from_pretrained(bart_dir)
-	model = BartForConditionalGeneration.from_pretrained(bart_dir)
-	context_size = model.config.max_position_embeddings
+	match model_name:
 
-	# T5
-	# tokenizer = T5Tokenizer.from_pretrained(t5_dir)
-	# model = T5ForConditionalGeneration.from_pretrained(t5_dir)
-	# context_size = model.config.n_positions
+		case "bart":
+			tokenizer = BartTokenizer.from_pretrained(bart_dir)
+			model = BartForConditionalGeneration.from_pretrained(bart_dir)
+			context_size = model.config.max_position_embeddings
+
+		case "t5":
+			tokenizer = T5Tokenizer.from_pretrained(t5_dir)
+			model = T5ForConditionalGeneration.from_pretrained(t5_dir)
+			context_size = model.config.n_positions
+
+		case _:
+			raise ValueError(f"Invalid model name: {model_name}")
 
 	print("Loading data...")
 	govreport_files = os.listdir(govreport_dir)
@@ -86,7 +93,8 @@ def main() -> None:
 
 	# Reduces LR when a tracked metric stops improving
 	scheduler = ReduceLROnPlateau(
-		optimizer, mode="min", factor=factor, patience=patience
+		optimizer, mode="min",
+		factor=factor, patience=patience
 	)
 
 	print(f"Using device {device}")
@@ -111,6 +119,10 @@ def main() -> None:
 def get_arguments() -> Namespace:
 	parser = ArgumentParser(description="Training script")
 
+	parser.add_argument(
+		"--model", action="store", type=str, required=True,
+		help="Model to train"
+	)
 	parser.add_argument(
 		"--batch-size", action="store", type=int, required=True,
 		help="Maximum size of a batch"

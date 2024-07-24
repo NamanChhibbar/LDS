@@ -31,6 +31,7 @@ def gpu_usage() -> list[int]:
 
 	# Extract memory used by GPUs in MiB
 	gpu_memory = [int(mem) for mem in result.split("\n")]
+
 	return gpu_memory
 
 def get_device(threshold: int = 300) -> str:
@@ -236,20 +237,27 @@ class TextSegmenter:
 		self,
 		text: str
 	) -> list[str]:
+
 		min_words = self.min_words
 		sent_delimiter = self.sent_delimiter
+
 		parts = self.base_tokenizer(text)
 		new_parts = []
 		for part in parts:
 			new_parts.extend(part.split(";"))
 		parts = new_parts
 		num_parts = len(parts)
+
 		segments = []
 		for i, sent in enumerate(parts):
-			prev_text_words = count_words(segments[-1]) if \
+			prev_text_words = (
+				count_words(segments[-1]) if
 				segments else inf
-			next_text_words = count_words(parts[i + 1]) if \
+			)
+			next_text_words = (
+				count_words(parts[i + 1]) if
 				i + 1 < num_parts else inf
+			)
 			if (
 				count_words(sent) >= min_words or
 				prev_text_words == next_text_words == inf
@@ -259,4 +267,5 @@ class TextSegmenter:
 				segments[-1] = f"{segments[-1]}{sent_delimiter}{sent}"
 			else:
 				parts[i + 1] = f"{sent}{sent_delimiter}{parts[i + 1]}"
+
 		return segments
