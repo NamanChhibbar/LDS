@@ -379,7 +379,7 @@ class RemoveRedundancy(Encoder):
 	def encode(
 		self,
 		text: str,
-		*kwargs
+		**kwargs
 	) -> list[int]:
 		
 		tokenizer = self.tokenizer
