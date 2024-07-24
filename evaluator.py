@@ -41,6 +41,21 @@ def main() -> None:
 	t5_dir = f"{data_dir}/Models/T5"
 	pegasus_dir = f"{data_dir}/Models/PEGASUS"
 
+	min_words = 20_000
+	max_words = inf
+	max_texts = inf
+	num_texts = 0
+	min_token_frac = .5
+	head_size = .5
+	threshold = .8
+	boost = .02
+	num_keywords = 20
+	seed = 69
+	min_summary_tokens = 100
+	batch_size = 5
+	device = get_device()
+	# device = "cpu"
+
 	# Sentence transformer
 	# Automatically loads into gpu if available
 	sent_encoder = SentenceTransformer(sent_dir)
@@ -77,12 +92,7 @@ def main() -> None:
 	stop_words = get_stop_words(extra_stop_words=STOP_WORDS)
 
 	# Load data
-	min_words = 20_000
-	max_words = inf
-	max_texts = inf
-
 	texts, summaries = [], []
-	num_texts = 0
 	for file in govreport_files:
 		file_path = f"{govreport_dir}/{file}"
 		with open(file_path) as fp:
@@ -93,20 +103,11 @@ def main() -> None:
 			num_texts += 1
 		if num_texts == max_texts:
 			break
-
 	print(f"Number of texts: {len(texts)}")
 
 	segment_min_words = 20
 	text_segmenter = TextSegmenter(sent_tokenize, segment_min_words)
 
-	min_token_frac = .5
-	head_size = .5
-	threshold = .8
-	boost = .02
-	num_keywords = 20
-	seed = 69
-	device = get_device()
-	# device = "cpu"
 	min_tokens = int(min_token_frac * context_size)
 
 	encoders = [
@@ -134,7 +135,6 @@ def main() -> None:
 			stop_words
 		)
 	]
-	min_summary_tokens = 300
 	pipelines = [
 		SummarizationPipeline(
 			model, enc, postprocessor, min_summary_tokens,
@@ -142,7 +142,6 @@ def main() -> None:
 		) for enc in encoders
 	]
 
-	batch_size = 5
 	evaluator = Evaluator(pipelines, device)
 	results = evaluator(texts, summaries, batch_size)
 
