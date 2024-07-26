@@ -1,6 +1,12 @@
-\section{Proposed Methods}
-% \section{Methodology}
+\section{Methodology}
 \label{sec:methodology}
+
+We discuss the methodology used in our experiments in this section.
+Most of the methods start by segmenting the document into smaller, contiguous, and
+exhaustive parts.
+The segmentation algorithm is controlled by a threshold on the minimum number of words
+in a segment, which is a hyperparameter in each of the respective methods.
+
 
 \subsection{Central Truncation}
 \label{method:truncation}
@@ -23,109 +29,51 @@ better results than both the "retaining head" and the "retaining tail" methods.
 Their research also shows that truncating the middle is even better than the more
 complicated hierarchical methods, displaying superiority with simplicity.
 
-
-\subsection{Document Skimming}
-\label{method:skimming}
-
-One way to process long texts is by employing a speed reading strategy known as
-"skimming".
-Skimming is done by reading the whole text in a go while selectively skipping some
-parts of the text for quicker reading.
-The reader usually omits the portions that seem redundant or irrelevant in the text,
-minimizing information loss.
-
-Since we do not know which parts of a text are relevant, we suggest uniformly sampling
-sentences or segments of the text such that they fit in the context size of the LLM.
-This approach ensures we sample a segment from each part of the text.
-This approch is a modification to the methodology \citet{wang2024videoagent} use for
-QA on long videos. \citet{worsham-kalita-2018-genre} also use random sampling for genre
-identification.
-
-
-\subsection{Document Skimming with Extraction}
-
-In addition to skimming, we can use keywords from an extractive summarization
-algorithm to obtain similarity scores for keywords and text segments.
-We can then create a probability distribution using the scores from which we can sample
-text segments to include.
-This will help us choose segemnts intelligently instead of randomly sampling them.
-
-Some extractive summarization algorithms that can be used are:
-
-\begin{itemize}
-	\item \textbf{TextRank}: An unsupervised graph-based ranking algorithm developed for
-	keyword and sentence extraction. It is introduced by
-	\citet{mihalcea-tarau-2004-textrank}.
-	\item \textbf{LexRank}: An algorithm similar to TextRank, but uses cosine similarity
-	for extraction. It is developed by \citet{erkan2004lexrank}.
-	\item \textbf{PacSum}: An algorithm also similar to TextRank, but also uses
-	positional information for extraction. It is developed by
-	\citet{zheng-lapata-2019-sentence}.
-	\item \textbf{ATS using Luhn's Heuristic}: An algorithm introduced by
-	\citet{siddika2022automatic} that extracts sentences based on term frequencies.
-	\item \textbf{SummaRuNNer}: An RNN based sequence model for extractive summarization.
-	Developed by \citet{nallapati2017summarunner}.
-\end{itemize}
-
-This approach is similar to the way \citet{golia2024action} use action-item
-pairs to summarize.
-
-
-\subsection{Summarization using Convolutions}
-
-Another way to approach the problem is to apply convolution to encoded segments of
-the document.
-The convolution operation multiplies a sliding window of weights element-wise by the
-embeddings and then sums the result.
-This allows the model to learn cross-segment relationships and acts as a
-limited-range attention mechanism, an algorithm similar to \citet{chen2022long}.
-
-This method begins with separating sentences from the document and grouping them
-based on a fixed maximum number of sentences per group.
-These groups are then encoded and passed through a 1D convolution layer of size $k$ with
-$f$ filters, where $k$ and $f$ are hyperparameters in the model.
-A max-pooling layer can also be applied for feature enhancement.
-A decoder-only transformer then uses these processed embeddings as keys and values
-for the encoder-decoder attention mechanism to generate the summary.
-
-Longformer model \cite{beltagy2020longformer} uses a windowed attention mechanism with
-linear complexity to process long texts.
-Our 1D convolution operation outperforms the windowed attention mechanism since it has
-linear complexity and is more efficient to calculate than attention.
-
-
-
-\section{Implemented Pipelines}
-
-
-\subsection*{Pipeline 1}
-
-This pipeline is based on the Truncation method proposed in Section \ref{method:truncation}
-and truncates the middle of the text.
-It includes a hyperparameter $head\_size \in [0, 1]$ which determines the fraction of tokens
-to be taken from the head.
+The fraction of tokens to be taken from the head is controlled by the hyperparameter
+$head\_size \in [0, 1]$.
 Setting $head\_size = 1$ results in taking tokens only from the head, whereas
 setting $head\_size = 0$ results in taking tokens only from the tail.
 The truncated text is then sent to the summarizer.
 
 
-\subsection*{Pipeline 2}
+\subsection{Document Skimming}
+\label{method:skimming}
 
-This pipeline is based on the Document Skimming method proposed in Section \ref{method:skimming}
-and uniformly samples segments of the text.
-This method starts by segmenting the text using a segmenter.
-It inlcudes a hyperparameter $min\_words$, which controls the minimum number of words required
-in a segment.
+One way to process long texts is by employing a speed reading strategy known as "skimming".
+Skimming is done by reading the whole text in a go while selectively skipping some
+parts of the text for quicker reading.
+The reader usually omits the portions that seem redundant or irrelevant in the text,
+minimizing information loss.
+
+This method starts by segmenting the text using a segmenter with the hyperparameter $min\_words$.
 The segmenter uses a sentence tokenizer to separate sentences from the text, and then
 merges the sentences which have fewer words than $min\_words$.
 We then sample segments uniformly, with each segment having probability $p$ to be picked.
 The sampled segments are then merged to form a single text and sent to the summarizer.
-The calculation for the optimal value of $p$ is given below:
+This ensures we sample a segment from each part of the text.
 
+To address the removal of redundancy in the document, we experiment with and without removing
+redundant segments before and after sampling.
+This is done by maintaining the average of segment embeddings.
+\href{https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2}{this} sentence transformer
+is used to generate the segment embeddings.
+If the cosine similarity between the average of segment embeddings and the current segment
+embedding is greater than a threshold, the segment is removed.
+Though removing redundant segments before sampling is less efficient due to the whole document
+being processed, it ensures better utilization of the LLM's context size.
+The mean embedding is initialised as a zero vector and updated after each segment is processed.
+Doing so introduces a hyperparameter $threshold$ to control the similarity threshold between the
+mean embedding and the current segment embedding.
+
+This approch is a modification to the methodology \citet{wang2024videoagent} use for
+question-answering on long videos. \citet{worsham-kalita-2018-genre} also use random sampling
+for genre identification.
+
+We will now discuss the calculation of the optimal value of $p$ here.
 Let $X$ denote the total number of tokens in the sampled segments.
 Since segments are sampled randomly, $X$ is a random variable.
-If the context size of the model is $c$, we want $\mathrm{E}[X] = c$, where $\mathrm{E}[X]$
-denotes the expectation of $X$.
+If the context size of the model is $model\_size$, we want $\mathrm{E}[X] = model\_size$,
+where $\mathrm{E}[X]$ denotes the expectation of $X$.
 
 Suppose we have $n \in \mathbb{N}$ segments and $X_i \sim \mathrm{Bernoulli}(p)$ denotes
 if segment $i$ is chosen, $i \in \{1, 2, \dots, n\}$.
@@ -145,37 +93,43 @@ have $\mathrm{E}[X_i] = p$ $\forall i \in \{1, 2, \dots, n\}$.
 Let $total\_len$ be the total number of tokens in the text, then
 $total\_len = \sum_{i = 1}^{n} len_i$.
 
-\[ \therefore \mathrm{E}[X] = p \cdot total\_len \]
-\[ \mathrm{E}[X] = c \Rightarrow p \cdot total\_len = c \]
-\[ \therefore p = c / total\_len \]
+\[ \therefore \mathrm{E}[X] = p \cdot total\_len = model\_size \]
+\[ \Rightarrow p \cdot total\_len = model\_size \]
+\[ \therefore p = model\_size / total\_len \]
 
 
-\subsection*{Pipeline 3}
+\subsection{Document Skimming with Keyword Extraction}
 
-This pipeline is a modification of \textbf{Pipeline 2}.
-After sampling the segments, segments similar to previously selected segments are
-removed by comparing the segment embeddings generated by
-\href{https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2}{this} sentence
-transformer, which is based on MiniLM \cite{wang2020minilm}.
+In addition to skimming, we can use keywords from an extractive algorithm to obtain
+similarity scores for keywords and text segments.
+We can then create a probability distribution using the scores from which we can sample
+text segments to include.
+This will help us choose segemnts intelligently instead of randomly sampling them.
 
-This is done by iterating linearly over the sampled segments and tracking the mean
-of the segment embeddings, denoted by $mean\_emb$, which is initially a zero vector.
-We use cosine similarity to compare $mean\_emb$ to the current segment embedding,
-denoted as $emb_i$, where $i$ is the index of the current segment.
-If \[ \mathrm{cos\_sim}(mean\_emb, emb_i) \ge threshold \]
-where $threshold$ is a hyperparameter, then segment $i$ is removed.
-The filtered segments are then concatenated and sent to the summarizer.
+Some extractive summarization algorithms that can be used are:
+
+This approach is similar to the way \citet{golia2024action} use action-item
+pairs to summarize.
 
 
-\subsection*{Pipeline 4}
+% \subsection{Summarization using Convolutions}
 
-This pipeline is also a modification of \textbf{Pipeline 2} and is similar to
-\textbf{Pipeline 3}.
-Instead of removing similar segments after sampling the segments, we first remove similar
-segments and then uniformly sample the segments.
-Although this pipeline might be slower than \textbf{Pipeline 3}, it ensures better
-utilization of the LLM's context size.
-Similar to \textbf{Pipeline 3}, it includes a hyperparameter $threshold$, which controls
-how similar a segment should be to remove it.
-After removal of segments and sampling, the segments are concatenated and sent to the
-summarizer.
+% Another way to approach the problem is to apply convolution to encoded segments of
+% the document.
+% The convolution operation multiplies a sliding window of weights element-wise by the
+% embeddings and then sums the result.
+% This allows the model to learn cross-segment relationships and acts as a
+% limited-range attention mechanism, an algorithm similar to \citet{chen2022long}.
+
+% This method begins with separating sentences from the document and grouping them
+% based on a fixed maximum number of sentences per group.
+% These groups are then encoded and passed through a 1D convolution layer of size $k$ with
+% $f$ filters, where $k$ and $f$ are hyperparameters in the model.
+% A max-pooling layer can also be applied for feature enhancement.
+% A decoder-only transformer then uses these processed embeddings as keys and values
+% for the encoder-decoder attention mechanism to generate the summary.
+
+% Longformer model \cite{beltagy2020longformer} uses a windowed attention mechanism with
+% linear complexity to process long texts.
+% Our 1D convolution operation outperforms the windowed attention mechanism since it has
+% linear complexity and is more efficient to calculate than attention.

@@ -437,19 +437,17 @@ class RemoveRedundancy(Encoder):
 	) -> list[str]:
 
 		sent_encoder = self.sent_encoder
-		selected_segments = []
+		segment_embs = sent_encoder.encode(segments)
 
 		# Average embedding of selected segments
-		selected_embedding = np.zeros(self.sent_embedding_dim)
+		selected_emb = np.zeros(self.sent_embedding_dim)
 
 		num_segments = 0
-		for segment in segments:
-
-			# Get segment embedding
-			segment_embedding = sent_encoder.encode(segment)
+		selected_segments = []
+		for segment, embedding in zip(segments, segment_embs):
 
 			# Calculate similarity between current segment and chosen segments
-			similarity = selected_embedding @ segment_embedding
+			similarity = selected_emb @ embedding
 
 			# Discard current segment and contnue if it is similar
 			if self.threshold < similarity:
@@ -459,10 +457,124 @@ class RemoveRedundancy(Encoder):
 			selected_segments.append(segment)
 
 			# Update selected segments embedding
-			selected_embedding = (
-				(num_segments * selected_embedding + segment_embedding) /
+			selected_emb = (
+				(num_segments * selected_emb + embedding) /
 				(num_segments := num_segments + 1)
 			)
+		return selected_segments
+	
+
+
+class RemoveRedundancy2(Encoder):
+
+	def __init__(
+		self,
+		tokenizer,
+		min_tokens: int,
+		max_tokens: int,
+		text_segmenter: Callable[[str], list[str]],
+		sent_encoder: SentenceTransformer,
+		preprocessor: Callable[[list[str]], list[str]] | None = None,
+		threshold: float = .7,
+		seed: int | None = None,
+		segment_delimiter: str = " ",
+		add_special_tokens: bool = True
+	) -> None:
+		super().__init__(
+			tokenizer, min_tokens, max_tokens, preprocessor,
+			add_special_tokens, tokenizer.bos_token_id,
+			tokenizer.eos_token_id
+		)
+		self.text_segmenter = text_segmenter
+		self.sent_encoder = sent_encoder
+		self.sent_embedding_dim = sent_encoder.get_sentence_embedding_dimension()
+		self.threshold = threshold
+		self.seed = seed
+		self.segment_delimiter = segment_delimiter
+		np.random.seed(seed)
+
+	def encode(
+		self,
+		text: str,
+		**kwargs
+	) -> list[int]:
+		
+		tokenizer = self.tokenizer
+		min_tokens = kwargs.get("min_tokens", self.min_tokens)
+		max_tokens = kwargs.get("max_tokens", self.max_tokens)
+
+		# Extract segments
+		segments = self.text_segmenter(text)
+
+		# Get keywords
+		keywords = get_keywords(text)
+
+		# Remove redundant segments
+		segments = self.remove_redundancy(segments, keywords)
+		num_segments = len(segments)
+
+		# Tokenize segments
+		tokenized_segments = tokenizer(
+			segments,
+			add_special_tokens = False,
+			verbose = False
+		)["input_ids"]
+
+		# Sum of number of tokens in segments
+		num_tokens = sum([
+			len(segment)
+			for segment in tokenized_segments
+		])
+
+		# Approximate probability of picking a segment
+		p = max_tokens / num_tokens
+
+		# Convert list of segments to numpy array for sampling
+		segments = np.array(segments)
+
+		# Sample until segments fit in model
+		while True:
+			segment_mask = np.random.rand(num_segments) <= p
+			sampled = segments[segment_mask]
+
+			# Flatten segments
+			flattened = self.segment_delimiter.join(sampled)
+			flattened = tokenizer(
+				flattened,
+				add_special_tokens = False,
+				verbose = False
+			)["input_ids"]
+
+			# Break if number of tokens is in range
+			if min_tokens <= len(flattened) <= max_tokens:
+				break
+
+		return flattened
+	
+	def remove_redundancy(
+		self,
+		segments: list[str],
+		keywords: list[str]
+	) -> list[str]:
+		
+		sent_encoder = self.sent_encoder
+		keywords = " ".join(keywords)
+		keyword_emb = sent_encoder.encode(keywords)
+		segment_embs = sent_encoder.encode(segments)
+
+		selected_segments = []
+		for segment, embedding in zip(segments, segment_embs):
+
+			# Calculate similarity between current segment and chosen segments
+			similarity = keyword_emb @ embedding
+
+			# Discard current segment and contnue if it is not similar
+			if similarity < self.threshold:
+				continue
+
+			# Otherwise select it
+			selected_segments.append(segment)
+
 		return selected_segments
 	
 

@@ -196,7 +196,7 @@ def main() -> None:
 	if not successful:
 		input("Press enter to save model")
 
-	print("\nSaving model...")
+	print(f"\nSaving model in {save_dir}...")
 	model.save_pretrained(save_dir)
 
 	print(f"Saving training history in {train_history_path}...")

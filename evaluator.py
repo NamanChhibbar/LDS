@@ -116,6 +116,10 @@ def main() -> None:
 			tokenizer, min_tokens, context_size, text_segmenter,
 			sent_encoder, preprocessor, threshold, seed
 		),
+		RemoveRedundancy2(
+			tokenizer, min_tokens, context_size, text_segmenter,
+			sent_encoder, preprocessor, .6, seed
+		),
 		KeywordScorer(
 			tokenizer, context_size, text_segmenter, sent_encoder,
 			preprocessor, num_keywords, keywords_preprocessor,
