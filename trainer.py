@@ -119,6 +119,7 @@ def main() -> None:
 def get_arguments() -> Namespace:
 	parser = ArgumentParser(description="Training script")
 
+	# Command line arguments
 	parser.add_argument(
 		"--model", action="store", type=str, required=True,
 		help="Model to train"
@@ -172,6 +173,7 @@ def get_arguments() -> Namespace:
 		"--float-precision", action="store", type=int,
 		help="Number of decimal places to show in floating points"
 	)
+
 	args = parser.parse_args()
 	return args
 

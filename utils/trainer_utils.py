@@ -1,5 +1,6 @@
 from math import ceil
 from time import perf_counter
+from typing import Self
 
 import numpy as np
 import torch
@@ -116,7 +117,7 @@ class SummarizationDataset:
 
 		return batch_encodings
 
-	def __iter__(self):
+	def __iter__(self) -> Self:
 		self.it = 0
 
 		# Shuffle batches if specified
@@ -129,7 +130,7 @@ class SummarizationDataset:
 				self.cache = self.cache[permutation]
 
 		return self
-	
+
 	def __next__(self) -> BatchEncoding:
 		it = self.it
 		# Check if iterator is initialized

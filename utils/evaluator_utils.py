@@ -74,9 +74,9 @@ class Evaluator:
 		all_summaries = self.summaries = []
 		time_taken = []
 		for i, pipeline in enumerate(self.pipelines):
-			print(f"Generating summaries for pipeline {i+1}...")
+			print(f"Generating summaries for pipeline {i + 1}...")
 			start = perf_counter()
-			summaries = pipeline(texts, batch_size)
+			summaries = pipeline(texts, batch_size=batch_size)
 			time = perf_counter() - start
 			print(f"Took {time}s")
 			all_summaries.extend(summaries)

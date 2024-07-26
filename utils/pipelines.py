@@ -26,11 +26,20 @@ class Pipeline(ABC):
 		self.encoder = encoder
 		self.postprocessor = postprocessor
 
-	@abstractmethod
 	def __call__(
 		self,
 		texts: str | list[str],
-		batch_size: int | None = None
+		**kwargs
+	) -> str | list[str]:
+		if isinstance(texts, str):
+			return self.generate_summaries([texts], **kwargs)[0]
+		return self.generate_summaries(texts, **kwargs)
+
+	@abstractmethod
+	def generate_summaries(
+		self,
+		texts: str | list[str],
+		**kwargs
 	) -> list[str]:
 		pass
 
@@ -74,27 +83,24 @@ class SummarizationPipeline(Pipeline):
 		self.repetition_penalty = repetition_penalty
 		self.top_p = top_p
 
-	def __call__(
+	def generate_summaries(
 		self,
-		texts: str | list[str],
-		batch_size: int = 1,
+		texts: list[str],
 		**kwargs
 	) -> list[str]:
 
 		device = self.device
 		model = self.model.to(device)
+		encoder = self.encoder
 		postprocessor = self.postprocessor
 		summary_min_tokens = self.summary_min_tokens
 		summary_max_tokens = self.summary_max_tokens
+		batch_size = kwargs.get("batch_size", 1)
 		temperature = kwargs.get("temperature", self.temperature)
 		repetition_penalty = kwargs.get(
 			"repetition_penalty", self.repetition_penalty
 		)
 		top_p = kwargs.get("top_p", self.top_p)
-		encoder = self.encoder
-
-		if isinstance(texts, str):
-			texts = [texts]
 
 		# Generate encodings in batches
 		batches = SummarizationDataset(texts, encoder, batch_size)
@@ -107,7 +113,7 @@ class SummarizationPipeline(Pipeline):
 			encodings = encodings.to(device)
 
 			# Generate summaries' encodings
-			output = self.model.generate(
+			output = model.generate(
 				**encodings,
 				min_length = summary_min_tokens,
 				max_length = summary_max_tokens,
@@ -152,10 +158,9 @@ class OpenAIPipeline(Pipeline):
 		self.call_inputs = None
 		self.response = None
 	
-	def __call__(
+	def generate_summaries(
 		self,
-		texts: list[str],
-		_ = None
+		texts: list[str]
 	) -> list[str]:
 
 		postprocessor = self.postprocessor
