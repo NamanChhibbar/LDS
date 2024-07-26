@@ -68,7 +68,7 @@ def count_tokens(
 def show_exception(exc: Exception) -> None:
 	exc_class = exc.__class__.__name__
 	exc_msg = str(exc)
-	print(f"Encountered exception of type {exc_class}: {exc_msg}")
+	print(f"\nEncountered exception of type {exc_class}: {exc_msg}\n")
 
 def clear_stdout(spaces: int = 100) -> None:
 	print(f"\r{" " * spaces}\r", end="")

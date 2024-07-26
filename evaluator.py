@@ -68,8 +68,7 @@ def main() -> None:
 	text_segmenter = TextSegmenter(sent_tokenize, segment_min_words)
 
 	print("Loading sentence encoder...")
-	# Automatically loads into gpu if available
-	sent_encoder = SentenceTransformer(sent_dir)
+	sent_encoder = SentenceTransformer(sent_dir, device=device)
 
 	print("Loading tokenizer and model...")
 	match model_name:
@@ -91,6 +90,8 @@ def main() -> None:
 		
 		case _:
 			raise ValueError(f"Invalid model name: {model_name}")
+		
+	print(f"Context size of model: {context_size}")
 
 	print("Initializing encoders and pipelines...")
 	stop_words = get_stop_words(extra_stop_words=STOP_WORDS)

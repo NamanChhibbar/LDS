@@ -53,7 +53,8 @@ class SummarizationDataset:
 		# Store batches of texts and summaries in a numpy array
 		num_batches = self.num_batches = ceil(len(texts) / batch_size)
 		self.text_batches = np.zeros(num_batches, dtype=object)
-		self.summary_batches = summaries and np.zeros(num_batches, dtype=object)
+		self.summary_batches = None if summaries is None \
+			else np.zeros(num_batches, dtype=object)
 		for i in range(self.num_batches):
 			text_batch = texts[i*batch_size:(i+1)*batch_size].tolist()
 			self.text_batches[i] = text_batch
@@ -167,22 +168,21 @@ def train_model(
 		epoch_time = 0
 
 		for batch, inputs in enumerate(dataset):
-			start = perf_counter()
 			try:
+				start = perf_counter()
 				inputs = inputs.to(device)
 				loss = model(**inputs).loss
 				optimizer.zero_grad()
 				loss.backward()
 				optimizer.step()
+				time = (perf_counter() - start) * 1000
 			except Exception as e:
 				show_exception(e)
 				print("Training terminated")
 				model.train(False)
-				return epoch_losses
+				return epoch_losses, False
 
 			epoch_loss += loss.item()
-			time = (perf_counter() - start) * 1000
-
 			epoch_time += time
 
 			# Calculate remaining time
@@ -225,4 +225,4 @@ def train_model(
 			f"Avergage time [{round(epoch_time, flt_prec)} ms/batch]"
 		)
 	model.train(False)
-	return epoch_losses
+	return epoch_losses, True

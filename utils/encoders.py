@@ -536,6 +536,7 @@ class KeywordScorer(Encoder):
 			if tokens_used + segment_len + 1 > max_tokens:
 				continue
 			selected_indices.append(i)
+			# +1 to account for segment delimiter
 			tokens_used += segment_len + 1
 
 		# Sort the selected indices to maintain segment order
