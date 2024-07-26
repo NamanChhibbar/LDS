@@ -25,12 +25,14 @@ from utils.evaluator_utils import Evaluator
 def main() -> None:
 
 	filterwarnings("ignore")
-	inf = float("inf")
-
 	args = get_arguments()
 
 	model_name = args.model.lower()
 	dataset_name = args.dataset.lower()
+	min_words = args.min_words
+	max_words = args.max_words
+	max_texts = args.max_texts
+	device = "cpu" if args.no_gpu else get_device()
 
 	data_dir = "/Users/naman/Workspace/Data/Long-Document-Summarization"
 	data_dir = "/home/nchibbar/Data"
@@ -42,9 +44,6 @@ def main() -> None:
 	t5_dir = f"{data_dir}/Models/T5"
 	pegasus_dir = f"{data_dir}/Models/PEGASUS"
 
-	min_words = 30_000
-	max_words = inf
-	max_texts = 300
 	segment_min_words = 20
 	min_token_frac = .5
 	head_size = .5
@@ -53,9 +52,11 @@ def main() -> None:
 	num_keywords = 20
 	seed = 69
 	min_summary_tokens = 100
+
 	batch_size = 5
-	device = get_device()
-	# device = "cpu"
+	temperature = 2.
+	repetition_penalty = 3.
+	top_p = .95
 
 	print("Loading text processors and segmenter...")
 	preprocessor = TextProcessor(preprocessing=True)
@@ -124,7 +125,7 @@ def main() -> None:
 	pipelines = [
 		SummarizationPipeline(
 			model, enc, postprocessor, min_summary_tokens,
-			context_size, device
+			context_size, device, temperature, repetition_penalty, top_p
 		) for enc in encoders
 	]
 
@@ -165,9 +166,9 @@ def main() -> None:
 		case _:
 			raise ValueError(f"Invalid dataset name: {dataset_name}")
 
-	print(f"Number of texts: {len(texts)}")
+	print(f"Using {num_texts} texts")
 
-	print("Evaluating pipelines...")
+	print(f"Evaluating pipelines with device {device}...")
 	evaluator = Evaluator(pipelines, device)
 	results = evaluator(texts, summaries, batch_size)
 
@@ -187,6 +188,22 @@ def get_arguments() -> Namespace:
 	parser.add_argument(
 		"--dataset", action="store", type=str, required=True,
 		help="Dataset to use"
+	)
+	parser.add_argument(
+		"--min-words", action="store", type=float, default=0,
+		help="Minimum words in text"
+	)
+	parser.add_argument(
+		"--max-words", action="store", type=float, default=float("inf"),
+		help="Maximum words in text"
+	)
+	parser.add_argument(
+		"--max-texts", action="store", type=float, default=float("inf"),
+		help="Maximum texts to use"
+	)
+	parser.add_argument(
+		"--no-gpu", action="store_true",
+		help="Specify to NOT use GPU"
 	)
 
 	args = parser.parse_args()
