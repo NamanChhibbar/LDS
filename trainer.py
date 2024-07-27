@@ -38,7 +38,6 @@ def main() -> None:
 	max_texts = args.max_texts
 	shuffle = args.no_shuffle
 	batch_size = args.batch_size
-	use_cache = args.no_cache
 	lr = args.learning_rate
 	factor = args.factor
 	patience = args.patience
@@ -176,7 +175,7 @@ def main() -> None:
 
 	dataset = SummarizationDataset(
 		texts, encoder, batch_size, summaries,
-		context_size, use_cache, shuffle, seed
+		context_size, shuffle, seed
 	)
 
 	# Adam optimizer with weight decay
@@ -243,10 +242,6 @@ def get_arguments() -> Namespace:
 	parser.add_argument(
 		"--no-shuffle", action="store_false",
 		help="specify to NOT shuffle data in the dataset"
-	)
-	parser.add_argument(
-		"--no-cache", action="store_false",
-		help="specify to NOT use cache to store processed inputs"
 	)
 	parser.add_argument(
 		"--min-words", action="store", type=int, default=0,

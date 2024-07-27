@@ -259,7 +259,7 @@ class SegmentSampler(Encoder):
 		sent_encoder: SentenceTransformer,
 		preprocessor: Callable[[list[str]], list[str]] | None = None,
 		threshold: float = .7,
-		prob_boost: float = .02,
+		prob_boost: float = .03,
 		seed: int | None = None,
 		segment_delimiter: str = " ",
 		add_special_tokens: bool = True
@@ -383,6 +383,7 @@ class RemoveRedundancy(Encoder):
 	) -> list[int]:
 		
 		tokenizer = self.tokenizer
+		segment_delimiter = self.segment_delimiter
 		min_tokens = kwargs.get("min_tokens", self.min_tokens)
 		max_tokens = kwargs.get("max_tokens", self.max_tokens)
 
@@ -393,18 +394,21 @@ class RemoveRedundancy(Encoder):
 		segments = self.remove_redundancy(segments)
 		num_segments = len(segments)
 
-		# Tokenize segments
-		tokenized_segments = tokenizer(
-			segments,
-			add_special_tokens = False,
-			verbose = False
-		)["input_ids"]
+		# Count number of tokens in segments
+		num_tokens, _ = count_tokens(segments, tokenizer)
+		
+		# Account for segment delimiters
+		num_tokens += num_segments - 1
 
-		# Sum of number of tokens in segments
-		num_tokens = sum([
-			len(segment)
-			for segment in tokenized_segments
-		])
+		# Check if segments fit in the model
+		if num_tokens <= max_tokens:
+			flattened = segment_delimiter.join(segments)
+			flattened = tokenizer(
+				flattened,
+				add_special_tokens = False,
+				verbose = False
+			)["input_ids"]
+			return flattened
 
 		# Approximate probability of picking a segment
 		p = max_tokens / num_tokens
@@ -418,7 +422,7 @@ class RemoveRedundancy(Encoder):
 			sampled = segments[segment_mask]
 
 			# Flatten segments
-			flattened = self.segment_delimiter.join(sampled)
+			flattened = segment_delimiter.join(sampled)
 			flattened = tokenizer(
 				flattened,
 				add_special_tokens = False,
@@ -500,6 +504,7 @@ class RemoveRedundancy2(Encoder):
 	) -> list[int]:
 		
 		tokenizer = self.tokenizer
+		segment_delimiter = self.segment_delimiter
 		min_tokens = kwargs.get("min_tokens", self.min_tokens)
 		max_tokens = kwargs.get("max_tokens", self.max_tokens)
 
@@ -513,18 +518,21 @@ class RemoveRedundancy2(Encoder):
 		segments = self.remove_redundancy(segments, keywords)
 		num_segments = len(segments)
 
-		# Tokenize segments
-		tokenized_segments = tokenizer(
-			segments,
-			add_special_tokens = False,
-			verbose = False
-		)["input_ids"]
+		# Count number of tokens in segments
+		num_tokens, _ = count_tokens(segments, tokenizer)
+		
+		# Account for segment delimiters
+		num_tokens += num_segments - 1
 
-		# Sum of number of tokens in segments
-		num_tokens = sum([
-			len(segment)
-			for segment in tokenized_segments
-		])
+		# Check if segments fit in the model
+		if num_tokens <= max_tokens:
+			flattened = segment_delimiter.join(segments)
+			flattened = tokenizer(
+				flattened,
+				add_special_tokens = False,
+				verbose = False
+			)["input_ids"]
+			return flattened
 
 		# Approximate probability of picking a segment
 		p = max_tokens / num_tokens
@@ -538,7 +546,7 @@ class RemoveRedundancy2(Encoder):
 			sampled = segments[segment_mask]
 
 			# Flatten segments
-			flattened = self.segment_delimiter.join(sampled)
+			flattened = segment_delimiter.join(sampled)
 			flattened = tokenizer(
 				flattened,
 				add_special_tokens = False,

@@ -1,5 +1,6 @@
 import os
 import json
+from time import perf_counter
 from warnings import filterwarnings
 from argparse import ArgumentParser, Namespace
 
@@ -173,9 +174,19 @@ def main() -> None:
 
 	print(f"Using {num_texts} texts")
 
+	print("Timing encoders...")
+	time_taken = []
+	for i, encoder in enumerate(encoders):
+		start = perf_counter()
+		encoder(texts)
+		time = (perf_counter() - start) * 1000
+		time_taken.append(time)
+		print(f"Encoder {i + 1} took {time} ms")
+
 	print(f"Evaluating pipelines with device {device}...")
 	evaluator = Evaluator(pipelines, device)
 	results = evaluator(texts, summaries, batch_size)
+	results["encoder_times"] = time_taken
 
 	print(f"Saving results in {results_path}...")
 	with open(results_path, "w") as fp:

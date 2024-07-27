@@ -23,7 +23,6 @@ class SummarizationDataset:
 	`batch_size`: Maximum number of text encodings in a batch
 	`summaries`: List of summaries
 	`summary_max_tokens`: Maximum tokens in summary encodings
-	`use_cache`: Use a cache to store already processed batches while iterating
 	`shuffle`: Shuffle batches before iterating
 	`seed`: Manual seed for output reproducibility
 	"""
@@ -34,7 +33,6 @@ class SummarizationDataset:
 		batch_size: int,
 		summaries: list[str] | None = None,
 		summary_max_tokens: int = 0,
-		use_cache: bool = False,
 		shuffle: bool = False,
 		seed: int | None = None
 	) -> None:
@@ -65,7 +63,7 @@ class SummarizationDataset:
 		# Use numpy array as a cache, if specified
 		self.cache = np.zeros(
 			self.num_batches, dtype=object
-		) if use_cache else None
+		)
 
 		self.encoder = encoder
 		self.batch_size = batch_size
@@ -85,7 +83,7 @@ class SummarizationDataset:
 		cache = self.cache
 
 		# Check if input is cached
-		if cache is not None and cache[ind]:
+		if cache[ind]:
 			return cache[ind]
 		
 		# Encode texts using encoder and summaries using tokenizer
@@ -109,12 +107,11 @@ class SummarizationDataset:
 		# Create batch encoding
 		batch_encodings = BatchEncoding(encodings)
 
-		# Save to cache and delete text batch if using cache
-		if cache is not None:
-			cache[ind] = batch_encodings
-			text_batches[ind] = 0
-			if summary_batches is not None:
-				summary_batches[ind] = 0
+		# Save to cache and delete text batch
+		cache[ind] = batch_encodings
+		text_batches[ind] = 0
+		if summary_batches is not None:
+			summary_batches[ind] = 0
 
 		return batch_encodings
 

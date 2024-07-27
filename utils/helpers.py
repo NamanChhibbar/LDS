@@ -54,20 +54,21 @@ def count_words(text: str) -> int:
 	return num_words
 
 def count_tokens(
-	text: str,
+	texts: str | list[str],
 	tokenizer
-) -> tuple[int, list[int]]:
-	encoding = tokenizer(
-		text,
+) -> tuple[int, list[int]] | tuple[int, list[list[int]]]:
+	encodings = tokenizer(
+		texts,
 		add_special_tokens = False,
 		verbose = False
 	)["input_ids"]
-	num_tokens = len(encoding)
-	return num_tokens, encoding
+	num_tokens = len(encodings) if isinstance(texts, str) \
+		else sum([len(encoding) for encoding in encodings])
+	return num_tokens, encodings
 
-def show_exception(exc: Exception) -> None:
-	exc_class = exc.__class__.__name__
-	exc_msg = str(exc)
+def show_exception(exception: Exception) -> None:
+	exc_class = exception.__class__.__name__
+	exc_msg = str(exception)
 	print(f"\nEncountered exception of type {exc_class}: {exc_msg}\n")
 
 def clear_stdout(spaces: int = 100) -> None:

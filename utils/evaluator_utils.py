@@ -1,5 +1,3 @@
-from time import perf_counter
-
 import numpy as np
 import torch
 from bert_score import BERTScorer
@@ -53,12 +51,11 @@ class Evaluator:
 		texts: str | list[str],
 		summaries: str | list[str],
 		batch_size: int | None = None
-	) -> dict:
-		time_taken = self.generate_summaries(texts, batch_size)
+	) -> dict[str]:
+		self.generate_summaries(texts, batch_size)
 		bert_score = self.get_bert_score(summaries)
 		rouge_score = self.get_rouge_score(summaries)
 		scores = {
-			"time-taken": time_taken,
 			"bert-scores": bert_score,
 			"rouge-scores": rouge_score
 		}
@@ -68,20 +65,14 @@ class Evaluator:
 		self,
 		texts: str | list[str],
 		batch_size: int | None = None
-	) -> list[int]:
+	) -> None:
 		if isinstance(texts, str):
 			texts = [texts]
 		all_summaries = self.summaries = []
-		time_taken = []
 		for i, pipeline in enumerate(self.pipelines):
 			print(f"Generating summaries for pipeline {i + 1}...")
-			start = perf_counter()
 			summaries = pipeline(texts, batch_size=batch_size)
-			time = perf_counter() - start
-			print(f"Took {time}s")
 			all_summaries.extend(summaries)
-			time_taken.append(time)
-		return time_taken
 	
 	# P, R, F
 	def get_bert_score(
