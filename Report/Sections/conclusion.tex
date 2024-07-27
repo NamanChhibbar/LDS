@@ -1,3 +1,15 @@
+\section{Future Work}
+
+We have used a very basic
+\href{https://www.nltk.org/api/nltk.tokenize.sent_tokenize.html}{sentence tokenizer} to
+segment the document.
+In out experiments, we find that segmentation is a crucial step in the pipeline, and can
+influence the output summary significantly.
+Ensuring the uniformity of the length of the segments while preserving coherence is
+important for better utilization of the context size of the summarizer.
+We encourage future work to experiment with more complex segmenters.
+
+
 \section{Conclusion}
 \label{sec:conclusion}
 
@@ -8,4 +20,4 @@ Even though our ROUGE-2 scores are lower than the baselines, ROUGE-1 and ROUGE-L
 scores are competitive.
 Since BERTScore is a better metric for capturing semantic similarity, we hypothesize
 our pipelines are able to generate better summaries than baselines with higher
-ROUGE scores. 
+ROUGE scores.
