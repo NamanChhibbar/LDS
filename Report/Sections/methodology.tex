@@ -54,11 +54,19 @@ This ensures we sample a segment from each part of the text.
 
 To address the removal of redundancy in the document, we experiment with and without removing
 redundant segments before and after sampling.
-This is done by maintaining the average of segment embeddings.
-\href{https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2}{this} sentence transformer
+This is done by computing the cosine similarity between the mean segment embeddings and the current
+segment embedding.
+\href{https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2}{This} sentence transformer
 is used to generate the segment embeddings.
-If the cosine similarity between the average of segment embeddings and the current segment
-embedding is greater than a threshold, the segment is removed.
+This sentence transformer is based on MiniLM \cite{wang2020minilm}, which is a distilled version
+of larger encoder-only transformer models.
+If the cosine similarity is greater than a threshold, the current segment is removed.
+The mean embedding is updated if the current segment is retained.
+
+When removing segments after sampling, we increase the probability of choosing the segments
+before sampling to compensate for the removed segments.
+This fraction is controlled by the hyperparameter $prob\_boost$.
+The updated probability is calculated as $p_{new} = (1 + prob\_boost) \cdot p_{optimal}$.
 Though removing redundant segments before sampling is less efficient due to the whole document
 being processed, it ensures better utilization of the LLM's context size.
 The mean embedding is initialised as a zero vector and updated after each segment is processed.
@@ -100,16 +108,25 @@ $total\_len = \sum_{i = 1}^{n} len_i$.
 
 \subsection{Document Skimming with Keyword Extraction}
 
-In addition to skimming, we can use keywords from an extractive algorithm to obtain
-similarity scores for keywords and text segments.
-We can then create a probability distribution using the scores from which we can sample
-text segments to include.
-This will help us choose segemnts intelligently instead of randomly sampling them.
+Document skimming (\ref{method:skimming}) involved a very intuitive and simple
+approach of sampling segments randomly.
+Instead of that, we can use an efficient keyword extraction algorithm to get important keywords
+from the document.
+These keywords help us sample segments intelligently, ensuring we get the most important
+segments from the document.
 
-Some extractive summarization algorithms that can be used are:
+We use Latent Dirichlet Allocation (LDA) \cite{blei2003latent} with a single topic to get topic
+words (keywords) from the document.
+These keywords are concatenated using a delimiter (a space is used in our experiments) to form a
+single sentence.
+This sentence is then embedded and compared with other segment embeddings using cosine similarity.
+Maximum number of segments with the highest similarity are retained.
+The keyword sentence and document segments are embedded using the same
+\href{https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2}{sentence transformer}
+used in the previous method.
 
-This approach is similar to the way \citet{golia2024action} use action-item
-pairs to summarize.
+This approach is similar to the way \citet{golia2024action} use action items to pick segments of
+text (a neighbourhood of 2 sentences around the action item) for summarization.
 
 
 % \subsection{Summarization using Convolutions}

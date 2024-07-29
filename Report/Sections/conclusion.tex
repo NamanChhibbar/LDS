@@ -1,12 +1,13 @@
 \section{Future Work}
 
-We have used a very basic
-\href{https://www.nltk.org/api/nltk.tokenize.sent_tokenize.html}{sentence tokenizer} to
-segment the document.
+We have used a very basic sentence tokenizer
+(\href{https://www.nltk.org/api/nltk.tokenize.sent_tokenize.html}{nltk.sent\_tokenize}),
+with some modifications to control the minimum number of words in a segment,
+to segment the document.
 In out experiments, we find that segmentation is a crucial step in the pipeline, and can
 influence the output summary significantly.
 Ensuring the uniformity of the length of the segments while preserving coherence is
-important for better utilization of the context size of the summarizer.
+important for better utilization of the context size of the summarizer while sampling.
 We encourage future work to experiment with more complex segmenters.
 
 

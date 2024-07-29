@@ -38,11 +38,11 @@ def main() -> None:
 	max_words = args.max_words
 	max_texts = args.max_texts
 	device = "cpu" if args.no_gpu else get_device()
-	no_time = args.no_time
+	time_only = args.time_only
 
 	data_dir = "/Users/naman/Workspace/Data/Long-Document-Summarization"
 	data_dir = "/home/nchibbar/Data"
-	results_path = f"{data_dir}/{model_name}-{dataset_name}.json"
+	results_path = f"{data_dir}/{model_name}-{dataset_name}{"-times" if time_only else ""}.json"
 	sent_dir = f"{data_dir}/Models/Sent-Transformer"
 	bart_dir = f"{data_dir}/Models/BART"
 	t5_dir = f"{data_dir}/Models/T5"
@@ -129,10 +129,10 @@ def main() -> None:
 			tokenizer, min_tokens, context_size, text_segmenter,
 			sent_encoder, preprocessor, threshold, seed
 		),
-		RemoveRedundancy2(
-			tokenizer, min_tokens, context_size, text_segmenter,
-			sent_encoder, preprocessor, .4, seed
-		),
+		# RemoveRedundancy2(
+		# 	tokenizer, min_tokens, context_size, text_segmenter,
+		# 	sent_encoder, preprocessor, .4, seed
+		# ),
 		KeywordScorer(
 			tokenizer, context_size, text_segmenter, sent_encoder,
 			preprocessor, num_keywords, keywords_preprocessor,
@@ -190,8 +190,8 @@ def main() -> None:
 
 	print(f"Using {num_texts} texts")
 
-	time_taken = []
-	if not no_time:
+	if time_only:
+		time_taken = []
 		print("Timing encoders...")
 		for i, encoder in enumerate(encoders):
 			start = perf_counter()
@@ -199,15 +199,18 @@ def main() -> None:
 			time = (perf_counter() - start) * 1000
 			time_taken.append(time)
 			print(f"Encoder {i + 1} took {time} ms")
-
-	print(f"Evaluating pipelines with device {device}...")
-	evaluator = Evaluator(pipelines, device)
-	results = evaluator(texts, summaries, batch_size)
-	results["encoder_times"] = time_taken
+		results = {"encoder_times": time_taken}
+	else:
+		print(f"Evaluating pipelines with device {device}...")
+		evaluator = Evaluator(pipelines, device)
+		results = evaluator(texts, summaries, batch_size)
+	
+	results["num_texts"] = num_texts
 
 	print(f"Saving results in {results_path}...")
 	with open(results_path, "w") as fp:
 		json.dump(results, fp, indent=2)
+
 
 
 def get_arguments() -> Namespace:
@@ -239,8 +242,8 @@ def get_arguments() -> Namespace:
 		help="Specify to NOT use GPU"
 	)
 	parser.add_argument(
-		"--no-time", action="store_true",
-		help="Specify to NOT time encoders"
+		"--time-only", action="store_true",
+		help="Specify to ONLY time encoders"
 	)
 
 	args = parser.parse_args()
