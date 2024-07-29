@@ -10,9 +10,6 @@ from .encoders import Encoder
 from .trainer_utils import SummarizationDataset
 
 
-OPENAI_DELAY = 3
-
-
 
 class Pipeline(ABC):
 
@@ -150,17 +147,20 @@ class OpenAIPipeline(Pipeline):
 		model: str,
 		encoder: Encoder,
 		postprocessor: Callable[[list[str]], list[str]] | None = None,
-		system_prompt: str | None = None
+		system_prompt: str | None = None,
+		delay: float = 1.
 	) -> None:
 		super().__init__(model, encoder, postprocessor)
 		self.max_tokens = encoder.max_tokens
 		self.system_prompt = system_prompt
+		self.delay = delay
 		self.call_inputs = None
 		self.response = None
 	
 	def generate_summaries(
 		self,
-		texts: list[str]
+		texts: list[str],
+		**kwargs
 	) -> list[str]:
 
 		postprocessor = self.postprocessor
@@ -184,7 +184,7 @@ class OpenAIPipeline(Pipeline):
 			summaries.append(summary)
 
 			# Delay before next call
-			sleep(OPENAI_DELAY)
+			sleep(self.delay)
 
 		return summaries
 	
@@ -207,11 +207,12 @@ class OpenAIPipeline(Pipeline):
 		messages = []
 		if system_prompt is not None:
 			messages.append({"role": "system", "content": system_prompt})
-			tokens_used += count_tokens(system_prompt, tokenizer) + 4
+			tokens_used += count_tokens(system_prompt, tokenizer)[0] + 4
 
 		# Distill text
-		encodings = encoder.encode(
+		encodings = encoder(
 			text,
+			return_batch = False,
 			max_tokens = max_tokens - tokens_used
 		)
 		text = tokenizer.decode(encodings, ignore_special_tokens=True)

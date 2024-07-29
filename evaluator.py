@@ -3,12 +3,14 @@ import json
 from time import perf_counter
 from warnings import filterwarnings
 from argparse import ArgumentParser, Namespace
+from dotenv import load_dotenv
 
 from nltk import sent_tokenize
 from transformers import (
 	BartTokenizer, BartForConditionalGeneration,
 	T5Tokenizer, T5ForConditionalGeneration,
-	PegasusTokenizerFast, PegasusForConditionalGeneration
+	PegasusTokenizerFast, PegasusForConditionalGeneration,
+	GPT2TokenizerFast
 )
 from sentence_transformers import SentenceTransformer
 
@@ -18,7 +20,7 @@ from utils.helpers import (
 	STOP_WORDS
 )
 from utils.encoders import *
-from utils.pipelines import SummarizationPipeline
+from utils.pipelines import *
 from utils.evaluator_utils import Evaluator
 
 
@@ -26,6 +28,8 @@ from utils.evaluator_utils import Evaluator
 def main() -> None:
 
 	filterwarnings("ignore")
+	if not load_dotenv():
+		raise FileNotFoundError(".env file not found")
 	args = get_arguments()
 
 	model_name = args.model.lower()
@@ -34,16 +38,18 @@ def main() -> None:
 	max_words = args.max_words
 	max_texts = args.max_texts
 	device = "cpu" if args.no_gpu else get_device()
+	no_time = args.no_time
 
 	data_dir = "/Users/naman/Workspace/Data/Long-Document-Summarization"
 	data_dir = "/home/nchibbar/Data"
-	govreport_dir = f"{data_dir}/GovReport/processed"
-	bigpatent_dir = f"{data_dir}/BigPatent/processed"
 	results_path = f"{data_dir}/{model_name}-{dataset_name}.json"
 	sent_dir = f"{data_dir}/Models/Sent-Transformer"
 	bart_dir = f"{data_dir}/Models/BART"
 	t5_dir = f"{data_dir}/Models/T5"
 	pegasus_dir = f"{data_dir}/Models/PEGASUS"
+	gpt_dir = f"{data_dir}/Models/GPT-3.5-turbo-tokenizer"
+	govreport_dir = f"{data_dir}/GovReport/processed"
+	bigpatent_dir = f"{data_dir}/BigPatent/processed"
 
 	segment_min_words = 20
 	min_token_frac = .5
@@ -58,6 +64,7 @@ def main() -> None:
 	temperature = 2.
 	repetition_penalty = 3.
 	top_p = .95
+	system_prompt = "You will be given some segments of a very long document. Your task is to summarize the entire document as a whole by extracting key information and ideas from the segments. Generate a detailed, concise, and coherent summary in 300 words. Do not refer to the document in the summary in any way."
 
 	print("Loading text processors and segmenter...")
 	preprocessor = TextProcessor(preprocessing=True)
@@ -88,6 +95,11 @@ def main() -> None:
 			tokenizer = PegasusTokenizerFast.from_pretrained(pegasus_dir)
 			model = PegasusForConditionalGeneration.from_pretrained(pegasus_dir)
 			context_size = model.config.max_position_embeddings
+
+		case "gpt":
+			tokenizer = GPT2TokenizerFast.from_pretrained(gpt_dir)
+			model = "gpt-3.5-turbo"
+			context_size = 4096
 		
 		case _:
 			raise ValueError(f"Invalid model name: {model_name}")
@@ -119,7 +131,7 @@ def main() -> None:
 		),
 		RemoveRedundancy2(
 			tokenizer, min_tokens, context_size, text_segmenter,
-			sent_encoder, preprocessor, .6, seed
+			sent_encoder, preprocessor, .4, seed
 		),
 		KeywordScorer(
 			tokenizer, context_size, text_segmenter, sent_encoder,
@@ -132,6 +144,10 @@ def main() -> None:
 		SummarizationPipeline(
 			model, enc, postprocessor, min_summary_tokens,
 			context_size, device, temperature, repetition_penalty, top_p
+		) for enc in encoders
+	] if model_name != "gpt" else [
+		OpenAIPipeline(
+			model, enc, postprocessor, system_prompt
 		) for enc in encoders
 	]
 
@@ -174,14 +190,15 @@ def main() -> None:
 
 	print(f"Using {num_texts} texts")
 
-	print("Timing encoders...")
 	time_taken = []
-	for i, encoder in enumerate(encoders):
-		start = perf_counter()
-		encoder(texts)
-		time = (perf_counter() - start) * 1000
-		time_taken.append(time)
-		print(f"Encoder {i + 1} took {time} ms")
+	if not no_time:
+		print("Timing encoders...")
+		for i, encoder in enumerate(encoders):
+			start = perf_counter()
+			encoder(texts)
+			time = (perf_counter() - start) * 1000
+			time_taken.append(time)
+			print(f"Encoder {i + 1} took {time} ms")
 
 	print(f"Evaluating pipelines with device {device}...")
 	evaluator = Evaluator(pipelines, device)
@@ -220,6 +237,10 @@ def get_arguments() -> Namespace:
 	parser.add_argument(
 		"--no-gpu", action="store_true",
 		help="Specify to NOT use GPU"
+	)
+	parser.add_argument(
+		"--no-time", action="store_true",
+		help="Specify to NOT time encoders"
 	)
 
 	args = parser.parse_args()
