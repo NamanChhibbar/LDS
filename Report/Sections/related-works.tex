@@ -25,9 +25,9 @@ The attention heads in the decoder only attends to the tokens picked by their
 k-nearest-neighbor (kNN) algorithm.
 The kNN indices between the input tokens are created by the hidden states generated in the
 encoder.
-\citet{phang2022investigating} intorduce the staggered block-local attention mechanism.
+\citet{phang2022investigating} introduce the staggered block-local attention mechanism.
 In block-local attention mechanism, the input sequence is divided into non-overlapping blocks
-and tokens in attend to tokens in the same block.
+and tokens in a block attend to other tokens in the same block.
 In staggered block-local attention, the blocks are staggered such that each token is in a
 different block in each head.
 
@@ -43,3 +43,9 @@ These groups are then encoded using BERT (Bidirectional Encoder Representations 
 Transformers) and passed through a 1D convolution layer for local feature extraction.
 What makes this method special is that the attention mechanism is replaced by a 1D
 convolution layer, which has linear complexity.
+\citet{chen2023extending} use positional interpolation to extend the context size of a
+pretrained model.
+Instead of the usual extrapolation of the positional embeddings, they downscale the positional
+embeddings to force them into a range the model is trained on, hence interpolating in the
+pretrained range.
+They claim that it is better for the model to use the positional embeddings it is trained on.

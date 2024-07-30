@@ -37,7 +37,7 @@ def main() -> None:
 	min_words = args.min_words
 	max_words = args.max_words
 	max_texts = args.max_texts
-	device = "cpu" if args.no_gpu else get_device()
+	device = "cpu" if args.no_gpu else get_device(1000)
 	time_only = args.time_only
 
 	data_dir = "/Users/naman/Workspace/Data/Long-Document-Summarization"
@@ -197,8 +197,8 @@ def main() -> None:
 			start = perf_counter()
 			encoder(texts)
 			time = (perf_counter() - start) * 1000
-			time_taken.append(time)
 			print(f"Encoder {i + 1} took {time} ms")
+			time_taken.append(time)
 		results = {"encoder_times": time_taken}
 	else:
 		print(f"Evaluating pipelines with device {device}...")
