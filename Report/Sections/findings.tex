@@ -1,21 +1,6 @@
 \section{Experimental Findings}
 \label{sec:findings}
 
-We test our pipelines with the following summarizers: \textbf{BART} (Bidirectional
-and Autoregressive Transformer) \cite{lewis-etal-2020-bart} fine-tuned on the
-CNN/Daily Mail dataset \cite{nallapati2016abstractive} with a context size of 1024,
-\textbf{LongT5} \cite{guo2021longt5}, a variant of T5 (Text-to-Text Transfer
-Transformer) \cite{raffel2020exploring}, fine-tuned on the BookSum dataset with
-a context size of 4096, and \textbf{GPT-3.5 Turbo} \cite{brown2020language} with a
-context size of 4096.
-
-We compare our results with the state-of-the-art summarization models, including
-Unlimiformer \cite{bertsch2023unlimiformer} integrated with BART \cite{lewis-etal-2020-bart}
-and PRIMERA \cite{beltagy2020longformer}, Hepos \cite{huang-etal-2021-efficient},
-PEGASUS-X with staggered block-local attention \cite{phang2022investigating}, extended
-LLaMA-7B with positional interpolation.
-Refer to \autoref{tab:results} for the baseline results and our results.
-
 \begin{table*}[!ht]
 	\centering
 
@@ -42,5 +27,87 @@ Refer to \autoref{tab:results} for the baseline results and our results.
 
 	\caption{Automatic evaluation results on the GovReport dataset. Context size of the models are
 	mentioned in parenthesis. The best score in each metric category is highlighted in \textbf{bold}.}
-	\label{tab:results}
+	\label{tab:govreport}
 \end{table*}
+
+\begin{table*}[!ht]
+	\centering
+
+	\begin{tabular}{c c c c c}
+		\hline
+		\textbf{Model} & \textbf{ROUGE-1} & \textbf{ROUGE-2} & \textbf{ROUGE-L} &
+		\textbf{BERTScore} \\
+		\hline
+		BigBird-Pegasus (16k) & \textbf{60.64} & \textbf{42.46} & \textbf{50.01} & - \\
+		\hline
+		Skimming w/ pre-sampling & 27.40 & 3.31 & 21.25 & \textbf{82.62} \\
+		removal + GPT-3.5 Turbo (4,096) & & & & \\
+		Central truncation + GPT-3.5 Turbo (4,096) & 27.77 & 3.09 & 20.56 & 82.57 \\
+		Skimming w/ post-sampling & 26.16 & 2.13 & 20.21 & 82.40 \\
+		removal + GPT-3.5 Turbo (4,096) & & & & \\
+		\hline
+	\end{tabular}
+
+	\caption{Automatic evaluation results on the BigPatent dataset. Context size of the models are
+	mentioned in parenthesis. The best score in each metric category is highlighted in \textbf{bold}.}
+	\label{tab:bigpatent}
+\end{table*}
+
+We test our pipelines with the following summarizers: \textbf{BART} (Bidirectional
+and Autoregressive Transformer) \cite{lewis-etal-2020-bart} fine-tuned on the
+CNN/Daily Mail dataset \cite{nallapati2016abstractive} with a context size of 1024,
+\textbf{LongT5} \cite{guo2021longt5}, a variant of T5 (Text-to-Text Transfer
+Transformer) \cite{raffel2020exploring}, fine-tuned on the BookSum dataset with
+a context size of 4096, and \textbf{GPT-3.5 Turbo} \cite{brown2020language} with a
+context size of 4096.
+
+We compare our results with the state-of-the-art summarization models on the GovReport dataset,
+including Unlimiformer \cite{bertsch2023unlimiformer} integrated with BART \cite{lewis-etal-2020-bart}
+and PRIMERA \cite{beltagy2020longformer}, Hepos \cite{huang-etal-2021-efficient},
+PEGASUS-X with staggered block-local attention \cite{phang2022investigating}, extended
+LLaMA-7B with positional interpolation.
+Refer to \autoref{tab:govreport} for the baseline results and our results.
+
+We also compare our results with BigBird-Pegasus \cite{zaheer2020big} on the BigPatent dataset.
+Refer to \autoref{tab:bigpatent} for the results.
+
+\subsection*{Time analysis}
+
+We evaluate the time complexity of our methods by measuring the mean time taken to distill the
+documents by our algorithms (excluding the time taken by the summarizer to generate the summaries).
+We find that Central Truncation (\ref{method:truncation}) and Document Skimming
+(\ref{method:skimming}) take approximately the same time.
+Skimming with post-sampling removal takes slightly more time than the other two methods.
+We can see a significant increase in time taken by Skimming with pre-sampling removal and Skimming
+with Keyword Extraction (\ref{method:skimming-keyword}) due to the additional computations required.
+\autoref{fig:encoder-times} illustrates the average time taken by our methods.
+Check \autoref{tab:encoder-times} for exact values.
+
+\begin{figure}[!ht]
+	\centering
+	\includegraphics[width=.48\textwidth]{Images/encoder-times.png}
+	\caption{Avergae time taken by our methods (in milliseconds)}
+	\label{fig:encoder-times}
+\end{figure}
+
+\begin{table}[!ht]
+	\centering
+
+	\begin{tabular}{c c}
+		\hline
+		\textbf{Method} & \textbf{Mean time taken} \\
+		\hline
+		Central Truncation & 244.81 ms \\
+		Document Skimming & 261.14 ms \\
+		Skimming w/ post- & 509.15 ms \\
+		sampling removal & \\
+		Skimming w/ pre- & 3761.55 ms \\
+		sampling removal & \\
+		Skimming w/ Extraction & 3715.82 ms \\
+		\hline
+	\end{tabular}
+
+	\caption{Automatic evaluation results on the BigPatent dataset. Context size of the models are
+	mentioned in parenthesis. The best score in each metric category is highlighted in \textbf{bold}.}
+	\label{tab:encoder-times}
+\end{table}

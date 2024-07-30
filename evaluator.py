@@ -194,18 +194,17 @@ def main() -> None:
 		time_taken = []
 		print("Timing encoders...")
 		for i, encoder in enumerate(encoders):
+			print(f"Timing encoder {i + 1}...")
 			start = perf_counter()
 			encoder(texts)
-			time = (perf_counter() - start) * 1000
-			print(f"Encoder {i + 1} took {time} ms")
+			time = (perf_counter() - start) * 1000 / num_texts
+			print(f"Encoder {i + 1} took {time} ms/text on average")
 			time_taken.append(time)
 		results = {"encoder_times": time_taken}
 	else:
 		print(f"Evaluating pipelines with device {device}...")
 		evaluator = Evaluator(pipelines, device)
 		results = evaluator(texts, summaries, batch_size)
-	
-	results["num_texts"] = num_texts
 
 	print(f"Saving results in {results_path}...")
 	with open(results_path, "w") as fp:
