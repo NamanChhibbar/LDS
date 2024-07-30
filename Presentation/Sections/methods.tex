@@ -1,4 +1,4 @@
-\section{Proposed Methods}
+\section{Methods used}
 
 
 \subsection{Central truncation}
@@ -6,18 +6,24 @@
 \begin{frame}{Central Truncation}
 
 	\begin{itemize}
-		\item The most common and straightforward approach used in practice to handle texts
-		exceeding the context size is truncation.
-		\item<2-> Generally, sequences are truncated from the end before processing.
-		\item<3-> \citet{sun2019fine} find that truncating the middle produced better results
-		than truncating the beginning or end.
-		\item<4-> Their results show that it is even better than more complex hierarchial
-		methods!
-		\item<5> \citet{worsham-kalita-2018-genre} also find promising results by truncating
-		the beginning or the end for summarizing long documents.
+		\item The most common and straightforward approach used in practice to handle
+		texts exceeding the context size.
+		\item Generally, sequences are truncated from the end before processing.
+		\item Some studies show that truncating the middle produced better results
+		\citep{sun2019fine, worsham-kalita-2018-genre}.
+		\item We keept a fraction of the tokens from the head and the tail, i.e. truncated
+		the middle.
+		\item Hyperparameter $head\_size \in [0, 1]$ controls the fraction of tokens taken
+		from the head.
 	\end{itemize}
 
-\end{frame}
+	% \item This pipeline is based on Central Truncation, i.e. truncating
+	% tokens from the middle of the text.
+	% \item<2-> Hyperparameter $head\_size \in [0, 1]$: Controls the fraction
+	% of tokens taken from the head.
+	% \item<3-> $head\_size = 0$ means all tokens are taken from the tail, and
+	% $head\_size = 1$ means all tokens are taken from the head.
+	% \item<4-> Tokens from the head and the tail are concatenated and sent to the summarizer.
 
 
 \subsection{Document Skimming}
@@ -69,9 +75,9 @@
 \end{frame}
 
 
-\subsection{Document Skimming w/ Extraction}
+\subsection{Skimming w/ Extraction}
 
-\begin{frame}{Document Skimming with Extraction}
+\begin{frame}{Document Skimming with Keyword Extraction}
 
 	\begin{itemize}
 		\item Instead of randomly sampling the text segments, we can make use of important
@@ -87,44 +93,23 @@
 \end{frame}
 
 
-\subsection{Using Convolutions}
+% \subsection{Using Convolutions}
 
-\begin{frame}{Summarizing using Convolutions!}
+% \begin{frame}{Summarizing using Convolutions!}
 
-	\begin{itemize}
-		\item This approach starts by segmenting the text and encoding the segments.
-		\item<2-> Since the segments will be short, we can use a small encoder to efficiently
-		encode the them.
-		\item<3-> We will then use 1D convolutions as an efficient substitute to the
-		quadratic self attention!
-		\item<4-> A similar methodolody is applied by \citet{chen2022long} to classify long
-		Chinese news.
-		\item<5> Longformer \citep{beltagy2020longformer} uses windowed self attention to
-		reduce the complexity, but ours is cheaper.
-	\end{itemize}
+% 	\begin{itemize}
+% 		\item This approach starts by segmenting the text and encoding the segments.
+% 		\item<2-> Since the segments will be short, we can use a small encoder to efficiently
+% 		encode the them.
+% 		\item<3-> We will then use 1D convolutions as an efficient substitute to the
+% 		quadratic self attention!
+% 		\item<4-> A similar methodolody is applied by \citet{chen2022long} to classify long
+% 		Chinese news.
+% 		\item<5> Longformer \citep{beltagy2020longformer} uses windowed self attention to
+% 		reduce the complexity, but ours is cheaper.
+% 	\end{itemize}
 	
-\end{frame}
-
-
-
-\section{Implemented Pipelines}
-
-
-\subsection{Pipeline 1}
-
-\begin{frame}{Pipeline 1}
-
-	\begin{itemize}
-		\item This pipeline is based on Central Truncation, i.e. truncating
-		tokens from the middle of the text.
-		\item<2-> Hyperparameter $head\_size \in [0, 1]$: Controls the fraction
-		of tokens taken from the head.
-		\item<3-> $head\_size = 0$ means all tokens are taken from the tail, and
-		$head\_size = 1$ means all tokens are taken from the head.
-		\item<4-> Tokens from the head and the tail are concatenated and sent to the summarizer.
-	\end{itemize}
-
-\end{frame}
+% \end{frame}
 
 
 \subsection{Pipeline 2}
