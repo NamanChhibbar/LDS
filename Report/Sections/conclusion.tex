@@ -26,11 +26,18 @@ that simple methods can also be effective in long document summarization.
 The last two methods, Skimming with pre-sampling removal and Skimming with Keyword Extraction
 (\ref{method:skimming-keyword}), show the best results but are computationally expensive.
 
-Our experiments show a huge jump in BERTScore compared to Unlimiformer on
-documents with word counts upto 70,000.
+Our experiments show a huge jump in BERTScore compared to Unlimiformer on documents with word
+counts upto 70,000.
 This shows that our pipelines are able utilize details in long texts efficiently.
 Even though our ROUGE-2 scores are lower than the baselines, ROUGE-1 and ROUGE-L
 scores are competitive.
 Since BERTScore is a better metric for capturing semantic similarity, we hypothesize
 our pipelines are able to generate better summaries than the baselines with higher
 ROUGE scores.
+
+
+\section*{Acknowledgement}
+
+All work herein reported is supported by the Nation Science Foundation under Grant No. 2349452.
+
+Any opinion, finding, or conclusion in this study is that of the authors and does not necessarily reflect the views of the National Science Foundation.
