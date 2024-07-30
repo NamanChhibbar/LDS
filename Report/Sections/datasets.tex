@@ -1,13 +1,17 @@
 \section{Datasets}
 \label{sec:datasets}
 
+We have used datasets containing documents with a maximum word count exceeding 70,000.
+We briefly discuss and analyze the word counts of the datasets below.
+
+
 \subsection*{GovReport}
 
-Introduced by \citet{huang-etal-2021-efficient}, this dataset consists of 7,238 reports
-written by government research agencies, including the Congressional Research Service (CRS)
-and the U.S. Government Accountability Office (GAO).
-Word count information is given in \autoref{tab:datasets}.
-Figure \ref{fig:govreport} shows the word count distribution of the dataset.
+Introduced by \citet{huang-etal-2021-efficient}, this dataset consists of reports written
+by government research agencies, including the Congressional Research Service (CRS) and
+the U.S. Government Accountability Office (GAO).
+Exact word count information is given in \autoref{tab:datasets}.
+\autoref{fig:govreport} shows the word count distribution of the dataset.
 
 \begin{figure}[!ht]
 	\centering
@@ -19,10 +23,10 @@ Figure \ref{fig:govreport} shows the word count distribution of the dataset.
 
 \subsection*{BigPatent}
 
-Introduced in \citet{sharma-etal-2019-bigpatent}, this dataset consists of 1.3 million
+Introduced in \citet{sharma-etal-2019-bigpatent}, this dataset consists of over 1.3 million
 records of U.S. patent documents with human wiritten abstractive summaries.
-Word count information is given in \autoref{tab:datasets}.
-Figure \ref{fig:bigpatent} shows the word count distribution of the dataset.
+Exact word count information is given in \autoref{tab:datasets}.
+\autoref{fig:bigpatent} shows the word count distribution of the dataset.
 
 \begin{figure}[!ht]
 	\centering
@@ -36,11 +40,10 @@ Figure \ref{fig:bigpatent} shows the word count distribution of the dataset.
 
 	\begin{tabular}{c c c c}
 		\hline
-		\textbf{Dataset} & \textbf{Avg. Word Count} & \textbf{Max Word Count} &
-		\textbf{No. of Documents} \\
+		Dataset & Avg. Word Count & Max Word Count & No. of Documents \\
 		\hline
-		GovReport & 7,700.71 & 73,815 & 7,238 \\
-		BigPatent & 3,055.72 & 71,027 & 1,341,362 \\
+		GovReport & 7,700.71 & \textbf{73,815} & 7,238 \\
+		BigPatent & 3,055.72 & \textbf{71,027} & 1,341,362 \\
 		\hline
 	\end{tabular}
 

@@ -227,6 +227,7 @@ class UniformSampler(Encoder):
 		p = max_tokens / len_encoding
 
 		# Sample until segments fit in model
+		i = 0
 		while True:
 			# Create sampling mask
 			segment_mask = np.random.rand(num_segments) <= p
@@ -243,6 +244,12 @@ class UniformSampler(Encoder):
 			# Break if number of tokens is in range
 			if min_tokens <= len(flattened) <= max_tokens:
 				break
+			i += 1
+			if i > 1000:
+				print(len(segments))
+				with open("/home/nchibbar/Data/temp.txt", "w") as fp:
+					fp.write(text)
+				raise Exception("Infinite loop")
 
 		return flattened
 	

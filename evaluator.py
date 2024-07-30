@@ -190,6 +190,12 @@ def main() -> None:
 
 	print(f"Using {num_texts} texts")
 
+	results = {
+		"min_words": min_words,
+		"max_words": max_words,
+		"max_texts": max_texts
+	}
+
 	if time_only:
 		time_taken = []
 		print("Timing encoders...")
@@ -200,11 +206,12 @@ def main() -> None:
 			time = (perf_counter() - start) * 1000 / num_texts
 			print(f"Encoder {i + 1} took {time} ms/text on average")
 			time_taken.append(time)
-		results = {"encoder_times": time_taken}
+		results["encoder_times"] = time_taken
 	else:
 		print(f"Evaluating pipelines with device {device}...")
 		evaluator = Evaluator(pipelines, device)
-		results = evaluator(texts, summaries, batch_size)
+		evaluator_results = evaluator(texts, summaries, batch_size)
+		results.update(evaluator_results)
 
 	print(f"Saving results in {results_path}...")
 	with open(results_path, "w") as fp:

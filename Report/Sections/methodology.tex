@@ -1,8 +1,8 @@
 \section{Methodology}
 \label{sec:methodology}
 
-We discuss the methodology used in our experiments in this section.
-Most of the methods start by segmenting the document into smaller, contiguous, and
+We discuss the algorithms used in our experiments in this section.
+Most of our algorithms start by segmenting the document into smaller, contiguous, and
 exhaustive parts.
 The segmentation algorithm is controlled by a threshold on the minimum number of words
 in a segment, which is a hyperparameter in each of the respective methods.
@@ -23,9 +23,9 @@ It is done in three main ways:
 
 \citet{worsham-kalita-2018-genre} also employ "retaining head" and "retaining tail"
 strategies on long texts and find promising results.
-Though the "retaining head" method is often used, keeping the initial tokens allowed
-by the LLM, \citet{sun2019fine} have found that keeping both head and tail produces
-better results than both the "retaining head" and the "retaining tail" methods.
+Though the "retaining head" method is often used, keeping the initial tokens allowed by
+the LLM, \citet{sun2019fine} find that keeping both head and tail produces better results
+than both the "retaining head" and the "retaining tail" methods.
 Their research also shows that truncating the middle is even better than the more
 complicated hierarchical methods, displaying superiority with simplicity.
 

@@ -6,8 +6,7 @@
 
 	\begin{tabular}{c c c c c}
 		\hline
-		\textbf{Model} & \textbf{ROUGE-1} & \textbf{ROUGE-2} & \textbf{ROUGE-L} &
-		\textbf{BERTScore} \\
+		Model & ROUGE-1 & ROUGE-2 & ROUGE-L & BERTScore \\
 		\hline
 		BART w/ Unlimiformer (1,024) & 53.4 & 22.5 & 22.5 & 66.0 \\
 		PRIMERA w/ Unlimiformer (4,096) & 56.5 & 24.8 & 26.3 & 67.7 \\
@@ -19,8 +18,8 @@
 		\hline
 		Skimming w/ Extraction & \textbf{61.99} & 18.52 & 38.46 & \textbf{86.20} \\
 		+ GPT-3.5 Turbo (4,096) & & & & \\
-		Central truncation + LongT5 (4,096) & 46.20 & 4.38 & 38.27 & 82.19 \\
-		Skimming w/ post-sampling & 46.76 & 4.56 & 39.61 & 81.96 \\
+		Central truncation + LongT5 (4,096) & 46.20 & 4.38 & 38.27 & \textbf{82.19} \\
+		Skimming w/ post-sampling & 46.76 & 4.56 & 39.61 & \textbf{81.96} \\
 		removal + LongT5 (4,096) & & & & \\
 		\hline
 	\end{tabular}
@@ -35,15 +34,14 @@
 
 	\begin{tabular}{c c c c c}
 		\hline
-		\textbf{Model} & \textbf{ROUGE-1} & \textbf{ROUGE-2} & \textbf{ROUGE-L} &
-		\textbf{BERTScore} \\
+		Model & ROUGE-1 & ROUGE-2 & ROUGE-L & BERTScore \\
 		\hline
 		BigBird-Pegasus (16k) & \textbf{60.64} & \textbf{42.46} & \textbf{50.01} & - \\
 		\hline
 		Skimming w/ pre-sampling & 27.40 & 3.31 & 21.25 & \textbf{82.62} \\
 		removal + GPT-3.5 Turbo (4,096) & & & & \\
-		Central truncation + GPT-3.5 Turbo (4,096) & 27.77 & 3.09 & 20.56 & 82.57 \\
-		Skimming w/ post-sampling & 26.16 & 2.13 & 20.21 & 82.40 \\
+		Central truncation + GPT-3.5 Turbo (4,096) & 27.77 & 3.09 & 20.56 & \textbf{82.57} \\
+		Skimming w/ post-sampling & 26.16 & 2.13 & 20.21 & \textbf{82.40} \\
 		removal + GPT-3.5 Turbo (4,096) & & & & \\
 		\hline
 	\end{tabular}
@@ -73,8 +71,8 @@ Refer to \autoref{tab:bigpatent} for the results.
 
 \subsection*{Time analysis}
 
-We evaluate the time complexity of our methods by measuring the mean time taken to distill the
-documents by our algorithms (excluding the time taken by the summarizer to generate the summaries).
+We evaluate the time complexity of our methods by measuring the mean time taken to process a
+document (excluding the time taken by the summarizer to generate the summaries).
 We find that Central Truncation (\ref{method:truncation}) and Document Skimming
 (\ref{method:skimming}) take approximately the same time.
 Skimming with post-sampling removal takes slightly more time than the other two methods.
@@ -86,7 +84,7 @@ Check \autoref{tab:encoder-times} for exact values.
 \begin{figure}[!ht]
 	\centering
 	\includegraphics[width=.48\textwidth]{Images/encoder-times.png}
-	\caption{Avergae time taken by our methods (in milliseconds)}
+	\caption{Mean time taken by our methods (in milliseconds)}
 	\label{fig:encoder-times}
 \end{figure}
 
@@ -95,7 +93,7 @@ Check \autoref{tab:encoder-times} for exact values.
 
 	\begin{tabular}{c c}
 		\hline
-		\textbf{Method} & \textbf{Mean time taken} \\
+		Method & Mean time taken \\
 		\hline
 		Central Truncation & 244.81 ms \\
 		Document Skimming & 261.14 ms \\
@@ -107,7 +105,6 @@ Check \autoref{tab:encoder-times} for exact values.
 		\hline
 	\end{tabular}
 
-	\caption{Automatic evaluation results on the BigPatent dataset. Context size of the models are
-	mentioned in parenthesis. The best score in each metric category is highlighted in \textbf{bold}.}
+	\caption{Mean time taken to process a document}
 	\label{tab:encoder-times}
 \end{table}

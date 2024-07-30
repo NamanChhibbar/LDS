@@ -1,16 +1,17 @@
 \section{Future Work}
+\label{sec:future-work}
 
 We have used a very basic sentence tokenizer
 (\href{https://www.nltk.org/api/nltk.tokenize.sent_tokenize.html}{nltk.sent\_tokenize}),
 with some modifications to control the minimum number of words in a segment,
 to segment the document.
-In out experiments, we find that segmentation is a crucial step in the pipeline, and can
+In our experiments, we find that segmentation is a crucial step in the pipeline, and can
 influence the output summary significantly.
 Ensuring the uniformity of the length of the segments while preserving coherence is
 important for better utilization of the context size of the summarizer while sampling.
 We encourage future work to experiment with more complex segmenters.
 
-Future word can also be focused on extending the Document Skimming with Keyword Extraction
+Future work can also be focused on extending the Document Skimming with Keyword Extraction
 (\ref{method:skimming-keyword}) method.
 Experimenting with different keyword extraction algorithms and use cases is encouraged.
 
@@ -31,5 +32,5 @@ This shows that our pipelines are able utilize details in long texts efficiently
 Even though our ROUGE-2 scores are lower than the baselines, ROUGE-1 and ROUGE-L
 scores are competitive.
 Since BERTScore is a better metric for capturing semantic similarity, we hypothesize
-our pipelines are able to generate better summaries than baselines with higher
+our pipelines are able to generate better summaries than the baselines with higher
 ROUGE scores.
