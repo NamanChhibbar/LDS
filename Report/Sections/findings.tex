@@ -71,21 +71,22 @@ Refer to \autoref{tab:bigpatent} for the results.
 
 \subsection*{Time analysis}
 
-We evaluate the time complexity of our methods by measuring the mean time taken to process a
-document (excluding the time taken by the summarizer to generate the summaries).
+We evaluate the time complexity of our methods by measuring the mean time taken to process
+a document (excluding the time taken by the summarizer to generate the summaries).
 We find that Central Truncation (\ref{method:truncation}) and Document Skimming
 (\ref{method:skimming}) take approximately the same time.
 Skimming with post-sampling removal takes slightly more time than the other two methods.
-We can see a significant increase in time taken by Skimming with pre-sampling removal and Summarization
-with Keyword Extraction (\ref{method:keyword}) due to the additional computations required.
-\autoref{fig:encoder-times} illustrates the average time taken by our methods.
-Check \autoref{tab:encoder-times} for exact values.
+We can see a significant increase in time taken by Skimming with pre-sampling removal
+and Summarization with Keyword Extraction (\ref{method:keyword}) due to the additional
+computations required.
+\autoref{fig:times} illustrates the average time taken by our methods.
+Check \autoref{tab:encoder-times} for exact values rounded-off to two decimal places.
 
 \begin{figure}[!ht]
 	\centering
 	\includegraphics[width=.48\textwidth]{Images/encoder-times.png}
-	\caption{Mean time taken by our methods (in milliseconds)}
-	\label{fig:encoder-times}
+	\caption{Mean time taken per document using BART tokenizer on BigPatent dataset}
+	\label{fig:times}
 \end{figure}
 
 \begin{table}[!ht]
@@ -95,16 +96,17 @@ Check \autoref{tab:encoder-times} for exact values.
 		\hline
 		Method & Mean time taken \\
 		\hline
-		Central Truncation & 244.81 ms \\
-		Document Skimming & 261.14 ms \\
-		Skimming w/ post- & 509.15 ms \\
+		Central Truncation & 142.50 ms \\
+		Document Skimming & 155.42 ms \\
+		Skimming w/ post- & 625.17 ms \\
 		sampling removal & \\
-		Skimming w/ pre- & 3761.55 ms \\
+		Skimming w/ pre- & 3059.63 ms \\
 		sampling removal & \\
-		Summarization w/ Extraction & 3715.82 ms \\
+		Summarization & 2131.40 ms \\
+		w/ Extraction & \\
 		\hline
 	\end{tabular}
 
-	\caption{Mean time taken to process a document}
+	\caption{Mean time taken per document using BART tokenizer on BigPatent dataset}
 	\label{tab:encoder-times}
 \end{table}
