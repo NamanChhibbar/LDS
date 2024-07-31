@@ -14,23 +14,23 @@
 	One of the major limitations of Transformers is limited context size, stemming from the
 	quadratic memory and computational complexity of the attention mechanism in their architecture
 	\cite{du2023improving}.
-	This constraint hinders the extraction of relevant information from extensive texts, where
+	This constraint hinders the extraction of relevant information from extensive texts where
 	summarization is valuable to overcome the interpretative challenges posed by complex
 	relations on such a large scale.
 
 	We experiment with various novel approaches to address the input size limitations of LLMs.
 	The methods introduced do not include any architectural modifications to the model used for
-	summarization, and hence can be incorporated into any existing summarization pipeline.
+	summarization and can be incorporated into any existing summarization pipeline.
 	We believe that these methods can effectively utilize the full potential of any existing LLM.
-	Though our experiments only include the taskt of summarization, our methods can be applied
+	Though our experiments only include the task of summarization, our methods can be applied
 	to any NLP task (sequence classification, question-answering, etc.) that requires processing
 	long texts.
 
 	We start by stating the problem statement (\ref{sec:problem}) and discussing some related works
 	(\ref{sec:related-works}) to gain insights into the problem and the state-of-the-art solutions.
 	We then introduce the datasets (\ref{sec:datasets}) and methodology (\ref{sec:methodology}) used
-	in our expriments.
+	in our experiments.
 	For evaluating our results, we present some common metrics (\ref{sec:metrics}) used in text
-	summariztion.
+	summarization.
 	We end the report by discussing our experimental findings (\ref{sec:findings}) and potential
 	future work (\ref{sec:future-work}), and concluding the study (\ref{sec:conclusion}).

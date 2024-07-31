@@ -7,12 +7,12 @@
 	Auto-Regressive Transformer) model to summarize each segment individually.
 	These segment summaries are then recursively combined and summarized until a single
 	summary remains.
-	This method performs well with long documents but may take considerable amount of time
+	This method performs well with long documents but may take a considerable amount of time
 	to converge due to repeated calls to the summarizer.
 
 	There have also been efforts to improve the efficiency of attention mechanisms in Transformers.
 	\citet{beltagy2020longformer} introduce Longformer, which replaces the quadratic
-	self-attention mechanism in the Transofrmer architecure with a sliding window self-attention,
+	self-attention mechanism in the Transformer architecture with a sliding window self-attention,
 	resulting in a linear complexity with respect to the input size.
 	To capture long-ranged dependencies, they include global attention at specific token positions.
 	\citet{huang-etal-2021-efficient} modify the encoder-decoder attention mechanism such that
@@ -21,12 +21,12 @@
 	This method has a complexity of $O(mn/s_h)$, where $m$ is the length of the output sequence.
 	\citet{bertsch2023unlimiformer} introduce Unlimiformer, which also modifies the encoder-decoder
 	attention in a Transformer.
-	The attention heads in the decoder only attends to the tokens picked by their
+	The attention heads in the decoder only attend to the tokens picked by their
 	k-Nearest-Neighbor (kNN) algorithm.
 	The kNN indices between the input tokens are created by the hidden states generated in the
 	encoder.
 	\citet{phang2022investigating} introduce the staggered block-local attention mechanism.
-	In block-local attention mechanism, the input sequence is divided into multiple
+	In the block-local attention mechanism, the input sequence is divided into multiple
 	non-overlapping blocks.
 	Tokens in a block attend only to the tokens in the same block.
 	In staggered block-local attention, the blocks are staggered such that each token is in a
@@ -39,14 +39,14 @@
 	These captions are used to answer the user's question.
 	\citet{chen2022long} describe a novel algorithm to classify long Chinese news into a set
 	of predefined categories.
-	They form multiple groups of sentences based on maximum token threshold in each group.
+	They form multiple groups of sentences based on a maximum token threshold in each group.
 	These groups are then encoded using BERT (Bidirectional Encoder Representations from
 	Transformers) and passed through a 1D convolution layer for local feature extraction.
 	What makes this method special is that the attention mechanism is replaced by a 1D
 	convolution layer, which has linear complexity.
 	\citet{chen2023extending} use positional interpolation to extend the context size of a
-	pretrained model.
+	pre-trained model.
 	Instead of the usual extrapolation of the positional embeddings, they downscale the positional
 	embeddings to force them into a range the model is trained on, hence interpolating in the
-	pretrained range.
-	They claim that it is better for the model to use the positional embeddings it is trained on.
+	pre-trained range.
+	They claim that it is better for the model to use the positional embeddings on which it is trained.
