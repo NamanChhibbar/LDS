@@ -1,23 +1,29 @@
-\section{Experimental Findings}
+\section{Experiments}
 
-\begin{frame}{Experimental Findings}
 
-	We have tested our pipelines on the following summarizers:
+\subsection{Summarizers used}
+
+\begin{frame}{Summarizers used}
+
+	We have tested our methods on the following summarizers:
 	
 	\begin{itemize}
-		\item<2-> \textbf{BART} (Bidirectional and Auto-Regressive Transformer)
+		\item \textbf{BART} (Bidirectional and Auto-Regressive Transformer)
 		\citep{lewis-etal-2020-bart} fine-tuned on the CNN/Daily Mail dataset
 		with a context size of 1024.
-		\item<3-> \textbf{LongT5} \citep{guo2021longt5}, a variant of Text-to-Text
+		\item \textbf{LongT5} \citep{guo2021longt5}, a variant of Text-to-Text
 		Transfer Transformer (T5) \citep{raffel2020exploring} fine-tuned on the
 		BookSum dataset with a context size of 4096.
-		\item<4> \textbf{GPT-3.5 Turbo} \citep{brown2020language} with a context
+		\item \textbf{GPT-3.5 Turbo} \citep{brown2020language} with a context
 		size of 4096.
 	\end{itemize}
 	
 \end{frame}
 
-\begin{frame}{Experimental Findings (contd.)}
+
+\subsection{Findings}
+
+\begin{frame}{Experimental Findings}
 
 	\begin{table}[!ht]
 		\centering
@@ -25,24 +31,30 @@
 	
 		\begin{tabular}{c c c c c}
 			\hline
-			\textbf{Model} & \textbf{ROUGE-1} & \textbf{ROUGE-2} & \textbf{ROUGE-L} &
-			\textbf{BERTScore} \\
+			Model & ROUGE-1 & ROUGE-2 & ROUGE-L & BERTScore \\
 			\hline
-			BART w/ Unlimiformer & 53.4 & 22.5 & 22.5 & 66.0 \\
-			PRIMERA w/ Unlimiformer & 56.5 & 24.8 & 26.3 & 67.7 \\
-			Hepos & 51.34 & 19.09 & \textbf{48.73} & - \\
-			PEGASUS-X w/ & & & & \\
-			Staggered Block-Local & \textbf{60.3} & 30.0 & 31.5 & - \\
-			Attention & & & & \\
+			BART w/ & 53.4 & 22.5 & 22.5 & 66.0 \\
+			Unlimiformer (1,024) & & & & \\
+			PRIMERA w/ & 56.5 & 24.8 & 26.3 & 67.7 \\
+			Unlimiformer (4,096) & & & & \\
+			Hepos (10,240) & 51.34 & 19.09 & \textbf{48.73} & - \\
+			PEGASUS-X w/ Staggered & 60.3 & \textbf{30.0} & 31.5 & - \\
+			Block-Local Attention (16k) & & & & \\
+			LLaMA-7B w/ Positional & 60.0 & 28.0 & 29.5 & - \\
+			Interpolation (15k) & & & & \\
 			\hline
-			Pipeline 3 w/ GPT-3.5 Turbo & 58.71 & 13.15 & 35.04 & \textbf{85.37} \\
-			Pipeline 1 w/ LongT5 & 46.20 & 4.38 & 38.27 & 82.19 \\
-			Pipeline 3 w/ LongT5 & 46.76 & 4.56 & 39.61 & 81.96 \\
+			Skimming w/ Extraction & \textbf{61.99} & 18.52 & 38.46 & \textbf{86.20} \\
+			+ GPT-3.5 Turbo (4,096) & & & & \\
+			Central truncation & 46.20 & 4.38 & 38.27 & \textbf{82.19} \\
+			+ LongT5 (4,096) & & & & \\
+			Skimming w/ post-sampling & 46.76 & 4.56 & 39.61 & \textbf{81.96} \\
+			removal + LongT5 (4,096) & & & & \\
 			\hline
 		\end{tabular}
 	
-		\caption{Automatic evaluation results on GovReport dataset}
-		\label{tab:results}
+		\caption{Automatic evaluation results on the GovReport dataset. Context size of
+		the models are mentioned in parenthesis. The best score in each metric category
+		is highlighted in \textbf{bold}.}
 	\end{table}
 	
 \end{frame}
