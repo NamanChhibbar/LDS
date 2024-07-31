@@ -1,41 +1,23 @@
 \section{Evaluation Metrics}
-\label{sec:metrics}
+	\label{sec:metrics}
 
-The best way to evaluate generated natural language is by humans, but conducting
-human trials is expensive and time-consuming.
-Hence, we use automatic evaluation metrics to evaluate the quality of the generated
-summary, given some reference summaries.
-\citet{fabbri2021summeval} review many such open-source and state-of-the-art metrics.
-Some of them that we use in our experiments are discussed below.
+	The best way to evaluate generated natural language is by humans, but conducting
+	human trials is expensive and time-consuming.
+	Hence, we use automatic evaluation metrics to evaluate the quality of the generated
+	summary, given some reference summaries.
+	\citet{fabbri2021summeval} review many such open-source and state-of-the-art metrics.
+	Some of them that we use in our experiments are discussed below.
 
-\textbf{ROUGE metrics:} \citet{lin-2004-rouge} introduces the Recall-Oriented Understudy
-for Gisting Evaluation (ROUGE) metrics.
-The basic ROUGE-N metric is based on the fraction of overlaps of some ideal summaries
-with the candidate summary, hence being recall-oriented.
-His study concludes that ROUGE-N with $\text{N}=2$, ROUGE-L, ROUGE-W, and ROUGE-S work
-well for the summarization task.
+	\textbf{ROUGE metrics:} \citet{lin-2004-rouge} introduces the Recall-Oriented Understudy
+	for Gisting Evaluation (ROUGE) metrics.
+	The basic ROUGE-N metric is based on the fraction of overlaps of some ideal summaries
+	with the candidate summary, hence being recall-oriented.
+	His study concludes that ROUGE-N with $\text{N}=2$, ROUGE-L, ROUGE-W, and ROUGE-S work
+	well for the summarization task.
 
-\textbf{BERTScore:} \citet{zhang2019bertscore} introduce the BERTScore, an automatic
-evaluation metric for text generation.
-BERTScore is calculated by comparing the contextual embeddings of tokens in the candidate
-and reference summaries, which are generated using BERT \cite{devlin2018bert}.
-BERTScore excels at capturing semantic similarities between sentences since it uses
-contextual embeddings of tokens instead of using N-gram frequencies to calculate similarity.
-
-
-% \subsection{BLEU metric}
-
-% Bilingual Evaluation Understudy (BLEU), developed by \citet{papineni-etal-2002-bleu},
-% works by calculating the fraction of overlaps of candidate summary with some ideal
-% summaries, hence being precision-oriented.
-% Their study claims that BLEU can be adapted for all NLG tasks!
-
-
-% \subsection{METEOR metric}
-
-% Metric for Evaluation of Translation with Explicit Ordering (METEOR), introduced by
-% \citet{banerjee-lavie-2005-meteor}, is evaluated by a complex algorithm involving
-% unigram precision and recall with a measure of fragmentation, i.e. how well the matched
-% words are ordered.
-% This metric is also well suited for NLG tasks like machine translation and
-% summarization.
+	\textbf{BERTScore:} \citet{zhang2019bertscore} introduce the BERTScore, an automatic
+	evaluation metric for text generation.
+	BERTScore is calculated by comparing the contextual embeddings of tokens in the candidate
+	and reference summaries, which are generated using BERT \cite{devlin2018bert}.
+	BERTScore excels at capturing semantic similarities between sentences since it uses
+	contextual embeddings of tokens instead of using N-gram frequencies to calculate similarity.
