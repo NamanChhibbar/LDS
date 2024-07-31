@@ -54,8 +54,8 @@ This ensures we sample a segment from each part of the text.
 
 To address the removal of redundancy in the document, we experiment with and without removing
 redundant segments before and after sampling.
-This is done by computing the cosine similarity between the mean segment embeddings and the current
-segment embedding.
+This is done by computing the cosine similarity between the mean segment embeddings and the
+current segment embedding.
 \href{https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2}{This} sentence transformer
 is used to generate the segment embeddings.
 This sentence transformer is based on MiniLM \cite{wang2020minilm}, which is a distilled version
@@ -106,11 +106,11 @@ $total\_len = \sum_{i = 1}^{n} len_i$.
 \[ \therefore p = model\_size / total\_len \]
 
 
-\subsection{Document Skimming with Keyword Extraction}
-\label{method:skimming-keyword}
+\subsection{Summarization with Keyword Extraction}
+\label{method:keyword}
 
-Document skimming (\ref{method:skimming}) involved a very intuitive and simple
-approach of sampling segments randomly.
+Document skimming (\ref{method:skimming}) involves a very intuitive and simple approach of
+sampling segments randomly.
 Instead of that, we can use an efficient keyword extraction algorithm to get important keywords
 from the document.
 These keywords help us sample segments intelligently, ensuring we get the most important
@@ -126,28 +126,5 @@ The keyword sentence and document segments are embedded using the same
 \href{https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2}{sentence transformer}
 used in the previous method.
 
-This approach is similar to the way \citet{golia2024action} use action items to pick segments of
-text (a neighbourhood of 2 sentences around the action item) for summarization.
-
-
-% \subsection{Summarization using Convolutions}
-
-% Another way to approach the problem is to apply convolution to encoded segments of
-% the document.
-% The convolution operation multiplies a sliding window of weights element-wise by the
-% embeddings and then sums the result.
-% This allows the model to learn cross-segment relationships and acts as a
-% limited-range attention mechanism, an algorithm similar to \citet{chen2022long}.
-
-% This method begins with separating sentences from the document and grouping them
-% based on a fixed maximum number of sentences per group.
-% These groups are then encoded and passed through a 1D convolution layer of size $k$ with
-% $f$ filters, where $k$ and $f$ are hyperparameters in the model.
-% A max-pooling layer can also be applied for feature enhancement.
-% A decoder-only transformer then uses these processed embeddings as keys and values
-% for the encoder-decoder attention mechanism to generate the summary.
-
-% Longformer model \cite{beltagy2020longformer} uses a windowed attention mechanism with
-% linear complexity to process long texts.
-% Our 1D convolution operation outperforms the windowed attention mechanism since it has
-% linear complexity and is more efficient to calculate than attention.
+This approach is similar to the way \citet{golia2024action} use action items to pick segments
+of text (a neighbourhood of 2 sentences around the action item) for summarization.

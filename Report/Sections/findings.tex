@@ -16,7 +16,7 @@
 		LLaMA-7B w/ Positional & 60.0 & 28.0 & 29.5 & - \\
 		Interpolation (15k) & & & & \\
 		\hline
-		Skimming w/ Extraction & \textbf{61.99} & 18.52 & 38.46 & \textbf{86.20} \\
+		Summarization w/ Extraction & \textbf{61.99} & 18.52 & 38.46 & \textbf{86.20} \\
 		+ GPT-3.5 Turbo (4,096) & & & & \\
 		Central truncation + LongT5 (4,096) & 46.20 & 4.38 & 38.27 & \textbf{82.19} \\
 		Skimming w/ post-sampling & 46.76 & 4.56 & 39.61 & \textbf{81.96} \\
@@ -76,8 +76,8 @@ document (excluding the time taken by the summarizer to generate the summaries).
 We find that Central Truncation (\ref{method:truncation}) and Document Skimming
 (\ref{method:skimming}) take approximately the same time.
 Skimming with post-sampling removal takes slightly more time than the other two methods.
-We can see a significant increase in time taken by Skimming with pre-sampling removal and Skimming
-with Keyword Extraction (\ref{method:skimming-keyword}) due to the additional computations required.
+We can see a significant increase in time taken by Skimming with pre-sampling removal and Summarization
+with Keyword Extraction (\ref{method:keyword}) due to the additional computations required.
 \autoref{fig:encoder-times} illustrates the average time taken by our methods.
 Check \autoref{tab:encoder-times} for exact values.
 
@@ -101,7 +101,7 @@ Check \autoref{tab:encoder-times} for exact values.
 		sampling removal & \\
 		Skimming w/ pre- & 3761.55 ms \\
 		sampling removal & \\
-		Skimming w/ Extraction & 3715.82 ms \\
+		Summarization w/ Extraction & 3715.82 ms \\
 		\hline
 	\end{tabular}
 
