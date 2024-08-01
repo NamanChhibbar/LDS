@@ -88,9 +88,10 @@ def main() -> None:
 	min_tokens = int(min_token_frac * context_size)
 	print(f"Context size of model: {context_size}")
 
-	print("Loading data...")
 	texts, summaries = [], []
 	num_texts = 0
+
+	print("Loading data...")
 	match dataset:
 
 		case "govreport":
@@ -127,7 +128,7 @@ def main() -> None:
 	
 	print(f"Using {num_texts} texts")
 
-	print("Creating dataset...")
+	print("Initializing encoder...")
 	preprocessor = TextProcessor(preprocessing=True)
 	text_segmenter = TextSegmenter(sent_tokenize, segment_min_words)
 	keywords_preprocessor = TextProcessor(
@@ -135,6 +136,7 @@ def main() -> None:
 		remove_nums = True
 	)
 	stop_words = get_stop_words(extra_stop_words=STOP_WORDS)
+
 	match encoder_name:
 
 		case "truncatemiddle":
@@ -173,6 +175,7 @@ def main() -> None:
 		case _:
 			raise ValueError(f"Invalid encoder name: {encoder_name}")
 
+	print("Initializing dataset...")
 	dataset = SummarizationDataset(
 		texts, encoder, batch_size, summaries,
 		context_size, shuffle, seed

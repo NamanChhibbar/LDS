@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from warnings import filterwarnings
 from typing import Callable
 
 import numpy as np
@@ -7,9 +6,6 @@ from transformers.tokenization_utils_base import BatchEncoding
 from sentence_transformers import SentenceTransformer
 
 from .helpers import count_tokens, get_keywords
-
-
-filterwarnings("ignore")
 
 
 
@@ -27,6 +23,7 @@ class Encoder(ABC):
 	`bos_id`: Beginning Of Sentence (BOS) token id
 	`eos_id`: End Of Sentence (EOS) token id
 	"""
+
 	def __init__(
 		self,
 		tokenizer,
@@ -37,6 +34,7 @@ class Encoder(ABC):
 		bos_id: int | None = None,
 		eos_id: int | None = None
 	) -> None:
+
 		self.tokenizer = tokenizer
 		self.min_tokens = min_tokens
 		self.max_tokens = max_tokens
@@ -64,27 +62,38 @@ class Encoder(ABC):
 		## Returns
 		Batched text encodings.
 		"""
+
 		preprocessor = self.preprocessor
 		min_tokens = kwargs.get("min_tokens", self.min_tokens)
 		max_tokens = kwargs.get("max_tokens", self.max_tokens)
-		single_text = False
-		if isinstance(texts, str):
-			texts = [texts]
-			single_text = True
+
+		# Preprocess texts
 		if preprocessor is not None:
 			texts = preprocessor(texts)
+
+		# Convert to list if single text is given
+		single_text = isinstance(texts, str)
+		if single_text:
+			texts = [texts]
+		
+		# Encode texts
 		encodings = [
 			self._encode_wrapper(text, min_tokens, max_tokens)
 			for text in texts
 		]
+
+		# Return single encoding if single text is given
 		if single_text:
 			encodings = encodings[0]
+		
+		# Return BatchEncoding if specified
 		if return_batch:
 			encodings = self.tokenizer.pad(
 				{"input_ids": encodings},
 				return_tensors = "pt",
 				verbose = False
 			)
+
 		return encodings
 	
 	@abstractmethod
@@ -94,18 +103,17 @@ class Encoder(ABC):
 		**kwargs
 	) -> list[int]:
 		"""
-		Creates encoding for a given text with number of tokens
-		in the range [`min_tokens`, `max_tokens`].
+		Creates encoding for a given text with number of tokens in the range
+		[`min_tokens`, `max_tokens`].
 
 		## Parameters
 		`text`: Text to encode
-		`min_tokens`: Minimum tokens in text encodings
-		`max_tokens`: Maximum tokens in text encodings
+		`kwargs`: Override default `min_tokens` or `max_tokens`
 
 		## Returns
 		`list[int]`: Text encodings
 		"""
-		pass
+		...
 
 	def _encode_wrapper(
 		self,
@@ -113,8 +121,12 @@ class Encoder(ABC):
 		min_tokens: int,
 		max_tokens: int
 	) -> list[int]:
+		
+		# Subtract special tokens if they are added
 		if self.add_special_tokens:
 			max_tokens -= self.num_special_tokens
+
+		# Check if text fits in the model
 		num_tokens, encoding = count_tokens(text, self.tokenizer)
 		if num_tokens > max_tokens:
 			encoding = self.encode(
@@ -122,20 +134,16 @@ class Encoder(ABC):
 				min_tokens = min_tokens,
 				max_tokens = max_tokens
 			)
+		
+		# Add special tokens if specified
 		if self.add_special_tokens:
-			encoding = self.add_tokens(encoding)
-		return encoding
-	
-	def add_tokens(
-		self,
-		encoding: list[int]
-	) -> list[int]:
-		bos_id = self.bos_id
-		eos_id = self.eos_id
-		if bos_id is not None:
-			encoding = [bos_id] + encoding
-		if eos_id is not None:
-			encoding = encoding + [eos_id]
+			bos_id = self.bos_id
+			eos_id = self.eos_id
+			if bos_id is not None:
+				encoding = [bos_id] + encoding
+			if eos_id is not None:
+				encoding = encoding + [eos_id]
+
 		return encoding
 	
 
@@ -150,6 +158,7 @@ class TruncateMiddle(Encoder):
 		preprocessor: Callable[[list[str]], list[str]] | None = None,
 		add_special_tokens: bool = True
 	) -> None:
+
 		super().__init__(
 			tokenizer, 0, max_tokens, preprocessor,
 			add_special_tokens, tokenizer.bos_token_id,
@@ -162,6 +171,7 @@ class TruncateMiddle(Encoder):
 		text: str,
 		**kwargs
 	) -> list[int]:
+
 		tokenizer = self.tokenizer
 		max_tokens = kwargs.get("max_tokens", self.max_tokens)
 
@@ -195,6 +205,7 @@ class UniformSampler(Encoder):
 		segment_delimiter: str = " ",
 		add_special_tokens: bool = True
 	) -> None:
+
 		super().__init__(
 			tokenizer, min_tokens, max_tokens,
 			preprocessor, add_special_tokens,
@@ -227,8 +238,8 @@ class UniformSampler(Encoder):
 		p = max_tokens / len_encoding
 
 		# Sample until segments fit in model
-		i = 0
 		while True:
+
 			# Create sampling mask
 			segment_mask = np.random.rand(num_segments) <= p
 			sampled = segments[segment_mask]
@@ -244,12 +255,6 @@ class UniformSampler(Encoder):
 			# Break if number of tokens is in range
 			if min_tokens <= len(flattened) <= max_tokens:
 				break
-			i += 1
-			if i > 1000:
-				print(len(segments))
-				with open("/home/nchibbar/Data/temp.txt", "w") as fp:
-					fp.write(text)
-				raise Exception("Infinite loop")
 
 		return flattened
 	
@@ -271,6 +276,7 @@ class SegmentSampler(Encoder):
 		segment_delimiter: str = " ",
 		add_special_tokens: bool = True
 	) -> None:
+
 		super().__init__(
 			tokenizer, min_tokens, max_tokens, preprocessor,
 			add_special_tokens, tokenizer.bos_token_id,
@@ -305,15 +311,14 @@ class SegmentSampler(Encoder):
 		p = (1 + self.prob_boost) * max_tokens / num_tokens
 
 		# Sample until segments fit in model
-		num_iters = 0
 		while True:
-			num_iters += 1
-			flattened = []
 
 			# Initialize sampled embedding
 			num_sampled = 0
 			sampled_embedding = np.zeros(self.sent_embedding_dim)
 
+			# Sample segments
+			sampled_segments = []
 			for segment in segments:
 
 				# Randomly sample segments
@@ -330,7 +335,7 @@ class SegmentSampler(Encoder):
 				if self.threshold < similarity:
 					continue
 
-				flattened.append(segment)
+				sampled_segments.append(segment)
 
 				# Update sampled embedding
 				sampled_embedding = (
@@ -340,7 +345,7 @@ class SegmentSampler(Encoder):
 				num_sampled += 1
 			
 			# Flatten and tokenize sampled segments
-			flattened = self.segment_delimiter.join(flattened)
+			flattened = self.segment_delimiter.join(sampled_segments)
 			flattened = tokenizer(
 				flattened,
 				add_special_tokens = False,
@@ -370,6 +375,7 @@ class RemoveRedundancy(Encoder):
 		segment_delimiter: str = " ",
 		add_special_tokens: bool = True
 	) -> None:
+
 		super().__init__(
 			tokenizer, min_tokens, max_tokens, preprocessor,
 			add_special_tokens, tokenizer.bos_token_id,
@@ -470,8 +476,10 @@ class RemoveRedundancy(Encoder):
 			# Update selected segments embedding
 			selected_emb = (
 				(num_segments * selected_emb + embedding) /
-				(num_segments := num_segments + 1)
+				(num_segments + 1)
 			)
+			num_segments += 1
+
 		return selected_segments
 	
 
@@ -491,6 +499,7 @@ class RemoveRedundancy2(Encoder):
 		segment_delimiter: str = " ",
 		add_special_tokens: bool = True
 	) -> None:
+		
 		super().__init__(
 			tokenizer, min_tokens, max_tokens, preprocessor,
 			add_special_tokens, tokenizer.bos_token_id,
@@ -609,6 +618,7 @@ class KeywordScorer(Encoder):
 		segment_delimiter: str = " ",
 		add_special_tokens: bool = True
 	) -> None:
+
 		super().__init__(
 			tokenizer, 0, max_tokens, preprocessor,
 			add_special_tokens, tokenizer.bos_token_id,

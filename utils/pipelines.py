@@ -19,6 +19,7 @@ class Pipeline(ABC):
 		encoder: Encoder,
 		postprocessor: Callable[[list[str]], list[str]] | None = None
 	) -> None:
+
 		self.model = model
 		self.encoder = encoder
 		self.postprocessor = postprocessor
@@ -28,17 +29,18 @@ class Pipeline(ABC):
 		texts: str | list[str],
 		**kwargs
 	) -> str | list[str]:
-		if isinstance(texts, str):
-			return self.generate_summaries([texts], **kwargs)[0]
-		return self.generate_summaries(texts, **kwargs)
+
+		return self.generate_summaries([texts], **kwargs)[0] \
+			if isinstance(texts, str) else \
+			self.generate_summaries(texts, **kwargs)
 
 	@abstractmethod
 	def generate_summaries(
 		self,
-		texts: str | list[str],
+		texts: list[str],
 		**kwargs
 	) -> list[str]:
-		pass
+		...
 
 
 
@@ -60,6 +62,7 @@ class SummarizationPipeline(Pipeline):
 	## Returns
 	list[str]: The generated summaries.
 	"""
+
 	def __init__(
 		self,
 		model,
@@ -72,6 +75,7 @@ class SummarizationPipeline(Pipeline):
 		repetition_penalty: float = 1.,
 		top_p: float = .9
 	) -> None:
+
 		super().__init__(model.to("cpu"), encoder, postprocessor)
 		self.summary_min_tokens = summary_min_tokens or model.config.min_length
 		self.summary_max_tokens = summary_max_tokens or encoder.max_tokens
@@ -150,6 +154,7 @@ class OpenAIPipeline(Pipeline):
 		system_prompt: str | None = None,
 		delay: float = 1.
 	) -> None:
+
 		super().__init__(model, encoder, postprocessor)
 		self.max_tokens = encoder.max_tokens
 		self.system_prompt = system_prompt
@@ -160,7 +165,7 @@ class OpenAIPipeline(Pipeline):
 	def generate_summaries(
 		self,
 		texts: list[str],
-		**kwargs
+		**_
 	) -> list[str]:
 
 		postprocessor = self.postprocessor
@@ -229,6 +234,7 @@ class OpenAIPipeline(Pipeline):
 		return tokens_used
 	
 	def send_call(self) -> bool:
+
 		# Check if call inputs are created
 		call_inputs = self.call_inputs
 		assert call_inputs is not None, "Call inputs not created"

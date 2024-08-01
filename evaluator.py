@@ -28,8 +28,6 @@ from utils.evaluator_utils import Evaluator
 def main() -> None:
 
 	filterwarnings("ignore")
-	if not load_dotenv():
-		raise FileNotFoundError(".env file not found")
 	args = get_arguments()
 
 	model_name = args.model.lower()
@@ -97,6 +95,8 @@ def main() -> None:
 			context_size = model.config.max_position_embeddings
 
 		case "gpt":
+			if not load_dotenv():
+				raise FileNotFoundError(".env file not found")
 			tokenizer = GPT2TokenizerFast.from_pretrained(gpt_dir)
 			model = "gpt-3.5-turbo"
 			context_size = 4096
@@ -151,9 +151,10 @@ def main() -> None:
 		) for enc in encoders
 	]
 
-	print("Loading data...")
 	texts, summaries = [], []
 	num_texts = 0
+
+	print("Loading data...")
 	match dataset_name:
 
 		case "govreport":
@@ -207,6 +208,7 @@ def main() -> None:
 			print(f"Encoder {i + 1} took {time} ms/text on average")
 			time_taken.append(time)
 		results["encoder_times"] = time_taken
+
 	else:
 		print(f"Evaluating pipelines with device {device}...")
 		evaluator = Evaluator(pipelines, device)

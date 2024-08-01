@@ -26,6 +26,7 @@ class SummarizationDataset:
 	`shuffle`: Shuffle batches before iterating
 	`seed`: Manual seed for output reproducibility
 	"""
+
 	def __init__(
 		self,
 		texts: list[str],
@@ -36,6 +37,7 @@ class SummarizationDataset:
 		shuffle: bool = False,
 		seed: int | None = None
 	) -> None:
+
 		# Check if texts and summaries are of same length
 		# if summaries are provided
 		if summaries is not None:
@@ -79,6 +81,7 @@ class SummarizationDataset:
 	def __getitem__(
 		self, ind: int
 	) -> BatchEncoding:
+
 		encoder = self.encoder
 		cache = self.cache
 
@@ -116,26 +119,28 @@ class SummarizationDataset:
 		return batch_encodings
 
 	def __iter__(self) -> Self:
-		self.it = 0
 
 		# Shuffle batches if specified
 		if self.shuffle:
 			permutation = np.random.permutation(self.num_batches)
 			self.text_batches = self.text_batches[permutation]
+			self.cache = self.cache[permutation]
 			if self.summary_batches is not None:
 				self.summary_batches = self.summary_batches[permutation]
-			if self.cache is not None:
-				self.cache = self.cache[permutation]
 
+		self.it = 0
 		return self
 
 	def __next__(self) -> BatchEncoding:
-		it = self.it
+
 		# Check if iterator is initialized
+		it = self.it
 		assert it is not None, "Iterator not initialized"
+
 		# Check if iterations are completed
 		if it == self.num_batches:
 			raise StopIteration()
+
 		self.it += 1
 		return self[it]
 	
@@ -160,11 +165,13 @@ def train_model(
 
 	model.train(True)
 	for epoch in range(epochs):
+
 		# Track total epoch loss and time
 		epoch_loss = 0
 		epoch_time = 0
 
 		for batch, inputs in enumerate(dataset):
+
 			try:
 				start = perf_counter()
 				inputs = inputs.to(device)
@@ -173,6 +180,7 @@ def train_model(
 				loss.backward()
 				optimizer.step()
 				time = (perf_counter() - start) * 1000
+
 			except Exception as e:
 				show_exception(e)
 				print("Training terminated")
@@ -200,12 +208,12 @@ def train_model(
 
 			clear_stdout(SPACES)
 			print(
-				f"Epoch [{epoch+1}/{epochs}] "
-				f"Batch [{batch+1}/{num_batches}] "
-				f"Time [{round(time, flt_prec)} ms/batch] "
-				f"Loss [{round(loss.item(), flt_prec)}] "
+				f"Epoch [{epoch+1}/{epochs}]",
+				f"Batch [{batch+1}/{num_batches}]",
+				f"Time [{round(time, flt_prec)} ms/batch]",
+				f"Loss [{round(loss.item(), flt_prec)}]",
 				f"Time remaining [{time_remaining}]",
-				end=""
+				end = None
 			)
 
 		epoch_loss = epoch_loss / num_batches
@@ -217,9 +225,10 @@ def train_model(
 
 		clear_stdout(SPACES)
 		print(
-			f"\rEpoch [{epoch+1}/{epochs}] "
-			f"Average loss [{round(epoch_loss, flt_prec)}] "
+			f"Epoch [{epoch+1}/{epochs}]",
+			f"Average loss [{round(epoch_loss, flt_prec)}]",
 			f"Avergage time [{round(epoch_time, flt_prec)} ms/batch]"
 		)
+
 	model.train(False)
 	return epoch_losses, True

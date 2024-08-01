@@ -34,9 +34,9 @@ def gpu_usage() -> list[int]:
 
 	return gpu_memory
 
-def get_device(threshold: int = 300) -> str:
+def get_device(threshold: int = 500) -> str:
 	"""
-	Returns a device with memory usage below a threshold.
+	Returns a device with memory usage below `threshold`.
 	"""
 	if torch.cuda.is_available():
 		usage = gpu_usage()
@@ -72,7 +72,7 @@ def show_exception(exception: Exception) -> None:
 	print(f"\nEncountered exception of type {exc_class}: {exc_msg}\n")
 
 def clear_stdout(spaces: int = 100) -> None:
-	print(f"\r{" " * spaces}\r", end="")
+	print(f"\r{" " * spaces}", end="\r")
 
 def get_keywords(
 	text: str,
@@ -81,8 +81,8 @@ def get_keywords(
 	preprocessor: Callable[[str], str] | None = None
 ) -> list[str]:
 	vectorizer = CountVectorizer(
-		stop_words=stop_words,
-		preprocessor=preprocessor
+		stop_words = stop_words,
+		preprocessor = preprocessor
 	)
 	dtm = vectorizer.fit_transform([text])
 	lda = LatentDirichletAllocation(n_components=1)
@@ -171,12 +171,13 @@ class TextProcessor:
 	]
 
 	def __init__(
-			self,
-			only_words_nums: bool = False,
-			preprocessing: bool = False,
-			remove_nums: bool = False,
-			ignore_tokens: list[str] | None = None
-		) -> None:
+		self,
+		only_words_nums: bool = False,
+		preprocessing: bool = False,
+		remove_nums: bool = False,
+		ignore_tokens: list[str] | None = None
+	) -> None:
+
 		pats_subs = []
 
 		# Only words and numbers
@@ -198,27 +199,29 @@ class TextProcessor:
 		# Fix white spaces
 		pats_subs.extend(TextProcessor._whitespace_pats_subs)
 
-		self.pats_subs = [
+		self._pats_subs = [
 			(re.compile(pat), sub) for pat, sub in pats_subs
 		]
 	
 	def __call__(
 		self,
 		texts: str | list[str]
-	) -> str | list[str]:
-		if isinstance(texts, str):
-			return self.process(texts)
-		texts = [self.process(text) for text in texts]
-		return texts
+	) -> str | list[str]:	
+
+		# Check if single text is given		
+		single_text = isinstance(texts, str)
+		if single_text:
+			texts = [texts]
 		
-	def process(
-		self,
-		text: str
-	) -> str:
-		for pat, sub in self.pats_subs:
-			text = pat.sub(sub, text)
-		text = text.strip()
-		return text
+		# Process texts
+		processed_texts = []
+		for text in texts:
+			for pat, sub in self._pats_subs:
+				text = pat.sub(sub, text)
+			text = text.strip()
+			processed_texts.append(text)
+
+		return processed_texts[0] if single_text else processed_texts	
 
 
 
@@ -230,6 +233,7 @@ class TextSegmenter:
 		min_words: int,
 		sent_delimiter: str = " "
 	) -> None:
+
 		self.base_tokenizer = base_tokenizer
 		self.min_words = min_words
 		self.sent_delimiter = sent_delimiter

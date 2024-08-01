@@ -17,6 +17,7 @@ class Evaluator:
 		rougen_max_n: int = 2,
 		rougew_weight_factor: int = 1.2
 	) -> None:
+
 		# Initialize pipelines
 		pipelines = self.pipelines = pipelines if \
 			isinstance(pipelines, list) else [pipelines]
@@ -52,6 +53,7 @@ class Evaluator:
 		summaries: str | list[str],
 		batch_size: int | None = None
 	) -> dict[str]:
+
 		self.generate_summaries(texts, batch_size)
 		bert_score = self.get_bert_score(summaries)
 		rouge_score = self.get_rouge_score(summaries)
@@ -66,6 +68,7 @@ class Evaluator:
 		texts: str | list[str],
 		batch_size: int | None = None
 	) -> None:
+
 		if isinstance(texts, str):
 			texts = [texts]
 		all_summaries = self.summaries = []
@@ -77,8 +80,9 @@ class Evaluator:
 	# P, R, F
 	def get_bert_score(
 		self,
-		summaries: str | list[str]
+		summaries: list[str]
 	) -> list[list[float]]:
+
 		all_summaries = self.summaries
 		assert all_summaries is not None, "Summaries not generated"
 		num_pipelines = self.num_pipelines
@@ -96,8 +100,9 @@ class Evaluator:
 	# F, P, R
 	def get_rouge_score(
 		self,
-		summaries: str | list[str]
+		summaries: list[str]
 	) -> list[dict[str, list[float]]]:
+
 		generated_summaries = self.summaries
 		assert generated_summaries is not None, "Summaries not generated"
 		num_generated_summaries = len(generated_summaries)
