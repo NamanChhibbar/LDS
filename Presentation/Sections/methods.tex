@@ -6,13 +6,13 @@
 		\begin{frame}{Central Truncation}
 
 			\begin{itemize}
-				\item The most common and straightforward approach used in practice to handle
-				inputs exceeding the context size.
+				\item Trucncation is the most common and straightforward approach used to
+				handle inputs exceeding the context size.
 				\item Generally, sequences are truncated from the end before processing.
 				\item Some studies show that truncating the middle produced better results
 				\citep{sun2019fine, worsham-kalita-2018-genre}.
-				\item We keep a fraction of the tokens from the head and the tail, i.e. truncate
-				the middle.
+				\item We keep some of the tokens from the head and some from the tail, i.e.
+				truncate the middle.
 				\item Hyperparameter $head\_size \in [0, 1]$ controls the fraction of tokens taken
 				from the head.
 			\end{itemize}
@@ -25,7 +25,7 @@
 		\begin{frame}{Document Skimming}
 
 			\begin{itemize}
-				\item This approach is inspired by the fast reading technique "skimming".
+				\item This approach is inspired by the fast reading technique called "skimming".
 				\item It involves reading while skipping some parts of the text for efficiency.
 				\item Reader attempts to skip the redundant or irrelevant parts.
 			\end{itemize}
@@ -47,9 +47,8 @@
 				which parts are important.
 				\item This ensures we capture details from every part of the document.
 				\item We also experiment with removing similar segments before and after sampling.
+				\item This is done since LLMs tend to repeat themselves.
 			\end{itemize}
-
-			\vskip .5cm
 
 			\begin{figure}
 				\centering
