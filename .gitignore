@@ -1,5 +1,6 @@
 temp*
 *.pdf
+.venv
 .env
 
 .DS_Store
