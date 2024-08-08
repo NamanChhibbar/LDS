@@ -221,7 +221,7 @@ class TextProcessor:
 			text = text.strip()
 			processed_texts.append(text)
 
-		return processed_texts[0] if single_text else processed_texts	
+		return processed_texts[0] if single_text else processed_texts
 
 
 
