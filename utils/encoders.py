@@ -530,6 +530,9 @@ class RemoveRedundancy2(Encoder):
 		# Get keywords
 		keywords = get_keywords(text)
 
+		# Convert list of segments to numpy array for sampling
+		segments = np.array(segments)
+
 		# Remove redundant segments
 		segments = self.remove_redundancy(segments, keywords)
 		num_segments = len(segments)
@@ -553,9 +556,6 @@ class RemoveRedundancy2(Encoder):
 		# Approximate probability of picking a segment
 		p = max_tokens / num_tokens
 
-		# Convert list of segments to numpy array for sampling
-		segments = np.array(segments)
-
 		# Sample until segments fit in model
 		while True:
 			segment_mask = np.random.rand(num_segments) <= p
@@ -577,28 +577,24 @@ class RemoveRedundancy2(Encoder):
 	
 	def remove_redundancy(
 		self,
-		segments: list[str],
+		segments: np.ndarray[str],
 		keywords: list[str]
 	) -> list[str]:
 		
 		sent_encoder = self.sent_encoder
+
+		# Get keyword embedding
 		keywords = " ".join(keywords)
 		keyword_emb = sent_encoder.encode(keywords)
+
+		# Get segment embeddings
 		segment_embs = sent_encoder.encode(segments)
 
-		selected_segments = []
-		for segment, embedding in zip(segments, segment_embs):
+		# Create filter for segments
+		scores = segment_embs @ keyword_emb
+		filt = scores > self.threshold
 
-			# Calculate similarity between current segment and chosen segments
-			similarity = keyword_emb @ embedding
-
-			# Discard current segment and contnue if it is not similar
-			if similarity < self.threshold:
-				continue
-
-			# Otherwise select it
-			selected_segments.append(segment)
-
+		selected_segments = segments[filt]
 		return selected_segments
 	
 
@@ -657,10 +653,7 @@ class KeywordScorer(Encoder):
 		segment_embeddings = sent_encoder.encode(segments)
 		
 		# Calculate similarity of keywords with each segment
-		segment_similarities = []
-		for embedding in segment_embeddings:
-			similarity = keywords_emb @ embedding
-			segment_similarities.append(similarity)
+		segment_similarities = segment_embeddings @ keywords_emb
 		
 		# Argument sort the similarities
 		best_indices = np.argsort(segment_similarities)[::-1]

@@ -54,7 +54,7 @@ def main() -> None:
 	bart_dir = f"{data_dir}/Models/BART"
 	t5_dir = f"{data_dir}/Models/T5"
 	pegasus_dir = f"{data_dir}/Models/PEGASUS"
-	save_dir = f"{data_dir}/Models/{model_name}-{dataset}-SegmentSampler"
+	save_dir = f"{data_dir}/Models/{model_name}-{dataset}-{encoder_name}"
 	train_history_path = f"{data_dir}/{model_name}-{dataset}-history.json"
 
 	segment_min_words = 20
