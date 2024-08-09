@@ -1,3 +1,4 @@
+from math import inf
 import re
 from typing import Callable
 import subprocess
@@ -8,14 +9,6 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.decomposition import LatentDirichletAllocation
 from nltk.corpus import stopwords
 
-
-inf = float("inf")
-
-STOP_WORDS = [
-	"also", "however", "therefore", "thus", "hence", "moreover",
-	"must", "may", "might", "could", "would", "shall", "need",
-	"needs", "given", "since", "though",
-]
 
 
 def gpu_usage() -> list[int]:
@@ -34,6 +27,7 @@ def gpu_usage() -> list[int]:
 
 	return gpu_memory
 
+
 def get_device(threshold: int = 500) -> str:
 	"""
 	Returns a device with memory usage below `threshold`.
@@ -48,10 +42,12 @@ def get_device(threshold: int = 500) -> str:
 		return "mps" if usage < threshold else "cpu"
 	return "cpu"
 
+
 def count_words(text: str) -> int:
 	words = text.split()
 	num_words = len(words)
 	return num_words
+
 
 def count_tokens(
 	texts: str | list[str],
@@ -66,13 +62,16 @@ def count_tokens(
 		else sum([len(encoding) for encoding in encodings])
 	return num_tokens, encodings
 
+
 def show_exception(exception: Exception) -> None:
 	exc_class = exception.__class__.__name__
 	exc_msg = str(exception)
 	print(f"\nEncountered exception of type {exc_class}: {exc_msg}\n")
 
+
 def clear_stdout(spaces: int = 100) -> None:
 	print(f"\r{" " * spaces}", end="\r")
+
 
 def get_keywords(
 	text: str,
@@ -93,6 +92,7 @@ def get_keywords(
 		for i in lda.components_[0].argsort()[:-num_words-1:-1]
 	]
 	return topic_words
+
 
 def get_stop_words(
 	lang: str = "english",

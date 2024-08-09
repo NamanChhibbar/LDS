@@ -14,10 +14,16 @@ from transformers import (
 )
 from sentence_transformers import SentenceTransformer
 
+from configs import (
+	BASE_DIR, MODELS_DIR, MIN_WORDS, MAX_WORDS,
+	MAX_TEXTS, SEGMENT_MIN_WORDS, MIN_TOKEN_FRAC,
+	HEAD_SIZE, THRESHOLD, PROB_BOOST, NUM_KEYWORDS,
+	SYSTEM_PROMPT, EXTRA_STOP_WORDS, MIN_SUMMARY_TOKENS,
+	TEMPERATURE, REPETITION_PENALTY, TOP_P, SEED, FLT_PREC
+)
 from utils.helpers import (
 	TextProcessor, TextSegmenter,
-	get_device, count_words, get_stop_words,
-	STOP_WORDS
+	get_device, count_words, get_stop_words
 )
 from utils.encoders import *
 from utils.pipelines import *
@@ -32,37 +38,14 @@ def main() -> None:
 
 	model_name = args.model.lower()
 	dataset_name = args.dataset.lower()
-	min_words = args.min_words
-	max_words = args.max_words
-	max_texts = args.max_texts
+	batch_size = args.batch_size
 	device = "cpu" if args.no_gpu else get_device(1000)
 	time_only = args.time_only
 
-	data_dir = "/Users/naman/Workspace/Data/Long-Document-Summarization"
-	data_dir = "/home/nchibbar/Data"
-	results_path = f"{data_dir}/{model_name}-{dataset_name}{"-times" if time_only else ""}.json"
-	sent_dir = f"{data_dir}/Models/Sent-Transformer"
-	bart_dir = f"{data_dir}/Models/BART"
-	t5_dir = f"{data_dir}/Models/T5"
-	pegasus_dir = f"{data_dir}/Models/PEGASUS"
-	gpt_dir = f"{data_dir}/Models/GPT-3.5-turbo-tokenizer"
-	govreport_dir = f"{data_dir}/GovReport/processed"
-	bigpatent_dir = f"{data_dir}/BigPatent/processed"
-
-	segment_min_words = 20
-	min_token_frac = .5
-	head_size = .5
-	threshold = .8
-	boost = .02
-	num_keywords = 20
-	seed = 69
-	min_summary_tokens = 100
-
-	batch_size = 5
-	temperature = 2.
-	repetition_penalty = 3.
-	top_p = .95
-	system_prompt = "You will be given some segments of a very long document. Your task is to summarize the entire document as a whole by extracting key information and ideas from the segments. Generate a detailed, concise, and coherent summary in 300 words. Do not refer to the document in the summary in any way."
+	data_dir = f"{BASE_DIR}/{dataset_name}"
+	sent_dir = f"{BASE_DIR}/Models/sent-transformer"
+	model_dir = f"{MODELS_DIR}/{model_name}"
+	results_path = f"{BASE_DIR}/{model_name}-{dataset_name}{"-times" if time_only else ""}.json"
 
 	print("Loading text processors and segmenter...")
 	preprocessor = TextProcessor(preprocessing=True)
@@ -71,7 +54,7 @@ def main() -> None:
 		remove_nums = True
 	)
 	postprocessor = None
-	text_segmenter = TextSegmenter(sent_tokenize, segment_min_words)
+	text_segmenter = TextSegmenter(sent_tokenize, SEGMENT_MIN_WORDS)
 
 	print("Loading sentence encoder...")
 	sent_encoder = SentenceTransformer(sent_dir, device=device)
@@ -80,24 +63,24 @@ def main() -> None:
 	match model_name:
 
 		case "bart":
-			tokenizer = BartTokenizer.from_pretrained(bart_dir)
-			model = BartForConditionalGeneration.from_pretrained(bart_dir)
+			tokenizer = BartTokenizer.from_pretrained(model_dir)
+			model = BartForConditionalGeneration.from_pretrained(model_dir)
 			context_size = model.config.max_position_embeddings
 
 		case "t5":
-			tokenizer = T5Tokenizer.from_pretrained(t5_dir)
-			model = T5ForConditionalGeneration.from_pretrained(t5_dir)
+			tokenizer = T5Tokenizer.from_pretrained(model_dir)
+			model = T5ForConditionalGeneration.from_pretrained(model_dir)
 			context_size = model.config.n_positions
 
 		case "pegasus":
-			tokenizer = PegasusTokenizerFast.from_pretrained(pegasus_dir)
-			model = PegasusForConditionalGeneration.from_pretrained(pegasus_dir)
+			tokenizer = PegasusTokenizerFast.from_pretrained(model_dir)
+			model = PegasusForConditionalGeneration.from_pretrained(model_dir)
 			context_size = model.config.max_position_embeddings
 
 		case "gpt":
 			if not load_dotenv():
 				raise FileNotFoundError(".env file not found")
-			tokenizer = GPT2TokenizerFast.from_pretrained(gpt_dir)
+			tokenizer = GPT2TokenizerFast.from_pretrained(model_dir)
 			model = "gpt-3.5-turbo"
 			context_size = 4096
 		
@@ -107,27 +90,27 @@ def main() -> None:
 	print(f"Context size of model: {context_size}")
 
 	print("Initializing encoders and pipelines...")
-	stop_words = get_stop_words(extra_stop_words=STOP_WORDS)
-	min_tokens = int(min_token_frac * context_size)
+	stop_words = get_stop_words(extra_stop_words=EXTRA_STOP_WORDS)
+	min_tokens = int(MIN_TOKEN_FRAC * context_size)
 
 	encoders = [
 		TruncateMiddle(
 			tokenizer, context_size, 1, preprocessor
 		),
 		TruncateMiddle(
-			tokenizer, context_size, head_size, preprocessor
+			tokenizer, context_size, HEAD_SIZE, preprocessor
 		),
 		UniformSampler(
 			tokenizer, min_tokens, context_size, text_segmenter,
-			preprocessor, seed
+			preprocessor, SEED
 		),
 		SegmentSampler(
 			tokenizer, min_tokens, context_size, text_segmenter,
-			sent_encoder, preprocessor, threshold, boost, seed
+			sent_encoder, preprocessor, THRESHOLD, PROB_BOOST, SEED
 		),
 		RemoveRedundancy(
 			tokenizer, min_tokens, context_size, text_segmenter,
-			sent_encoder, preprocessor, threshold, seed
+			sent_encoder, preprocessor, THRESHOLD, SEED
 		),
 		# RemoveRedundancy2(
 		# 	tokenizer, min_tokens, context_size, text_segmenter,
@@ -135,19 +118,19 @@ def main() -> None:
 		# ),
 		KeywordScorer(
 			tokenizer, context_size, text_segmenter, sent_encoder,
-			preprocessor, num_keywords, keywords_preprocessor,
+			preprocessor, NUM_KEYWORDS, keywords_preprocessor,
 			stop_words
 		)
 	]
 
 	pipelines = [
 		SummarizationPipeline(
-			model, enc, postprocessor, min_summary_tokens,
-			context_size, device, temperature, repetition_penalty, top_p
+			model, enc, postprocessor, MIN_SUMMARY_TOKENS,
+			context_size, device, TEMPERATURE, REPETITION_PENALTY, TOP_P
 		) for enc in encoders
 	] if model_name != "gpt" else [
 		OpenAIPipeline(
-			model, enc, postprocessor, system_prompt
+			model, enc, postprocessor, SYSTEM_PROMPT
 		) for enc in encoders
 	]
 
@@ -158,32 +141,32 @@ def main() -> None:
 	match dataset_name:
 
 		case "govreport":
-			files = os.listdir(govreport_dir)
+			files = os.listdir(data_dir)
 			for file in files:
-				file_path = f"{govreport_dir}/{file}"
+				file_path = f"{data_dir}/{file}"
 				with open(file_path) as fp:
 					data = json.load(fp)
-				if min_words < count_words(data["text"]) < max_words:
+				if MIN_WORDS < count_words(data["text"]) < MAX_WORDS:
 					texts.append(data["text"])
 					summaries.append(data["summary"])
 					num_texts += 1
-				if num_texts == max_texts:
+				if num_texts == MAX_TEXTS:
 					break
 			
 		case "bigpatent":
-			files = os.listdir(bigpatent_dir)
+			files = os.listdir(data_dir)
 			for file in files:
-				file_path = f"{bigpatent_dir}/{file}"
+				file_path = f"{data_dir}/{file}"
 				with open(file_path) as fp:
 					data = json.load(fp)
 				for text, summary in zip(data["texts"], data["summaries"]):
-					if min_words < count_words(text) < max_words:
+					if MIN_WORDS < count_words(text) < MAX_WORDS:
 						texts.append(text)
 						summaries.append(summary)
 						num_texts += 1
-					if num_texts == max_texts:
+					if num_texts == MAX_TEXTS:
 						break
-				if num_texts == max_texts:
+				if num_texts == MAX_TEXTS:
 					break
 		
 		case _:
@@ -192,9 +175,9 @@ def main() -> None:
 	print(f"Using {num_texts} texts")
 
 	results = {
-		"min_words": min_words,
-		"max_words": max_words,
-		"max_texts": max_texts
+		"min_words": MIN_WORDS,
+		"max_words": MAX_WORDS,
+		"max_texts": MAX_TEXTS
 	}
 
 	if time_only:
@@ -205,7 +188,9 @@ def main() -> None:
 			start = perf_counter()
 			encoder(texts)
 			time = (perf_counter() - start) * 1000 / num_texts
-			print(f"Encoder {i + 1} took {time} ms/text on average")
+			print(
+				f"Encoder {i + 1} took {round(time, FLT_PREC)} ms/text on average"
+			)
 			time_taken.append(time)
 		results["encoder_times"] = time_taken
 
@@ -234,16 +219,8 @@ def get_arguments() -> Namespace:
 		help="Dataset to use"
 	)
 	parser.add_argument(
-		"--min-words", action="store", type=float, default=0,
-		help="Minimum words in text"
-	)
-	parser.add_argument(
-		"--max-words", action="store", type=float, default=float("inf"),
-		help="Maximum words in text"
-	)
-	parser.add_argument(
-		"--max-texts", action="store", type=float, default=float("inf"),
-		help="Maximum texts to use"
+		"--batch-size", action="store", type=int, required=True,
+		help="maximum size of a batch"
 	)
 	parser.add_argument(
 		"--no-gpu", action="store_true",
