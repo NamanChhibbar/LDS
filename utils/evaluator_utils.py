@@ -1,9 +1,9 @@
 import numpy as np
 import torch
-from bert_score import BERTScorer
-from rouge import Rouge
+import bert_score
+import rouge
 
-from .pipelines import Pipeline
+import utils.pipelines as p
 
 
 
@@ -11,7 +11,7 @@ class Evaluator:
 
 	def __init__(
 		self,
-		pipelines: list[Pipeline],
+		pipelines: list[p.Pipeline],
 		device: str | torch.device = "cpu",
 		rouge_metrics: list[str] | None = None,
 		rougen_max_n: int = 2,
@@ -24,12 +24,12 @@ class Evaluator:
 		self.num_pipelines = len(pipelines)
 
 		# Initialize BERT scorer
-		self.bert_scorer = BERTScorer(lang="en", device=device)
+		self.bert_scorer = bert_score.BERTScorer(lang="en", device=device)
 		self.device = device
 
 		# Initialise ROUGE scorer
 		rouge_metrics = rouge_metrics or ["rouge-n", "rouge-l", "rouge-w"]
-		self.rouge_scorer = Rouge(
+		self.rouge_scorer = rouge.Rouge(
 			metrics=rouge_metrics,
 			max_n=rougen_max_n,
 			limit_length=False,

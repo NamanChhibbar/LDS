@@ -2,7 +2,7 @@
 Contains paths and configurations for the project.
 """
 
-from math import inf
+inf = float("inf")
 
 # Directory for the project containing models and datasets
 BASE_DIR = "/Users/naman/Workspace/Data/Long-Document-Summarizer"
@@ -53,3 +53,6 @@ SEED = 69
 
 # Float precision
 FLT_PREC = 4
+
+# Numeber of spaces to clear stdout
+SPACES = 100

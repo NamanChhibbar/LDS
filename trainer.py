@@ -1,38 +1,23 @@
 import os
 import json
-from warnings import filterwarnings
-from argparse import ArgumentParser, Namespace
+import warnings
+import argparse as ap
 
-from nltk import sent_tokenize
-from transformers import (
-	BartTokenizer, BartForConditionalGeneration,
-	T5Tokenizer, T5ForConditionalGeneration,
-	PegasusTokenizerFast, PegasusForConditionalGeneration
-)
-from torch.optim import AdamW
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-from sentence_transformers import SentenceTransformer
+import nltk
+import transformers as tfm
+import torch
+import sentence_transformers as stfm
 
-from configs import (
-	BASE_DIR, MODELS_DIR, MIN_WORDS, MAX_WORDS,
-	MAX_TEXTS, SEGMENT_MIN_WORDS, MIN_TOKEN_FRAC,
-	HEAD_SIZE, THRESHOLD, PROB_BOOST, NUM_KEYWORDS,
-	EXTRA_STOP_WORDS, LEARNING_RATE, SCHEDULER_FACTOR,
-	SCHEDULER_PATIENCE, GPU_USAGE_TOLERANCE, SEED,
-	FLT_PREC
-)
-from utils.helpers import (
-	TextProcessor, TextSegmenter,
-	get_device, count_words, get_stop_words
-)
-from utils.encoders import *
-from utils.trainer_utils import SummarizationDataset, train_model
+import configs as c
+import utils.helpers as h
+import utils.encoders as e
+import utils.trainer_utils as tu
 
 
 
 def main() -> None:
 
-	filterwarnings("ignore")
+	warnings.filterwarnings("ignore")
 
 	# Get command line arguments
 	# See function get_arguments for descriptions
@@ -43,37 +28,37 @@ def main() -> None:
 	shuffle = args.no_shuffle
 	batch_size = args.batch_size
 	epochs = args.epochs
-	device = "cpu" if args.no_gpu else get_device(GPU_USAGE_TOLERANCE)
+	device = "cpu" if args.no_gpu else h.get_device(c.GPU_USAGE_TOLERANCE)
 
 	# All paths that are needed to be hard coded
-	data_dir = f"{BASE_DIR}/{dataset}"
-	sent_dir = f"{MODELS_DIR}/sent-transformer"
-	model_dir = f"{MODELS_DIR}/{model_name}"
-	save_dir = f"{MODELS_DIR}/{model_name}-{dataset}-{encoder_name}"
-	train_history_path = f"{BASE_DIR}/{model_name}-{dataset}-history.json"
+	data_dir = f"{c.BASE_DIR}/{dataset}"
+	sent_dir = f"{c.MODELS_DIR}/sent-transformer"
+	model_dir = f"{c.MODELS_DIR}/{model_name}"
+	save_dir = f"{c.MODELS_DIR}/{model_name}-{dataset}-{encoder_name}"
+	train_history_path = f"{c.BASE_DIR}/{model_name}-{dataset}-history.json"
 
 	print("Loading tokenizer and model...")
 	match model_name:
 
 		case "bart":
-			tokenizer = BartTokenizer.from_pretrained(model_dir)
-			model = BartForConditionalGeneration.from_pretrained(model_dir)
+			tokenizer = tfm.BartTokenizer.from_pretrained(model_dir)
+			model = tfm.BartForConditionalGeneration.from_pretrained(model_dir)
 			context_size = model.config.max_position_embeddings
 
 		case "t5":
-			tokenizer = T5Tokenizer.from_pretrained(model_dir)
-			model = T5ForConditionalGeneration.from_pretrained(model_dir)
+			tokenizer = tfm.T5Tokenizer.from_pretrained(model_dir)
+			model = tfm.T5ForConditionalGeneration.from_pretrained(model_dir)
 			context_size = model.config.n_positions
 
 		case "pegasus":
-			tokenizer = PegasusTokenizerFast.from_pretrained(model_dir)
-			model = PegasusForConditionalGeneration.from_pretrained(model_dir)
+			tokenizer = tfm.PegasusTokenizerFast.from_pretrained(model_dir)
+			model = tfm.PegasusForConditionalGeneration.from_pretrained(model_dir)
 			context_size = model.config.max_position_embeddings
 
 		case _:
 			raise ValueError(f"Invalid model name: {model_name}")
 	
-	min_tokens = int(MIN_TOKEN_FRAC * context_size)
+	min_tokens = int(c.MIN_TOKEN_FRAC * context_size)
 	print(f"Context size of model: {context_size}")
 
 	texts, summaries = [], []
@@ -88,11 +73,11 @@ def main() -> None:
 				file_path = f"{data_dir}/{file}"
 				with open(file_path) as fp:
 					data = json.load(fp)
-				if MIN_WORDS < count_words(data["text"]) < MAX_WORDS:
+				if c.MIN_WORDS < h.count_words(data["text"]) < c.MAX_WORDS:
 					texts.append(data["text"])
 					summaries.append(data["summary"])
 					num_texts += 1
-				if num_texts == MAX_TEXTS:
+				if num_texts == c.MAX_TEXTS:
 					break
 
 		case "bigpatent":
@@ -102,13 +87,13 @@ def main() -> None:
 				with open(file_path) as fp:
 					data = json.load(fp)
 				for text, summary in zip(data["texts"], data["summaries"]):
-					if MIN_WORDS < count_words(text) < MAX_WORDS:
+					if c.MIN_WORDS < h.count_words(text) < c.MAX_WORDS:
 						texts.append(text)
 						summaries.append(summary)
 						num_texts += 1
-					if num_texts == MAX_TEXTS:
+					if num_texts == c.MAX_TEXTS:
 						break
-				if num_texts == MAX_TEXTS:
+				if num_texts == c.MAX_TEXTS:
 					break
 
 		case _:
@@ -117,46 +102,46 @@ def main() -> None:
 	print(f"Using {num_texts} texts")
 
 	print("Initializing encoder...")
-	preprocessor = TextProcessor(preprocessing=True)
-	text_segmenter = TextSegmenter(sent_tokenize, SEGMENT_MIN_WORDS)
-	keywords_preprocessor = TextProcessor(
+	preprocessor = h.TextProcessor(preprocessing=True)
+	text_segmenter = h.TextSegmenter(nltk.sent_tokenize, c.SEGMENT_MIN_WORDS)
+	keywords_preprocessor = h.TextProcessor(
 		only_words_nums = True,
 		remove_nums = True
 	)
-	stop_words = get_stop_words(extra_stop_words=EXTRA_STOP_WORDS)
+	stop_words = h.get_stop_words(c.EXTRA_STOP_WORDS)
 
 	match encoder_name:
 
 		case "truncatemiddle":
-			encoder = TruncateMiddle(
-				tokenizer, context_size, HEAD_SIZE, preprocessor
+			encoder = e.TruncateMiddle(
+				tokenizer, context_size, c.HEAD_SIZE, preprocessor
 			)
 
 		case "uniformsampler":
-			encoder = UniformSampler(
+			encoder = e.UniformSampler(
 				tokenizer, min_tokens, context_size, text_segmenter,
-				preprocessor, SEED
+				preprocessor, c.SEED
 			)
 
 		case "segmentsampler":
-			sent_encoder = SentenceTransformer(sent_dir, device=device)
-			encoder = SegmentSampler(
+			sent_encoder = stfm.SentenceTransformer(sent_dir, device=device)
+			encoder = e.SegmentSampler(
 				tokenizer, min_tokens, context_size, text_segmenter,
-				sent_encoder, preprocessor, THRESHOLD, PROB_BOOST, SEED
+				sent_encoder, preprocessor, c.THRESHOLD, c.PROB_BOOST, c.SEED
 			)
 
 		case "removeredundancy":
-			sent_encoder = SentenceTransformer(sent_dir, device=device)
-			encoder = RemoveRedundancy(
+			sent_encoder = stfm.SentenceTransformer(sent_dir, device=device)
+			encoder = e.RemoveRedundancy(
 				tokenizer, min_tokens, context_size, text_segmenter,
-				sent_encoder, preprocessor, THRESHOLD, SEED
+				sent_encoder, preprocessor, c.THRESHOLD, c.SEED
 			)
 
 		case "keywordscorer":
-			sent_encoder = SentenceTransformer(sent_dir, device=device)
-			encoder = KeywordScorer(
+			sent_encoder = stfm.SentenceTransformer(sent_dir, device=device)
+			encoder = e.KeywordScorer(
 				tokenizer, context_size, text_segmenter, sent_encoder,
-				preprocessor, NUM_KEYWORDS, keywords_preprocessor,
+				preprocessor, c.NUM_KEYWORDS, keywords_preprocessor,
 				stop_words
 			)
 		
@@ -164,23 +149,24 @@ def main() -> None:
 			raise ValueError(f"Invalid encoder name: {encoder_name}")
 
 	print("Initializing dataset...")
-	dataset = SummarizationDataset(
+	dataset = tu.SummarizationDataset(
 		texts, encoder, batch_size, summaries,
-		context_size, shuffle, SEED
+		context_size, shuffle, c.SEED
 	)
 
 	# Adam optimizer with weight decay
-	optimizer = AdamW(model.parameters(), LEARNING_RATE)
+	optimizer = torch.optim.AdamW(model.parameters(), c.LEARNING_RATE)
 
 	# Reduces LR when a tracked metric stops improving
-	scheduler = ReduceLROnPlateau(
+	scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
 		optimizer, mode="min",
-		factor=SCHEDULER_FACTOR, patience=SCHEDULER_PATIENCE
+		factor=c.SCHEDULER_FACTOR, patience=c.SCHEDULER_PATIENCE
 	)
 
 	print(f"Starting training with device {device}...\n")
-	train_history, successful = train_model(
-		model, dataset, epochs, optimizer, scheduler, device, FLT_PREC
+	train_history, successful = tu.train_model(
+		model, dataset, epochs, optimizer, scheduler,
+		device, c.FLT_PREC, c.SPACES
 	)
 
 	if not successful:
@@ -202,8 +188,8 @@ def main() -> None:
 
 
 
-def get_arguments() -> Namespace:
-	parser = ArgumentParser(description="Training script")
+def get_arguments() -> ap.Namespace:
+	parser = ap.ArgumentParser(description="Training script")
 
 	# Command line arguments
 	parser.add_argument(

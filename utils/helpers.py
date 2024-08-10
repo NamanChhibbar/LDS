@@ -1,13 +1,14 @@
-from math import inf
 import re
-from typing import Callable
+import typing
 import subprocess
 
-from numpy import argmin
+import numpy as np
 import torch
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.decomposition import LatentDirichletAllocation
-from nltk.corpus import stopwords
+import sklearn
+import nltk
+
+
+inf = float("inf")
 
 
 
@@ -28,13 +29,13 @@ def gpu_usage() -> list[int]:
 	return gpu_memory
 
 
-def get_device(threshold: int = 500) -> str:
+def get_device(threshold: int | float = 500) -> str:
 	"""
 	Returns a device with memory usage below `threshold`.
 	"""
 	if torch.cuda.is_available():
 		usage = gpu_usage()
-		cuda_ind = argmin(usage)
+		cuda_ind = np.argmin(usage)
 		return f"cuda:{cuda_ind}" if usage[cuda_ind] < threshold \
 			else "cpu"
 	if torch.backends.mps.is_available():
@@ -77,14 +78,14 @@ def get_keywords(
 	text: str,
 	num_words: int = 20,
 	stop_words: list[str] | None = None,
-	preprocessor: Callable[[str], str] | None = None
+	preprocessor: typing.Callable[[str], str] | None = None
 ) -> list[str]:
-	vectorizer = CountVectorizer(
+	vectorizer = sklearn.feature_extraction.text.CountVectorizer(
 		stop_words = stop_words,
 		preprocessor = preprocessor
 	)
 	dtm = vectorizer.fit_transform([text])
-	lda = LatentDirichletAllocation(n_components=1)
+	lda = sklearn.decomposition.LatentDirichletAllocation(n_components=1)
 	lda.fit(dtm)
 	feature_names = vectorizer.get_feature_names_out()
 	topic_words = [
@@ -95,10 +96,10 @@ def get_keywords(
 
 
 def get_stop_words(
-	lang: str = "english",
-	extra_stop_words: list[str] | None = None
+	extra_stop_words: list[str] | None = None,
+	lang: str = "english"
 ) -> list[str]:
-	stop_words = stopwords.words(lang)
+	stop_words = nltk.corpus.stopwords.words(lang)
 	if extra_stop_words is not None:
 		stop_words += [
 			word.lower()
@@ -229,7 +230,7 @@ class TextSegmenter:
 
 	def __init__(
 		self,
-		base_tokenizer: Callable[[str], list[str]],
+		base_tokenizer: typing.Callable[[str], list[str]],
 		min_words: int,
 		sent_delimiter: str = " "
 	) -> None:

@@ -1,23 +1,23 @@
-from time import sleep
-from abc import ABC, abstractmethod
-from typing import Callable
+import time
+import abc
+import typing
 
 import torch
 import openai
 
-from .helpers import count_tokens, show_exception
-from .encoders import Encoder
-from .trainer_utils import SummarizationDataset
+import utils.helpers as h
+import utils.encoders as e
+import utils.trainer_utils as tu
 
 
 
-class Pipeline(ABC):
+class Pipeline(abc.ABC):
 
 	def __init__(
 		self,
 		model,
-		encoder: Encoder,
-		postprocessor: Callable[[list[str]], list[str]] | None = None
+		encoder: e.Encoder,
+		postprocessor: typing.Callable[[list[str]], list[str]] | None = None
 	) -> None:
 
 		self.model = model
@@ -34,7 +34,7 @@ class Pipeline(ABC):
 			if isinstance(texts, str) else \
 			self.generate_summaries(texts, **kwargs)
 
-	@abstractmethod
+	@abc.abstractmethod
 	def generate_summaries(
 		self,
 		texts: list[str],
@@ -66,8 +66,8 @@ class SummarizationPipeline(Pipeline):
 	def __init__(
 		self,
 		model,
-		encoder: Encoder,
-		postprocessor: Callable[[list[str]], list[str]] | None = None,
+		encoder: e.Encoder,
+		postprocessor: typing.Callable[[list[str]], list[str]] | None = None,
 		summary_min_tokens: int | None = None,
 		summary_max_tokens: int | None = None,
 		device: str | torch.device = "cpu",
@@ -104,7 +104,7 @@ class SummarizationPipeline(Pipeline):
 		top_p = kwargs.get("top_p", self.top_p)
 
 		# Generate encodings in batches
-		batches = SummarizationDataset(texts, encoder, batch_size)
+		batches = tu.SummarizationDataset(texts, encoder, batch_size)
 
 		# Generate summaries
 		all_summaries = []
@@ -149,8 +149,8 @@ class OpenAIPipeline(Pipeline):
 	def __init__(
 		self,
 		model: str,
-		encoder: Encoder,
-		postprocessor: Callable[[list[str]], list[str]] | None = None,
+		encoder: e.Encoder,
+		postprocessor: typing.Callable[[list[str]], list[str]] | None = None,
 		system_prompt: str | None = None,
 		delay: float = 1.
 	) -> None:
@@ -189,7 +189,7 @@ class OpenAIPipeline(Pipeline):
 			summaries.append(summary)
 
 			# Delay before next call
-			sleep(self.delay)
+			time.sleep(self.delay)
 
 		return summaries
 	
@@ -212,7 +212,7 @@ class OpenAIPipeline(Pipeline):
 		messages = []
 		if system_prompt is not None:
 			messages.append({"role": "system", "content": system_prompt})
-			tokens_used += count_tokens(system_prompt, tokenizer)[0] + 4
+			tokens_used += h.count_tokens(system_prompt, tokenizer)[0] + 4
 
 		# Distill text
 		encodings = encoder(
@@ -245,7 +245,7 @@ class OpenAIPipeline(Pipeline):
 
 		# Show exception and return False if the call failed
 		except Exception as e:
-			show_exception(e)
+			h.show_exception(e)
 			return False
 
 		# Return True if call is successful
