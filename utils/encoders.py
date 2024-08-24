@@ -2,7 +2,6 @@ import abc
 import typing
 
 import numpy as np
-import transformers
 from transformers.tokenization_utils_base import BatchEncoding
 import sentence_transformers as stfm
 

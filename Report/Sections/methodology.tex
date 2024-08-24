@@ -2,10 +2,11 @@
 	\label{sec:methodology}
 
 	In this section, we discuss the algorithms used in our experiments.
-	Most of our algorithms start by segmenting the document into smaller, contiguous, and
-	exhaustive parts.
-	The segmentation algorithm is controlled by a threshold on the minimum number of words
-	in a segment, which is a hyperparameter in each of the respective methods.
+	Most of our algorithms start by segmenting the document into smaller, contiguous, and exhaustive
+	parts.
+	We do so by using a sentence tokenizer to separate sentences from the text and merging them such that
+	have fewer words than the threshold $min\_words$, which is a hyperparameter is each of the respective
+	methods.
 
 
 	\subsection{Central Truncation}
@@ -29,27 +30,28 @@
 		Their research also shows that truncating the middle is even better than the more
 		complicated hierarchical methods, displaying superiority with simplicity.
 
-		The fraction of tokens to be taken from the head is controlled by the hyperparameter
-		$head\_size \in [0, 1]$.
-		Setting $head\_size = 1$ results in taking tokens only from the head, whereas
-		setting $head\_size = 0$ results in taking tokens only from the tail.
-		The truncated text is then sent to the summarizer.
+		The fraction of tokens to be taken from the head is controlled by the hyperparameter $head\_size
+		\in [0, 1]$.
+		Setting $head\_size = 1$ results in taking tokens only from the head, whereas setting $head\_size
+		= 0$ results in taking tokens only from the tail.
+		The truncated text is then sent to the model.
 
 
 	\subsection{Document Skimming}
 		\label{method:skimming}
 
 		One way to process long texts is by employing a speed reading strategy called "skimming".
-		Skimming is done by reading the whole text in a go while selectively skipping some
-		parts of the text for quicker reading.
-		The reader usually omits the portions that seem redundant or irrelevant in the text,
-		minimizing information loss.
+		Skimming is done by reading the whole text in a go while selectively skipping some parts of the
+		text for quicker reading.
+		The reader usually omits the portions that seem redundant or irrelevant in the text, minimizing
+		information loss.
+		This method is inspired by the way \cite{wang2024videoagent} randomly sample video frames to
+		generate captions.
+		\citet{worsham-kalita-2018-genre} also use random sampling for genre identification.
 
-		This method starts by segmenting the text using a segmenter with the hyperparameter $min\_words$.
-		The segmenter uses a sentence tokenizer to separate sentences from the text, and then
-		merges the sentences that have fewer words than $min\_words$.
+		This method starts by segmenting the document with the hyperparameter $min\_words$.
 		We then sample segments uniformly, with each segment having probability $p$ to be picked.
-		The sampled segments are then merged to form a single text and sent to the summarizer.
+		The sampled segments are then merged to form a single text and sent to the model.
 		This ensures we sample a segment from each part of the text.
 
 		To address the removal of redundancy in the document, we experiment with and without removing
@@ -58,27 +60,22 @@
 		current segment embedding.
 		\href{https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2}{This} sentence transformer
 		is used to generate the segment embeddings.
-		This sentence transformer is based on MiniLM \cite{wang2020minilm}, which is a distilled version
+		The sentence transformer is based on MiniLM \cite{wang2020minilm}, which is a distilled version
 		of larger encoder-only transformer models.
 		If the cosine similarity is greater than a threshold, the current segment is removed.
 		The mean embedding is updated if the current segment is retained.
 
-		When removing segments after sampling, we increase the probability of choosing the segments
-		before sampling to compensate for the removed segments.
+		When removing segments after sampling, we increase the probability of choosing a segment during
+		sampling to compensate for the removed segments.
 		This fraction is controlled by the hyperparameter $prob\_boost$.
-		The updated probability is calculated as $p_{new} = (1 + prob\_boost) \cdot p_{optimal}$.
-		Even though removing redundant segments before sampling is less efficient due
-		to the whole document being processed, it ensures better utilization of the
-		LLM's context size.
+		The updated probability is calculated as $p_{new} = (1 + prob\_boost) \cdot p$.
+		Even though removing redundant segments before sampling is less efficient due to the whole document
+		being processed, it ensures better utilization of the LLM's context size.
 		The mean embedding is initialised as a zero vector and updated after each segment is processed.
 		Doing so introduces a hyperparameter $threshold$ to control the similarity threshold between the
 		mean embedding and the current segment embedding.
 
-		This approach is a modification to the methodology \citet{wang2024videoagent} used for
-		question-answering on long videos. \citet{worsham-kalita-2018-genre} also use random sampling
-		for genre identification.
-
-		We will now discuss calculating the optimal value of $p$ here.
+		We will now discuss the calculation of the optimal value of $p$ here.
 		Let $X$ denote the total number of tokens in the sampled segments.
 		Since segments are sampled randomly, $X$ is a random variable.
 		If the context size of the model is $model\_size$, we want $\mathrm{E}[X] = model\_size$,
