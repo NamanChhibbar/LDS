@@ -1,3 +1,9 @@
+"""
+Script to evaluate summarization pipelines on a dataset.
+
+DO NOT IMPORT THIS SCRIPT DIRECTLY. IT IS INTENDED TO BE RUN AS A SCRIPT.
+"""
+
 import os
 import json
 import time
@@ -10,10 +16,9 @@ import transformers as tfm
 import sentence_transformers as stfm
 
 import configs as c
-import utils.helpers as h
-import utils.encoders as e
-import utils.pipelines as p
-import utils.evaluator_utils as eu
+import encoders as e
+import pipelines as p
+import utils as u
 
 
 
@@ -25,7 +30,7 @@ def main() -> None:
 	model_name = args.model.lower()
 	dataset_name = args.dataset.lower()
 	batch_size = args.batch_size
-	device = "cpu" if args.no_gpu else h.get_device(1000)
+	device = "cpu" if args.no_gpu else u.get_device(1000)
 	time_only = args.time_only
 
 	data_dir = f"{c.BASE_DIR}/{dataset_name}"
@@ -34,13 +39,13 @@ def main() -> None:
 	results_path = f"{c.BASE_DIR}/{model_name}-{dataset_name}{"-times" if time_only else ""}.json"
 
 	print("Loading text processors and segmenter...")
-	preprocessor = h.TextProcessor(preprocessing=True)
-	keywords_preprocessor = h.TextProcessor(
+	preprocessor = u.TextProcessor(preprocessing=True)
+	keywords_preprocessor = u.TextProcessor(
 		only_words_nums = True,
 		remove_nums = True
 	)
 	postprocessor = None
-	text_segmenter = h.TextSegmenter(nltk.sent_tokenize, c.SEGMENT_MIN_WORDS)
+	text_segmenter = u.TextSegmenter(nltk.sent_tokenize, c.SEGMENT_MIN_WORDS)
 
 	print("Loading sentence encoder...")
 	sent_encoder = stfm.SentenceTransformer(sent_dir, device=device)
@@ -76,7 +81,7 @@ def main() -> None:
 	print(f"Context size of model: {context_size}")
 
 	print("Initializing encoders and pipelines...")
-	stop_words = h.get_stop_words(c.EXTRA_STOP_WORDS)
+	stop_words = u.get_stop_words(c.EXTRA_STOP_WORDS)
 	min_tokens = int(c.MIN_TOKEN_FRAC * context_size)
 
 	encoders = [
@@ -132,7 +137,7 @@ def main() -> None:
 				file_path = f"{data_dir}/{file}"
 				with open(file_path) as fp:
 					data = json.load(fp)
-				if c.MIN_WORDS < h.count_words(data["text"]) < c.MAX_WORDS:
+				if c.MIN_WORDS < u.count_words(data["text"]) < c.MAX_WORDS:
 					texts.append(data["text"])
 					summaries.append(data["summary"])
 					num_texts += 1
@@ -146,7 +151,7 @@ def main() -> None:
 				with open(file_path) as fp:
 					data = json.load(fp)
 				for text, summary in zip(data["texts"], data["summaries"]):
-					if c.MIN_WORDS < h.count_words(text) < c.MAX_WORDS:
+					if c.MIN_WORDS < u.count_words(text) < c.MAX_WORDS:
 						texts.append(text)
 						summaries.append(summary)
 						num_texts += 1
@@ -182,7 +187,7 @@ def main() -> None:
 
 	else:
 		print(f"Evaluating pipelines with device {device}...")
-		evaluator = eu.Evaluator(pipelines, device)
+		evaluator = u.Evaluator(pipelines, device)
 		evaluator_results = evaluator(texts, summaries, batch_size)
 		results.update(evaluator_results)
 

@@ -1,3 +1,9 @@
+"""
+Script to train a model using an encoder on a dataset.
+
+DO NOT IMPORT THIS SCRIPT DIRECTLY. IT IS INTENDED TO BE RUN AS A SCRIPT.
+"""
+
 import os
 import json
 import warnings
@@ -9,9 +15,8 @@ import torch
 import sentence_transformers as stfm
 
 import configs as c
-import utils.helpers as h
-import utils.encoders as e
-import utils.trainer_utils as tu
+import encoders as e
+import utils as u
 
 
 
@@ -28,7 +33,7 @@ def main() -> None:
 	shuffle = args.no_shuffle
 	batch_size = args.batch_size
 	epochs = args.epochs
-	device = "cpu" if args.no_gpu else h.get_device(c.GPU_USAGE_TOLERANCE)
+	device = "cpu" if args.no_gpu else u.get_device(c.GPU_USAGE_TOLERANCE)
 
 	# All paths that are needed to be hard coded
 	data_dir = f"{c.BASE_DIR}/{dataset}"
@@ -73,7 +78,7 @@ def main() -> None:
 				file_path = f"{data_dir}/{file}"
 				with open(file_path) as fp:
 					data = json.load(fp)
-				if c.MIN_WORDS < h.count_words(data["text"]) < c.MAX_WORDS:
+				if c.MIN_WORDS < u.count_words(data["text"]) < c.MAX_WORDS:
 					texts.append(data["text"])
 					summaries.append(data["summary"])
 					num_texts += 1
@@ -87,7 +92,7 @@ def main() -> None:
 				with open(file_path) as fp:
 					data = json.load(fp)
 				for text, summary in zip(data["texts"], data["summaries"]):
-					if c.MIN_WORDS < h.count_words(text) < c.MAX_WORDS:
+					if c.MIN_WORDS < u.count_words(text) < c.MAX_WORDS:
 						texts.append(text)
 						summaries.append(summary)
 						num_texts += 1
@@ -102,13 +107,13 @@ def main() -> None:
 	print(f"Using {num_texts} texts")
 
 	print("Initializing encoder...")
-	preprocessor = h.TextProcessor(preprocessing=True)
-	text_segmenter = h.TextSegmenter(nltk.sent_tokenize, c.SEGMENT_MIN_WORDS)
-	keywords_preprocessor = h.TextProcessor(
+	preprocessor = u.TextProcessor(preprocessing=True)
+	text_segmenter = u.TextSegmenter(nltk.sent_tokenize, c.SEGMENT_MIN_WORDS)
+	keywords_preprocessor = u.TextProcessor(
 		only_words_nums = True,
 		remove_nums = True
 	)
-	stop_words = h.get_stop_words(c.EXTRA_STOP_WORDS)
+	stop_words = u.get_stop_words(c.EXTRA_STOP_WORDS)
 
 	match encoder_name:
 
@@ -149,7 +154,7 @@ def main() -> None:
 			raise ValueError(f"Invalid encoder name: {encoder_name}")
 
 	print("Initializing dataset...")
-	dataset = tu.SummarizationDataset(
+	dataset = u.SummarizationDataset(
 		texts, encoder, batch_size, summaries,
 		context_size, shuffle, c.SEED
 	)
@@ -164,7 +169,7 @@ def main() -> None:
 	)
 
 	print(f"Starting training with device {device}...\n")
-	train_history, successful = tu.train_model(
+	train_history, successful = u.train_model(
 		model, dataset, epochs, optimizer, scheduler,
 		device, c.FLT_PREC, c.SPACES
 	)

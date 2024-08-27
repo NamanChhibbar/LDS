@@ -1,9 +1,11 @@
+"""
+Contains utilites for `evaluator.py`.
+"""
+
 import numpy as np
 import torch
 import bert_score
 import rouge
-
-import utils.pipelines as p
 
 
 
@@ -11,7 +13,7 @@ class Evaluator:
 
 	def __init__(
 		self,
-		pipelines: list[p.Pipeline],
+		pipelines: list["Pipeline"], # type: ignore
 		device: str | torch.device = "cpu",
 		rouge_metrics: list[str] | None = None,
 		rougen_max_n: int = 2,

@@ -1,3 +1,7 @@
+"""
+Contains utilities for `trainer.py`.
+"""
+
 import math
 import time
 import typing
@@ -7,7 +11,6 @@ import torch
 from transformers.tokenization_utils_base import BatchEncoding
 
 import utils.helpers as h
-import utils.encoders as e
 
 
 
@@ -28,7 +31,7 @@ class SummarizationDataset:
 	def __init__(
 		self: typing.Self,
 		texts: list[str],
-		encoder: e.Encoder,
+		encoder: "Encoder", # type: ignore
 		batch_size: int,
 		summaries: list[str] | None = None,
 		summary_max_tokens: int = 0,

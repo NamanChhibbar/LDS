@@ -1,3 +1,7 @@
+"""
+Contains callable end-to-end summarization pipelines.
+"""
+
 import time
 import abc
 import typing
@@ -5,9 +9,8 @@ import typing
 import torch
 import openai
 
-import utils.helpers as h
-import utils.encoders as e
-import utils.trainer_utils as tu
+import encoders as e
+import utils as u
 
 
 
@@ -104,7 +107,7 @@ class SummarizationPipeline(Pipeline):
 		top_p = kwargs.get("top_p", self.top_p)
 
 		# Generate encodings in batches
-		batches = tu.SummarizationDataset(texts, encoder, batch_size)
+		batches = u.SummarizationDataset(texts, encoder, batch_size)
 
 		# Generate summaries
 		all_summaries = []
@@ -212,7 +215,7 @@ class OpenAIPipeline(Pipeline):
 		messages = []
 		if system_prompt is not None:
 			messages.append({"role": "system", "content": system_prompt})
-			tokens_used += h.count_tokens(system_prompt, tokenizer)[0] + 4
+			tokens_used += u.count_tokens(system_prompt, tokenizer)[0] + 4
 
 		# Distill text
 		encodings = encoder(
@@ -245,7 +248,7 @@ class OpenAIPipeline(Pipeline):
 
 		# Show exception and return False if the call failed
 		except Exception as e:
-			h.show_exception(e)
+			u.show_exception(e)
 			return False
 
 		# Return True if call is successful
