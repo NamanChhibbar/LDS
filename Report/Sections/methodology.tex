@@ -45,7 +45,7 @@
 		text for quicker reading.
 		The reader usually omits the portions that seem redundant or irrelevant in the text, minimizing
 		information loss.
-		This method is inspired by the way \cite{wang2024videoagent} randomly sample video frames to
+		This method is inspired by the way \citet{wang2024videoagent} randomly sample video frames to
 		generate captions.
 		\citet{worsham-kalita-2018-genre} also use random sampling for genre identification.
 
@@ -109,20 +109,47 @@
 
 		Document skimming (\ref{method:skimming}) involves a very intuitive and simple approach of
 		sampling segments randomly.
-		Instead of that, we can use an efficient keyword extraction algorithm to get important keywords
+		Instead, we can use an efficient keyword extraction algorithm to get important keywords
 		from the document.
-		These keywords help us sample segments intelligently, ensuring we get the most important
-		segments from the document.
+		These keywords capture the overall meaning of the document and can help us sample segments
+		intelligently, ensuring we get the most important segments from the document.
 
 		We use Latent Dirichlet Allocation (LDA) \cite{blei2003latent} with a single topic to get topic
 		words (keywords) from the document.
-		These keywords are concatenated using a delimiter (a space is used in our experiments) to form a
-		single sentence.
-		This sentence is then embedded and compared with other segment embeddings using cosine similarity.
-		Maximum number of segments with the highest similarity are retained.
+		The keywords are then concatenated using a delimiter (a space is used in our experiments) to
+		form a single sentence.
+		The sentence is then embedded to form the keyword embedding.
 		The keyword sentence and document segments are embedded using the same
 		\href{https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2}{sentence transformer}
 		used in the previous method.
+		The segment embeddings are then compared to the keyword embedding using cosine similarity
+		to get similarity scores for each of the segment embedding.
+		Maximum number of segments with the highest similarity scores are retained.
+		Following algorithm describes the process:
+
+		\begin{algorithm}
+			\begin{algorithmic}
+				\State \textbf{Input:} Text ($text$), context size of model ($size$)
+				\State \textbf{Output:} Distilled text
+				\State $segments \leftarrow \text{segmenter}(text)$
+				\State $embeddings \leftarrow \text{sent\_tfm}(segments)$
+				\State $keywords \leftarrow \text{LDA}(text)$
+				\State $\text{concatenate}(keywords, \text{delimiter})$
+				\State $keyword\_emb \leftarrow \text{sent\_tfm}(keywords)$
+				\State Sort $embeddings$ by decreasing cosine similarity scores with $keyword\_emb$
+				\State $selected \leftarrow \{\}$
+				\State $num\_tokens \leftarrow 0$
+				\For{$embedding$ in $embeddings$}
+					\State $tokens \leftarrow \text{count\_tokens}(embedding)$
+					\If{$tokens + num\_tokens \le size$}
+						\State Add $embedding$ to $selected$
+						\State $num\_tokens += tokens$
+					\EndIf
+				\EndFor
+				\State $\text{concatenate}(selected, \text{delimiter})$
+				\State \Return{$selected$}
+			\end{algorithmic}
+		\end{algorithm}
 
 		This approach is similar to the way \citet{golia2024action} use action items to pick segments
 		of text (a neighbourhood of 2 sentences around the action item) for summarization.
