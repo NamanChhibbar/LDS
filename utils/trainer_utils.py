@@ -29,7 +29,7 @@ class SummarizationDataset:
 	"""
 
 	def __init__(
-		self: typing.Self,
+		self,
 		texts: list[str],
 		encoder: "Encoder", # type: ignore
 		batch_size: int,
@@ -80,7 +80,7 @@ class SummarizationDataset:
 		return self.num_batches
 	
 	def __getitem__(
-		self: typing.Self,
+		self,
 		ind: int
 	) -> BatchEncoding:
 
@@ -120,7 +120,7 @@ class SummarizationDataset:
 
 		return batch_encodings
 
-	def __iter__(self: typing.Self) -> typing.Self:
+	def __iter__(self) -> typing.Self:
 
 		# Shuffle batches if specified
 		if self.shuffle:
@@ -133,7 +133,7 @@ class SummarizationDataset:
 		self.it = 0
 		return self
 
-	def __next__(self: typing.Self) -> BatchEncoding:
+	def __next__(self) -> BatchEncoding:
 
 		# Check if iterator is initialized
 		it = self.it
