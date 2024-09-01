@@ -4,7 +4,7 @@ Contains callable end-to-end summarization pipelines.
 
 import time
 import abc
-import typing
+import collections.abc as c
 
 import torch
 import openai
@@ -20,7 +20,7 @@ class Pipeline(abc.ABC):
 		self,
 		model,
 		encoder: e.Encoder,
-		postprocessor: typing.Callable[[list[str]], list[str]] | None = None
+		postprocessor: c.Callable[[list[str]], list[str]] | None = None
 	) -> None:
 
 		self.model = model
@@ -70,7 +70,7 @@ class SummarizationPipeline(Pipeline):
 		self,
 		model,
 		encoder: e.Encoder,
-		postprocessor: typing.Callable[[list[str]], list[str]] | None = None,
+		postprocessor: c.Callable[[list[str]], list[str]] | None = None,
 		summary_min_tokens: int | None = None,
 		summary_max_tokens: int | None = None,
 		device: str | torch.device = "cpu",
@@ -153,7 +153,7 @@ class OpenAIPipeline(Pipeline):
 		self,
 		model: str,
 		encoder: e.Encoder,
-		postprocessor: typing.Callable[[list[str]], list[str]] | None = None,
+		postprocessor: c.Callable[[list[str]], list[str]] | None = None,
 		system_prompt: str | None = None,
 		delay: float = 1.
 	) -> None:

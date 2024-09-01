@@ -3,7 +3,7 @@ Contains callable encoder classes.
 """
 
 import abc
-import typing
+import collections.abc as c
 
 import numpy as np
 from transformers.tokenization_utils_base import BatchEncoding
@@ -33,7 +33,7 @@ class Encoder(abc.ABC):
 		tokenizer,
 		min_tokens: int,
 		max_tokens: int,
-		preprocessor: typing.Callable[[list[str]], list[str]] | None = None,
+		preprocessor: c.Callable[[list[str]], list[str]] | None = None,
 		add_special_tokens: bool = True,
 		bos_id: int | None = None,
 		eos_id: int | None = None
@@ -159,7 +159,7 @@ class TruncateMiddle(Encoder):
 		tokenizer,
 		max_tokens: int,
 		head_size: float = .5,
-		preprocessor: typing.Callable[[list[str]], list[str]] | None = None,
+		preprocessor: c.Callable[[list[str]], list[str]] | None = None,
 		add_special_tokens: bool = True
 	) -> None:
 
@@ -203,8 +203,8 @@ class UniformSampler(Encoder):
 		tokenizer,
 		min_tokens: int,
 		max_tokens: int,
-		text_segmenter: typing.Callable[[str], list[str]],
-		preprocessor: typing.Callable[[list[str]], list[str]] | None = None,
+		text_segmenter: c.Callable[[str], list[str]],
+		preprocessor: c.Callable[[list[str]], list[str]] | None = None,
 		seed: int | None = None,
 		segment_delimiter: str = " ",
 		add_special_tokens: bool = True
@@ -271,9 +271,9 @@ class SegmentSampler(Encoder):
 		tokenizer,
 		min_tokens: int,
 		max_tokens: int,
-		text_segmenter: typing.Callable[[str], list[str]],
+		text_segmenter: c.Callable[[str], list[str]],
 		sent_encoder: stfm.SentenceTransformer,
-		preprocessor: typing.Callable[[list[str]], list[str]] | None = None,
+		preprocessor: c.Callable[[list[str]], list[str]] | None = None,
 		threshold: float = .7,
 		prob_boost: float = .03,
 		seed: int | None = None,
@@ -371,9 +371,9 @@ class RemoveRedundancy(Encoder):
 		tokenizer,
 		min_tokens: int,
 		max_tokens: int,
-		text_segmenter: typing.Callable[[str], list[str]],
+		text_segmenter: c.Callable[[str], list[str]],
 		sent_encoder: stfm.SentenceTransformer,
-		preprocessor: typing.Callable[[list[str]], list[str]] | None = None,
+		preprocessor: c.Callable[[list[str]], list[str]] | None = None,
 		threshold: float = .7,
 		seed: int | None = None,
 		segment_delimiter: str = " ",
@@ -495,9 +495,9 @@ class RemoveRedundancy2(Encoder):
 		tokenizer,
 		min_tokens: int,
 		max_tokens: int,
-		text_segmenter: typing.Callable[[str], list[str]],
+		text_segmenter: c.Callable[[str], list[str]],
 		sent_encoder: stfm.SentenceTransformer,
-		preprocessor: typing.Callable[[list[str]], list[str]] | None = None,
+		preprocessor: c.Callable[[list[str]], list[str]] | None = None,
 		threshold: float = .7,
 		seed: int | None = None,
 		segment_delimiter: str = " ",
@@ -609,11 +609,11 @@ class KeywordScorer(Encoder):
 		self,
 		tokenizer,
 		max_tokens: int,
-		text_segmenter: typing.Callable[[str], list[str]],
+		text_segmenter: c.Callable[[str], list[str]],
 		sent_encoder: stfm.SentenceTransformer,
-		preprocessor: typing.Callable[[list[str]], list[str]] | None = None,
+		preprocessor: c.Callable[[list[str]], list[str]] | None = None,
 		num_keywords: int = 20,
-		keywords_preprocessor: typing.Callable[[list[str]], list[str]] | None = None,
+		keywords_preprocessor: c.Callable[[list[str]], list[str]] | None = None,
 		stop_words: list[str] | None = None,
 		segment_delimiter: str = " ",
 		add_special_tokens: bool = True
