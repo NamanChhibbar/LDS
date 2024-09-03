@@ -56,6 +56,8 @@
 
 		To address the removal of redundancy in the document, we experiment with and without removing
 		redundant segments before and after sampling.
+		We do this to prevent the model from seeing the same information multiple times, which may
+		lead to model repeating itself.
 		This is done by computing the cosine similarity between the mean segment embeddings and the
 		current segment embedding.
 		\href{https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2}{This} sentence transformer
@@ -74,6 +76,7 @@
 		The mean embedding is initialised as a zero vector and updated after each segment is processed.
 		Doing so introduces a hyperparameter $threshold$ to control the similarity threshold between the
 		mean embedding and the current segment embedding.
+		\autoref{fig:doc-skim} is a visual representation of the algorithm.
 
 		We will now discuss the calculation of the optimal value of $p$ here.
 		Let $X$ denote the total number of tokens in the sampled segments.
@@ -102,6 +105,14 @@
 		\[ \therefore \mathrm{E}[X] = p \cdot total\_len = model\_size \]
 		\[ \Rightarrow p \cdot total\_len = model\_size \]
 		\[ \therefore p = model\_size / total\_len \]
+
+		\begin{figure*}[!ht]
+			\centering
+			\includegraphics[width=.8\textwidth]{Images/doc-skim.png}
+			\caption{The Document Skimming Algorithm. The grey blocks represent the segments
+			of the document.}
+			\label{fig:doc-skim}
+		\end{figure*}
 
 
 	\subsection{Summarization with Keyword Extraction}
