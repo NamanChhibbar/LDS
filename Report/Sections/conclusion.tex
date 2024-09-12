@@ -1,8 +1,8 @@
 \section{Future Work}
 	\label{sec:future-work}
 
-	We have used a very basic sentence tokenizer
-	(\href{https://www.nltk.org/api/nltk.tokenize.sent_tokenize.html}{nltk.sent\_tokenize})
+	We use a basic
+	\href{https://www.nltk.org/api/nltk.tokenize.sent_tokenize.html}{sentence tokenizer}
 	with some modifications to control the minimum number of words in a segment, to segment
 	the document.
 	In our experiments, we find that segmentation is a crucial step in the pipeline and can
@@ -27,13 +27,13 @@
 	The last two methods, Skimming with pre-sampling removal and Summarization with Keyword
 	Extraction (\ref{method:keyword}), achieve the best results but are computationally expensive.
 
-	Our experiments show a huge jump in BERTScore compared to Unlimiformer on documents with
-	word counts up to 70,000.
+	Our experiments show a large jump in BERTScore compared to Unlimiformer on the GovReport
+	dataset.
 	This shows that our pipelines are able to utilize details in long texts efficiently.
 	Even though our ROUGE-2 scores are lower than the baselines, ROUGE-1 and ROUGE-L scores are
 	competitive.
 	Since BERTScore is better at capturing semantic similarity, we claim that BERTScore is a
-	better metric for evaluating summarizies than ROUGE scores.
+	better metric for evaluating summaries than ROUGE scores.
 	Hence, we hypothesize that our pipelines can generate better summaries than the baselines
 	with higher ROUGE scores.
 	It should also be noted that the models used in our experiments have smaller context sizes
@@ -48,6 +48,7 @@
 
 	Any opinion, finding, or conclusion in this study is that of the authors and does not
 	necessarily reflect the views of the National Science Foundation.
+
 
 \section*{Supplementary Materials}
 
