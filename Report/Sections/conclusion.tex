@@ -8,10 +8,10 @@
 	the output summary greatly, indicating that good segmentation is important for good distillation
 	of text.
 	Ensuring the uniformity of the length of the segments while preserving coherence within a
-	segment is also important for better utilization of the context size of the model.
-	We encourage future work to experiment with differnt kinds of segmenters.
+	segment is also essential for better utilization of the context size of the model.
+	We encourage future work to experiment with different kinds of segmenters.
 
-	Future work can also be focused on extending the Summarization with Keyword Extraction
+	Future work may also be focused on extending the Summarization with Keyword Extraction
 	(\ref{method:keyword}) method.
 	There are many potential ways to use the extracted keywords we do not touch upon.
 
@@ -27,9 +27,9 @@
 	with Keyword Extraction (\ref{method:keyword}), achieve the best results but are computationally
 	expensive.
 
-	Our experiments show a large jump in BERTScore compared to Unlimiformer
+	Our experiments show significant improvement in BERTScore compared to Unlimiformer
 	\cite{bertsch2023unlimiformer} on the GovReport dataset.
-	This shows that our pipelines are able to utilize details in long texts efficiently.
+	This shows that our pipelines can utilize details in long texts efficiently.
 	Even though our ROUGE-2 scores are lower than the baselines, ROUGE-1 and ROUGE-L scores are
 	competitive.
 	Since BERTScore is better at capturing semantic similarity, we highlight the use of BERTScore
