@@ -1,6 +1,7 @@
 \section{Experimental Findings}
 	\label{sec:findings}
 
+
 	\begin{table*}[!ht]
 		\centering
 
@@ -24,9 +25,8 @@
 			\hline
 		\end{tabular}
 
-		\caption{Automatic evaluation results on the GovReport dataset. Context size of
-		the models are mentioned in parenthesis. The best score in each metric category
-		is highlighted in \textbf{bold}.}
+		\caption{Automatic evaluation results on the GovReport dataset. Context size of the models are
+		mentioned in parentheses. The best score in each metric category is highlighted in \textbf{bold}.}
 		\label{tab:govreport}
 	\end{table*}
 
@@ -47,9 +47,8 @@
 			\hline
 		\end{tabular}
 
-		\caption{Automatic evaluation results on the BigPatent dataset. Context size of
-		the models are mentioned in parenthesis. The best score in each metric category
-		is highlighted in \textbf{bold}.}
+		\caption{Automatic evaluation results on the BigPatent dataset. Context size of the models are
+		mentioned in parentheses. The best score in each metric category is highlighted in \textbf{bold}.}
 		\label{tab:bigpatent}
 	\end{table*}
 
@@ -67,16 +66,18 @@
 	\cite{huang-etal-2021-efficient}, PEGASUS-X with staggered block-local attention
 	\cite{phang2022investigating}, extended	LLaMA-7B with positional interpolation
 	\cite{chen2023extending}.
-	Refer to \autoref{tab:govreport} for the baseline results and our results.
-
 	We also compare our results with BigBird-Pegasus \cite{zaheer2020big} on the BigPatent dataset.
-	Refer to \autoref{tab:bigpatent} for the results.
+	Refer to \autoref{tab:govreport} and \autoref{tab:bigpatent} for results on the GovReport and 
+	BigPatent datasets respectively.
+
+	We were unable to confirm the BERTScores of our baselines, except for Unlimiformer, due to
+	unavailability of code or computational limitations.
 
 
 	\subsection*{Time complexity analysis}
 
-		We evaluate the time complexity of our methods by measuring the mean time taken to process
-		a document (excluding the time taken by the model to generate the summaries).
+		We evaluate the time complexity of our methods by measuring the mean time taken to process a
+		document (excluding the time taken by the model to generate the summaries).
 		We find that Central Truncation (\ref{method:truncation}) and Document Skimming
 		(\ref{method:skimming}) take approximately the same time.
 		Skimming with post-sampling removal takes slightly more time than the other two methods.

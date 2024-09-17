@@ -1,20 +1,20 @@
 \section{Methodology}
 	\label{sec:methodology}
 
-	In this section, we discuss the algorithms used in our experiments.
-	Most of our algorithms start by segmenting the document into smaller, contiguous, and
-	exhaustive parts.
-	We do so by using a sentence tokenizer to separate sentences from the text and merging
-	them such that have fewer words than the threshold $min\_words$, which is a hyperparameter
-	is each of the respective methods.
+	In this section, we discuss the three algorithms used for distilling documents.
+	Two of our algorithms start by segmenting the document into smaller, contiguous, and exhaustive
+	parts.
+	We do so by using a sentence tokenizer to separate sentences from the text, and then merging
+	them such that the number of words in each segment is more than the threshold $min\_words$,
+	hyperparameter in both methods.
 
 
 	\subsection{Central Truncation}
 		\label{method:truncation}
 
-		Truncation is the most common and straightforward approach used to handle long texts
-		that exceed the context size of an LLM.
-		It is done in three main ways:
+		Truncation is the most common and straightforward approach used to handle long texts that exceed
+		the context size of an LLM.
+		It can be done in three main ways:
 
 		\begin{itemize}
 			\item \textbf{Retaining Head}: Keeping tokens from the start.
@@ -22,25 +22,34 @@
 			\item \textbf{Head and Tail}: Keeping tokens from both start and end.
 		\end{itemize}
 
-		\citet{worsham-kalita-2018-genre} also employ "retaining head" and "retaining tail"
-		strategies on long texts and find promising results.
-		Though the "retaining head" method is often used, keeping the initial tokens allowed by
-		the LLM, \citet{sun2019fine} find that keeping both head and tail produces better results
-		than both the "retaining head" and the "retaining tail" methods.
-		Their research also shows that truncating the middle is even better than the more
-		complicated hierarchical methods, displaying superiority with simplicity.
+		\citet{worsham-kalita-2018-genre} also employ "retaining head" and "retaining tail" strategies
+		on long texts and find promising results.
+		Though the "retaining head" method is often used, keeping the initial tokens allowed by the LLM,
+		\citet{sun2019fine} find that keeping both head and tail produces better results than both the
+		"retaining head" and the "retaining tail" methods.
+		Their research also shows that truncating the middle is even better than the more complicated
+		hierarchical methods, displaying superiority with simplicity.
+		This is a time-efficient method worth exploring.
 
 		The fraction of tokens to be taken from the head is controlled by the hyperparameter $head\_size
-		\in [0, 1]$.
+		\in [0, 1]$ in our algorithm.
 		Setting $head\_size = 1$ results in taking tokens only from the head, whereas setting $head\_size
 		= 0$ results in taking tokens only from the tail.
-		The truncated text is then sent to the model.
+		The truncated tokens are then sent to the model for summarization.
 
 
 	\subsection{Document Skimming}
 		\label{method:skimming}
 
-		One way to process long texts is by employing a speed reading strategy called skimming.
+		\begin{figure*}[!ht]
+			\centering
+			\includegraphics[width=.8\textwidth]{Images/doc-skim.png}
+			\caption{The Document Skimming Algorithm. The grey blocks represent segments of the document.}
+			\label{fig:doc-skim}
+		\end{figure*}
+
+		One way to process long texts is by employing a speed reading strategy called skimming
+		\cite{dhillon2020effect}.
 		Skimming is done by reading the whole text in a go while selectively skipping some parts of the
 		text for quicker reading.
 		The reader usually omits the portions that seem redundant or irrelevant in the text, minimizing
@@ -51,68 +60,74 @@
 
 		This method starts by segmenting the document with the hyperparameter $min\_words$.
 		We then sample segments uniformly, with each segment having probability $p$ to be picked.
-		The sampled segments are then merged to form a single text and sent to the model.
-		This ensures we sample a segment from each part of the text.
-
-		To address the removal of redundancy in the document, we experiment with and without removing
-		redundant segments before and after sampling.
-		We do this to prevent the model from seeing the same information multiple times, which may
-		lead to model repeating itself.
-		This is done by computing the cosine similarity between the mean segment embeddings and the
-		current segment embedding.
-		\href{https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2}{This} sentence transformer
-		is used to generate the segment embeddings.
-		The sentence transformer is based on MiniLM \cite{wang2020minilm}, which is a distilled version
-		of larger encoder-only transformer models.
-		If the cosine similarity is greater than a threshold, the current segment is removed.
-		The mean embedding is updated if the current segment is retained.
-
-		When removing segments after sampling, we increase the probability of choosing a segment during
-		sampling to compensate for the removed segments.
-		This fraction is controlled by the hyperparameter $prob\_boost$.
-		The updated probability is calculated as $p_{new} = (1 + prob\_boost) \cdot p$.
-		Even though removing redundant segments before sampling is less efficient due to the whole document
-		being processed, it ensures better utilization of the LLM's context size.
-		The mean embedding is initialised as a zero vector and updated after each segment is processed.
-		Doing so introduces a hyperparameter $threshold$ to control the similarity threshold between the
-		mean embedding and the current segment embedding.
+		The sampled segments are then concatenated to form a single text and sent to the model.
+		This method ensures the model sees a segment from each part of the text.
 		\autoref{fig:doc-skim} is a visual representation of the algorithm.
 
-		We will now discuss the calculation of the optimal value of $p$ here.
-		Let $X$ denote the total number of tokens in the sampled segments.
-		Since segments are sampled randomly, $X$ is a random variable.
-		If the context size of the model is $model\_size$, we want $\mathrm{E}[X] = model\_size$,
-		where $\mathrm{E}[X]$ denotes the expectation of $X$.
+		\subsubsection*{Removing Redundancy}
 
-		Suppose we have $n \in \mathbb{N}$ segments and $X_i \sim \mathrm{Bernoulli}(p)$ denotes
-		if segment $i$ is chosen, $i \in \{1, 2, \dots, n\}$.
-		If $len_i$ denotes the number of tokens in segment $i$, we can write:
+			To address the removal of redundancy in the document, we experiment with and without removing
+			redundant segments before and after sampling.
+			We do this to prevent the model from seeing the same information multiple times, which may
+			lead to repetition in the output.
+			This is done by linearly iterating over the sampled segments and selectively removing some
+			of the segments.
+			We do this by maintaining the mean embedding of the selected segments, initialized as a zero
+			vector.
+			The current segment is retained if the cosine similarity between the mean embedding and the
+			segment embedding is lower than a $threshold$, which acts as a hyperparameter.
+			\href{https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2}{This} sentence transformer
+			is used to generate the segment embeddings.
+			The sentence transformer is based on MiniLM \cite{wang2020minilm}, which is a distilled version
+			of a larger encoder-only transformer model.
+			In case the current segment is retained, the mean embedding is updated as follows:
 
-		\[ X = \sum_{i = 1}^{n} X_i \cdot len_i \]
-		\[ \Rightarrow \mathrm{E}[X] = \mathrm{E}[\sum_{i = 1}^{n} X_i \cdot len_i] \]
-		\[ \Rightarrow \mathrm{E}[X] = \sum_{i = 1}^{n} \mathrm{E}[X_i \cdot len_i] \]
-		\[ \Rightarrow \mathrm{E}[X] = \sum_{i = 1}^{n} \mathrm{E}[X_i] \cdot len_i \]
+			\[ new\_mean\_emb = \frac{n \cdot mean\_emb + seg\_emb}{n + 1} \]
 
-		Since $X_i \sim \mathrm{Bernoulli}(p)$ $\forall i \in \{1, 2, \dots, n\}$, we
-		have $\mathrm{E}[X_i] = p$ $\forall i \in \{1, 2, \dots, n\}$.
+			where $n$ is the number of sampled segments (excluding the current segment), $seg\_emb$ is the
+			segment embedding of the current segment, $mean\_emb$ is the mean embedding, and $new\_mean$ is
+			the updated mean embedding.
 
-		\[ \Rightarrow \mathrm{E}[X] = \sum_{i = 1}^{n} p \cdot len_i \]
-		\[ \Rightarrow \mathrm{E}[X] = p \cdot \sum_{i = 1}^{n} len_i \]
+			While removing segments after sampling, we waste some of the context size.
+			To ameliorate this, we increase the probability of choosing a segment during sampling to
+			compensate for the removed segments.
+			This fraction is controlled by the hyperparameter $prob\_boost$.
+			The updated probability is calculated as:
+			
+			\[ p_{new} = (1 + prob\_boost) \cdot p \]
 
-		Let $total\_len$ be the total number of tokens in the text, then
-		$total\_len = \sum_{i = 1}^{n} len_i$.
+			Even though removing redundant segments before sampling is less efficient due to the whole
+			document being processed, it ensures better utilization of the LLM's context size.
 
-		\[ \therefore \mathrm{E}[X] = p \cdot total\_len = model\_size \]
-		\[ \Rightarrow p \cdot total\_len = model\_size \]
-		\[ \therefore p = model\_size / total\_len \]
+		\subsubsection*{Other Calculations}
+		
+			We will now discuss the calculation of the optimal value of $p$ here.
+			Let $X$ denote the total number of tokens in the sampled segments.
+			Since segments are sampled randomly, $X$ is a random variable.
+			If the context size of the model is $model\_size$, we want $\mathrm{E}[X] = model\_size$,
+			where $\mathrm{E}[X]$ denotes the expectation of $X$.
 
-		\begin{figure*}[!ht]
-			\centering
-			\includegraphics[width=.8\textwidth]{Images/doc-skim.png}
-			\caption{The Document Skimming Algorithm. The grey blocks represent the segments
-			of the document.}
-			\label{fig:doc-skim}
-		\end{figure*}
+			Suppose we have $n \in \mathbb{N}$ segments and $X_i \sim \mathrm{Bernoulli}(p)$ denotes
+			if segment $i$ is chosen, $i \in \{1, 2, \dots, n\}$.
+			If $len_i$ denotes the number of tokens in segment $i$, we can write:
+
+			\[ X = \sum_{i = 1}^{n} X_i \cdot len_i \]
+			\[ \Rightarrow \mathrm{E}[X] = \mathrm{E}[\sum_{i = 1}^{n} X_i \cdot len_i] \]
+			\[ \Rightarrow \mathrm{E}[X] = \sum_{i = 1}^{n} \mathrm{E}[X_i \cdot len_i] \]
+			\[ \Rightarrow \mathrm{E}[X] = \sum_{i = 1}^{n} \mathrm{E}[X_i] \cdot len_i \]
+
+			Since $X_i \sim \mathrm{Bernoulli}(p)$ $\forall i \in \{1, 2, \dots, n\}$, we
+			have $\mathrm{E}[X_i] = p$ $\forall i \in \{1, 2, \dots, n\}$.
+
+			\[ \Rightarrow \mathrm{E}[X] = \sum_{i = 1}^{n} p \cdot len_i \]
+			\[ \Rightarrow \mathrm{E}[X] = p \cdot \sum_{i = 1}^{n} len_i \]
+
+			Let $total\_len$ be the total number of tokens in the text, then
+			$total\_len = \sum_{i = 1}^{n} len_i$.
+
+			\[ \therefore \mathrm{E}[X] = p \cdot total\_len = model\_size \]
+			\[ \Rightarrow p \cdot total\_len = model\_size \]
+			\[ \therefore p = model\_size / total\_len \]
 
 
 	\subsection{Summarization with Keyword Extraction}
@@ -120,25 +135,29 @@
 
 		Document skimming (\ref{method:skimming}) involves a very intuitive and simple approach of
 		sampling segments randomly.
-		Instead, we can use an efficient keyword extraction algorithm to get important keywords
-		from the document.
+		In an attempt to use the entirety of the text, we experiment with an efficient keyword extraction
+		algorithm to get important keywords which explain the core meaning of the document.
 		These keywords capture the overall meaning of the document and can help us sample segments
 		intelligently, ensuring we get the most important segments from the document.
 
 		We use Latent Dirichlet Allocation (LDA) \cite{blei2003latent} with a single topic to get topic
-		words (keywords) from the document.
-		The keywords are then concatenated using a delimiter (a space is used in our experiments) to
-		form a single sentence.
-		The sentence is then embedded to form the keyword embedding.
+		words (or keywords) from the document.
+		There are many ways to use these to create a probability distribution to sample the segments from.
+		A simple approach we use is to concatenate the keywords using a delimiter (a space is used in our
+		experiments) to form a single sentence.
+		This sentence is then embedded to form the keyword embedding which, in theory, captures a high level
+		meaning of the document.
 		The keyword sentence and document segments are embedded using the same
 		\href{https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2}{sentence transformer}
 		used in the previous method.
 		The segment embeddings are then compared to the keyword embedding using cosine similarity
 		to get similarity scores for each of the segment embedding.
 		Maximum number of segments with the highest similarity scores are retained.
-		Following algorithm describes the process:
+		The selected segments are then concatenated and sent to the model.
+		The following algorithm describes the process:
 
 		\begin{algorithm}
+			\caption{Summarization with Keyword Extraction}
 			\begin{algorithmic}
 				\State \textbf{Input:} Text ($text$), context size of model ($size$)
 				\State \textbf{Output:} Distilled text
