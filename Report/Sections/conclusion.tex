@@ -12,20 +12,20 @@
 	We encourage future work to experiment with different kinds of segmenters.
 
 	Future work may also be focused on extending the Summarization with Keyword Extraction
-	(\ref{method:keyword}) method.
+	(\autoref{method:keyword}) method.
 	There are many potential ways to use the extracted keywords we do not touch upon.
 
 
 \section{Conclusion}
 \label{sec:conclusion}
 
-	Our experiments show that Document Skimming with post-sampling removal (\ref{method:skimming})
+	Our experiments show that Document Skimming with post-sampling removal (\autoref{method:skimming})
 	performs well while being efficient.
-	The Central Truncation method (\ref{method:truncation}) also shows good results, which
+	The Central Truncation method (\autoref{method:truncation}) also shows good results, which
 	shows that simple methods can also be effective when dealing with long inputs.
-	The last two methods, Skimming with pre-sampling removal (\ref{method:skimming}) and Summarization
-	with Keyword Extraction (\ref{method:keyword}), achieve the best results but are computationally
-	expensive.
+	The last two methods, Skimming with pre-sampling removal (\autoref{method:skimming}) and
+	Summarization with Keyword Extraction (\autoref{method:keyword}), achieve the best results but
+	are computationally expensive.
 
 	Our experiments show significant improvement in BERTScore compared to Unlimiformer
 	\cite{bertsch2023unlimiformer} on the GovReport dataset.
@@ -36,17 +36,20 @@
 	compared to ROUGE scores.
 	Hence, we hypothesize that our pipelines can generate better summaries than the baselines
 	with higher ROUGE scores.
-	It should also be noted that the models used in our experiments have smaller context sizes compared
-	to the baselines, indicating that our algorithms have a greater potential if used with larger models.
+	It should also be noted that the models used in our experiments have smaller context sizes
+	compared to the baselines, indicating that our algorithms have a greater potential if used with
+	larger models.
 
 
-\section*{Acknowledgement}
+	\noreview{
 
-	All work herein reported is supported by the Nation Science Foundation under Grant
-	No. 2349452.
-
-	Any opinion, finding, or conclusion in this study is that of the authors and does not
-	necessarily reflect the views of the National Science Foundation.
+		\section*{Acknowledgement}
+		
+			All work herein reported is supported by the Nation Science Foundation under Grant No. 2349452.
+		
+			Any opinion, finding, or conclusion in this study is that of the authors and does not necessarily
+			reflect the views of the National Science Foundation.
+	}
 
 
 \section*{Supplementary Materials}
@@ -54,3 +57,6 @@
 	The datasets used in this study are available here:
 	\href{https://gov-report-data.github.io/}{GovReport},
 	\href{https://evasharma.github.io/bigpatent/}{BigPatent}
+
+	The code used in this study is available here:
+	\href{https://github.com/NamanChhibbar/Long-Document-Summarizer.git}{GitHub}

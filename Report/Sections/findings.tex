@@ -25,8 +25,12 @@
 			\hline
 		\end{tabular}
 
-		\caption{Automatic evaluation results on the GovReport dataset. Context size of the models are
-		mentioned in parentheses. The best score in each metric category is highlighted in \textbf{bold}.}
+		\caption{
+			Automatic evaluation results on the GovReport dataset. Context size of the models are
+			mentioned in parentheses.
+			The best score in each metric category is highlighted in \textbf{bold}.
+			Results of our algorithms are below the horizontal line in the middle.
+		}
 		\label{tab:govreport}
 	\end{table*}
 
@@ -47,8 +51,12 @@
 			\hline
 		\end{tabular}
 
-		\caption{Automatic evaluation results on the BigPatent dataset. Context size of the models are
-		mentioned in parentheses. The best score in each metric category is highlighted in \textbf{bold}.}
+		\caption{
+			Automatic evaluation results on the BigPatent dataset. Context size of the models are
+			mentioned in parentheses.
+			The best score in each metric category is highlighted in \textbf{bold}.
+			Results of our algorithms are below the horizontal line in the middle.
+		}
 		\label{tab:bigpatent}
 	\end{table*}
 
@@ -70,7 +78,7 @@
 	Refer to \autoref{tab:govreport} and \autoref{tab:bigpatent} for results on the GovReport and 
 	BigPatent datasets, respectively.
 
-	We were unable to confirm the BERTScores of our baselines, except for Unlimiformer, due to
+	We were unable to obtain the BERTScores of our baselines, except for Unlimiformer, due to
 	unavailability of code or computational limitations.
 
 
@@ -78,11 +86,11 @@
 
 		We evaluate the time complexity of our methods by measuring the mean time taken to process a
 		document (excluding the time taken by the model to generate the summaries).
-		We find that Central Truncation (\ref{method:truncation}) and Document Skimming
-		(\ref{method:skimming}) take approximately the same time.
+		We find that Central Truncation (\autoref{method:truncation}) and Document Skimming
+		(\autoref{method:skimming}) take approximately the same time.
 		Skimming with post-sampling removal takes slightly more time than the other two methods.
-		We can see a significant increase in time taken by Skimming with pre-sampling removal
-		and Summarization with Keyword Extraction (\ref{method:keyword}) due to the additional
+		We can see a significant increase in time taken by Skimming with pre-sampling removal and
+		Summarization with Keyword Extraction (\autoref{method:keyword}) due to the additional
 		computations required.
 		\autoref{fig:times} illustrates the average time taken by our methods.
 		Check \autoref{tab:encoder-times} for exact values rounded off to two decimal places.
@@ -112,6 +120,7 @@
 				\hline
 			\end{tabular}
 
-			\caption{Mean time taken per document using BART tokenizer on BigPatent dataset}
+			\caption{Mean time taken (in milliseconds) per document using BART tokenizer on BigPatent
+			dataset}
 			\label{tab:encoder-times}
 		\end{table}

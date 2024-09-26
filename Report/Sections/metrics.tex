@@ -4,13 +4,14 @@
 	The best way to evaluate generated natural language is by humans, but conducting
 	human trials are expensive and time-consuming.
 	Hence, we use automatic evaluation metrics to evaluate the quality of the generated
-	summary, given some reference summaries.
+	summary, given reference summaries.
 	\citet{fabbri2021summeval} review many such open-source and state-of-the-art metrics.
-	Some of them that we use in our experiments are discussed below.
+	The two that we use in our experiments are discussed below.
+	These metrics are commonly used in published literature.
 
 	\textbf{ROUGE metrics:} \citet{lin-2004-rouge} introduces the Recall-Oriented Understudy
 	for Gisting Evaluation (ROUGE) metrics.
-	The basic ROUGE-N metric is based on the fraction of overlaps of some ideal summaries
+	The basic ROUGE-N metric is based on the fraction of overlaps of ideal or reference summaries
 	with the candidate summary, hence being recall-oriented.
 	His study concludes that ROUGE-N with $\text{N} = 2$, ROUGE-L, ROUGE-W, and ROUGE-S work
 	well for the summarization task.

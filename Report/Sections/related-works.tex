@@ -1,10 +1,10 @@
 \section{Related Works}
 	\label{sec:related-works}
 
-	\citet{golia2024action} take a "Divide and Conquer" based approach to address sequence length
+	\citet{golia2024action} take a "Divide and Conquer" approach to address sequence length
 	limitations in summarizing long meeting transcripts.
 	They begin by segmenting the transcript and then use the BART (Bidirectional and Auto-Regressive
-	Transformer) model to summarize each segment individually.
+	Transformer) \cite{lewis-etal-2020-bart} model to summarize each segment individually.
 	These segment summaries are then recursively combined and summarized until a single summary
 	remains.
 	This method performs well with long documents but may take a considerable amount of time to
@@ -14,13 +14,13 @@
 	\citet{beltagy2020longformer} introduce the Longformer, which replaces the quadratic self-attention
 	mechanism in the Transformer architecture with a sliding window self-attention, resulting in a
 	linear complexity with respect to the input size.
-	To capture long-ranged dependencies, they include global attention at specific token positions.
+	To capture long-range dependencies, they include global attention at specific token positions.
 	\citet{huang-etal-2021-efficient} modify the encoder-decoder attention mechanism such that each
 	attention head in the decoder attends to $n/s_h$ tokens in the input sequence, where $n$ is the input
 	length and $s_h$ is the number of heads.
 	This method has a complexity of $O(mn/s_h)$, where $m$ is the length of the output sequence.
 	\citet{bertsch2023unlimiformer} introduce Unlimiformer, which also modifies the encoder-decoder
-	attention in a Transformer.
+	attention in a transformer.
 	The attention heads in the decoder only attend to the tokens picked by their k-Nearest-Neighbor (kNN)
 	algorithm.
 	The kNN indices between the input tokens are created by the hidden states generated in the encoder.
@@ -39,12 +39,12 @@
 	predefined categories.
 	They form multiple groups of sentences based on a maximum token threshold in each group.
 	These groups are then encoded using BERT (Bidirectional Encoder Representations from Transformers)
-	and passed through a 1D convolution layer for local feature extraction.
-	What makes this method special is that the attention mechanism is replaced by a 1D convolution layer,
-	which has linear complexity.
-	\citet{chen2023extending} use positional interpolation to extend the context size of a pre-trained
-	model.
+	\cite{devlin2018bert} and passed through a 1D convolution layer for local feature extraction.
+	What makes this method special is that the attention mechanism is replaced by a 1D convolution
+	layer, which has linear complexity.
+	\citet{chen2023extending} use positional interpolation to extend the context size of a
+	pre-trained model.
 	Instead of the usual extrapolation of the positional embeddings, they downscale the positional
-	embeddings to force them into a range the model is trained on, hence interpolating in the pre-trained
-	range.
+	embeddings to force them into a range the model is trained on, hence interpolating in the
+	pre-trained range.
 	They claim that the model should use the positional embeddings on which it is trained.
