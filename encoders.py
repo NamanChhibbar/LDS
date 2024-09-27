@@ -256,11 +256,9 @@ class UniformSampler(Encoder):
 				verbose = False
 			)["input_ids"]
 
-			# Break if number of tokens is in range
+			# Return if number of tokens is in range
 			if min_tokens <= len(flattened) <= max_tokens:
-				break
-
-		return flattened
+				return flattened
 	
 
 
@@ -356,11 +354,9 @@ class SegmentSampler(Encoder):
 				verbose = False
 			)["input_ids"]
 
-			# Break if number of tokens is in range
+			# Return if number of tokens is in range
 			if min_tokens <= len(flattened) <= max_tokens:
-				break
-
-		return flattened
+				return flattened
 	
 
 
@@ -446,11 +442,9 @@ class RemoveRedundancy(Encoder):
 				verbose = False
 			)["input_ids"]
 
-			# Break if number of tokens is in range
+			# Return if number of tokens is in range
 			if min_tokens <= len(flattened) <= max_tokens:
-				break
-
-		return flattened
+				return flattened
 	
 	def remove_redundancy(
 		self,
@@ -573,11 +567,9 @@ class RemoveRedundancy2(Encoder):
 				verbose = False
 			)["input_ids"]
 
-			# Break if number of tokens is in range
+			# Return if number of tokens is in range
 			if min_tokens <= len(flattened) <= max_tokens:
-				break
-
-		return flattened
+				return flattened
 	
 	def remove_redundancy(
 		self,

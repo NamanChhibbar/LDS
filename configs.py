@@ -9,9 +9,9 @@ BASE_DIR = "/Users/naman/Workspace/Data/Long-Document-Summarizer"
 # BASE_DIR = "/home/nchibbar/Data"
 
 # Directory containing all model configuration directories (in lower case names)
-MODELS_DIR = f"{BASE_DIR}/Models"
+MODELS_DIR = f"{BASE_DIR}/models"
 
-# Data loading configurations
+# Data loading configurations for training and evaluation
 MIN_WORDS = 20_000
 MAX_WORDS = inf
 MAX_TEXTS = inf
@@ -25,7 +25,10 @@ HEAD_SIZE = .5
 THRESHOLD = .8
 PROB_BOOST = .03
 NUM_KEYWORDS = 20
-SYSTEM_PROMPT = "You will be given some segments of a very long document. Your task is to summarize the entire document as a whole by extracting key information and ideas from the segments. Generate a detailed, concise, and coherent summary in 300 words. Do not refer to the document in the summary in any way."
+SYSTEM_PROMPT = "You will be given some segments of a very long document. \
+	Your task is to summarize the entire document as a whole by extracting key \
+	information and ideas from the segments. Generate a detailed, concise, and \
+	coherent summary in 300 words. Do not refer to the document in the summary in any way."
 
 # Extra stop words for keywords extraction
 EXTRA_STOP_WORDS = [

@@ -4,7 +4,6 @@ Contains utilities for `trainer.py`.
 
 import math
 import time
-import collections.abc as c
 
 import numpy as np
 import torch
@@ -120,7 +119,7 @@ class SummarizationDataset:
 
 		return batch_encodings
 
-	def __iter__(self) -> c.Self:
+	def __iter__(self):
 
 		# Shuffle batches if specified
 		if self.shuffle:

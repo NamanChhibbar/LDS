@@ -5,8 +5,9 @@ Contains text processing utilities.
 import re
 import collections.abc as c
 
-import sklearn
 import nltk
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.decomposition import LatentDirichletAllocation
 
 from .helpers import count_words
 
@@ -21,12 +22,12 @@ def get_keywords(
 	stop_words: list[str] | None = None,
 	preprocessor: c.Callable[[str], str] | None = None
 ) -> list[str]:
-	vectorizer = sklearn.feature_extraction.text.CountVectorizer(
+	vectorizer = CountVectorizer(
 		stop_words = stop_words,
 		preprocessor = preprocessor
 	)
 	dtm = vectorizer.fit_transform([text])
-	lda = sklearn.decomposition.LatentDirichletAllocation(n_components=1)
+	lda = LatentDirichletAllocation(n_components=1)
 	lda.fit(dtm)
 	feature_names = vectorizer.get_feature_names_out()
 	topic_words = [
@@ -40,7 +41,7 @@ def get_stop_words(
 	extra_stop_words: list[str] | None = None,
 	lang: str = "english"
 ) -> list[str]:
-	stop_words = nltk.corpus.stopwords.words(lang)
+	stop_words: list[str] = nltk.corpus.stopwords.words(lang)
 	if extra_stop_words is not None:
 		stop_words += [
 			word.lower()
