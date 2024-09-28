@@ -1,62 +1,45 @@
 \section{Future Work}
-	\label{sec:future-work}
+\label{sec:future-work}
 
-	To segment the document, we use a basic sentence tokenizer
-	(\href{https://www.nltk.org/api/nltk.tokenize.sent_tokenize.html}{nltk.sent\_tokenize})
-	with some modifications to control the minimum number of words in a segment.
-	In our experiments, we find that segmentation is a crucial step in the pipeline and can influence
-	the output summary greatly, indicating that good segmentation is important for good distillation
-	of text.
-	Ensuring the uniformity of the length of the segments while preserving coherence within a
-	segment is also essential for better utilization of the context size of the model.
-	We encourage future work to experiment with different kinds of segmenters.
+To segment the document, we use a basic sentence tokenizer (\href{https://www.nltk.org/api/nltk.tokenize.sent_tokenize.html}{nltk.sent\_tokenize}) with some modifications to control the minimum number of words in a segment.
+In our experiments, we find that segmentation is a crucial step in the pipeline and can influence the output summary greatly, indicating that good segmentation is important for good distillation of text.
+Ensuring the uniformity of the length of the segments while preserving coherence within a segment is also essential for better utilization of the context size of the model.
+We encourage future work to experiment with different kinds of segmenters.
 
-	Future work may also be focused on extending the Summarization with Keyword Extraction
-	(\autoref{method:keyword}) method.
-	There are many potential ways to use the extracted keywords we do not touch upon.
+Future work may also be focused on extending the Summarization with Keyword Extraction (\autoref{method:keyword}) method.
+There are many potential ways to use the extracted keywords we do not touch upon.
 
 
 \section{Conclusion}
 \label{sec:conclusion}
 
-	Our experiments show that Document Skimming with post-sampling removal (\autoref{method:skimming})
-	performs well while being efficient.
-	The Central Truncation method (\autoref{method:truncation}) also shows good results, which
-	shows that simple methods can also be effective when dealing with long inputs.
-	The last two methods, Skimming with pre-sampling removal (\autoref{method:skimming}) and
-	Summarization with Keyword Extraction (\autoref{method:keyword}), achieve the best results but
-	are computationally expensive.
+Our experiments show that Document Skimming with post-sampling removal (\autoref{method:skimming}) performs well while being efficient.
+The Central Truncation method (\autoref{method:truncation}) also shows good results, which shows that simple methods can also be effective when dealing with long inputs.
+The last two methods, Skimming with pre-sampling removal (\autoref{method:skimming}) and Summarization with Keyword Extraction (\autoref{method:keyword}), achieve the best results but are computationally expensive.
 
-	Our experiments show significant improvement in BERTScore compared to Unlimiformer
-	\cite{bertsch2023unlimiformer} on the GovReport dataset.
-	This shows that our pipelines can utilize details in long texts efficiently.
-	Even though our ROUGE-2 scores are lower than the baselines, ROUGE-1 and ROUGE-L scores are
-	competitive.
-	Since BERTScore is better at capturing semantic similarity, we highlight the use of BERTScore
-	compared to ROUGE scores.
-	Hence, we hypothesize that our pipelines can generate better summaries than the baselines
-	with higher ROUGE scores.
-	It should also be noted that the models used in our experiments have smaller context sizes
-	compared to the baselines, indicating that our algorithms have a greater potential if used with
-	larger models.
+Our experiments show significant improvement in BERTScore compared to Unlimiformer \cite{bertsch2023unlimiformer} on the GovReport dataset.
+This shows that our pipelines can utilize details in long texts efficiently.
+Even though our ROUGE-2 scores are lower than the baselines, ROUGE-1 and ROUGE-L scores are competitive.
+Since BERTScore is better at capturing semantic similarity, we highlight the use of BERTScore compared to ROUGE scores.
+Hence, we hypothesize that our pipelines can generate better summaries than the baselines with higher ROUGE scores.
+It should also be noted that the models used in our experiments have smaller context sizes compared to the baselines, indicating that our algorithms have a greater potential if used with larger models.
 
 
-	\noreview{
+\noreview{
+  \section*{Acknowledgement}
+  
+  All work herein reported is supported by the Nation Science Foundation under Grant No. 2349452.
 
-		\section*{Acknowledgement}
-		
-			All work herein reported is supported by the Nation Science Foundation under Grant No. 2349452.
-		
-			Any opinion, finding, or conclusion in this study is that of the authors and does not necessarily
-			reflect the views of the National Science Foundation.
-	}
+  Any opinion, finding, or conclusion in this study is that of the authors and does not necessarily
+  reflect the views of the National Science Foundation.
+}
 
 
 \section*{Supplementary Materials}
 
-	The datasets used in this study are available here:
-	\href{https://gov-report-data.github.io/}{GovReport},
-	\href{https://evasharma.github.io/bigpatent/}{BigPatent}
+The datasets used in this study are available here:
+\href{https://gov-report-data.github.io/}{GovReport},
+\href{https://evasharma.github.io/bigpatent/}{BigPatent}
 
-	The code used in this study is available here:
-	\href{https://github.com/NamanChhibbar/Long-Document-Summarizer.git}{GitHub}
+The code used in this study is available here:
+\href{https://github.com/NamanChhibbar/Long-Document-Summarizer.git}{GitHub}
