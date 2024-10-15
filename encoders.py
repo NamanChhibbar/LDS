@@ -17,15 +17,13 @@ class Encoder(abc.ABC):
 	"""
 	Base class for encoders.
 
-	## Parameters
-	`tokenizer`: Hugging Face tokenizer
-	`min_tokens`: Min tokens in text encodings
-	`max_tokens`: Max tokens in text encodings
-	`preprocessor`: Text preprocessor
-	`add_special_tokens`: Add BOS and EOS tokens to text before
-	summary generation
-	`bos_id`: Beginning Of Sentence (BOS) token id
-	`eos_id`: End Of Sentence (EOS) token id
+	:param tokenizer: Hugging Face tokenizer
+	:param int min_tokens: Min tokens in text encodings
+	:param int max_tokens: Max tokens in text encodings
+	:param optional preprocessor: Text preprocessor
+	:param bool = True add_special_tokens: Add BOS and EOS tokens to text before summary generation
+	:param int | None = None bos_id: Beginning Of Sentence (BOS) token id
+	:param int | None = None eos_id: End Of Sentence (EOS) token id
 	"""
 
 	def __init__(
@@ -58,13 +56,11 @@ class Encoder(abc.ABC):
 		"""
 		Encodes texts to fit in the model's context size and creates a BatchEncoding.
 
-		## Parameters
-		`texts`: Texts (or text) to encode.
-		`return_batch`: Whether to return a BatchEncoding or not.
-		`kwargs`: Override default `min_tokens` or `max_tokens`.
+		:param str | list[str] texts: Texts (or text) to encode.
+		:param bool = True return_batch: Whether to return a BatchEncoding or not.
+		:param **kwargs: Override default `min_tokens` or `max_tokens`.
 
-		## Returns
-		Batched text encodings.
+		:returns encodings (list[int] | list[list[int]] | BatchEncoding):Batched text encodings.
 		"""
 
 		preprocessor = self.preprocessor
@@ -107,15 +103,12 @@ class Encoder(abc.ABC):
 		**kwargs
 	) -> list[int]:
 		"""
-		Creates encoding for a given text with number of tokens in the range
-		[`min_tokens`, `max_tokens`].
+		Creates encoding for a given text with number of tokens in the range [`min_tokens`, `max_tokens`].
 
-		## Parameters
-		`text`: Text to encode
-		`kwargs`: Override default `min_tokens` or `max_tokens`
+		:param str text: Text to encode
+		:param **kwargs: Override default `min_tokens` or `max_tokens`
 
-		## Returns
-		`list[int]`: Text encodings
+		:returns encoding (list[int]): Text encodings
 		"""
 		...
 

@@ -51,16 +51,15 @@ class SummarizationPipeline(Pipeline):
 	"""
 	Pipeline for generating summaries using an encoder.
 
-	## Parameters
-	`model`: The model model.
-	`encoder`: The encoder model.
-	`summary_min_tokens`: The minimum number of tokens in the summary.
-	`summary_max_tokens`: The maximum number of tokens in the summary.
-	`postprocessor`: The postprocessor for the generated summaries.
-	`device`: The device to use for computation.
-	`temperature`: The temperature for sampling.
-	`repetition_penalty`: The repetition penalty.
-	`top_p`: The nucleus sampling threshold.
+	:param model: The model model.
+	:param Encoder encoder: The encoder model.
+	:param int | None = None summary_min_tokens: The minimum number of tokens in the summary.
+	:param int | None = None summary_max_tokens: The maximum number of tokens in the summary.
+	:param (list[str]) -> list[str] | None = None postprocessor: The postprocessor for the generated summaries.
+	:param str | torch.device = "cpu" device: The device to use for computation.
+	:param float = 1.0 temperature: The temperature for sampling.
+	:param float = 1.0 repetition_penalty: The repetition penalty.
+	:param float = 0.9 top_p: The nucleus sampling threshold.
 
 	## Returns
 	list[str]: The generated summaries.
