@@ -9,7 +9,7 @@ import numpy as np
 import torch
 from transformers.tokenization_utils_base import BatchEncoding
 
-import utils.helpers as h
+from utils.helpers import count_words, show_exception, clear_stdout
 
 
 
@@ -45,7 +45,7 @@ class SummarizationDataset:
 				"Length of texts and summaries must be equal"
 
 		# This enables dynamic batching
-		perm = np.argsort([h.count_words(text) for text in texts])
+		perm = np.argsort([count_words(text) for text in texts])
 		texts = np.array(texts)[perm]
 		if summaries is not None:
 			summaries = np.array(summaries)[perm]
@@ -181,7 +181,7 @@ def train_model(
 				time_taken = (time.perf_counter() - start) * 1000
 
 			except Exception as e:
-				h.show_exception(e)
+				show_exception(e)
 				print("Training terminated")
 				model.train(False)
 				return epoch_losses, False
@@ -205,7 +205,7 @@ def train_model(
 			if days:
 				time_remaining = f"{days}d {time_remaining}"
 
-			h.clear_stdout(spaces)
+			clear_stdout(spaces)
 			print(
 				f"Epoch [{epoch+1}/{epochs}]",
 				f"Batch [{batch+1}/{num_batches}]",
@@ -222,7 +222,7 @@ def train_model(
 		if scheduler is not None:
 			scheduler.step(epoch_loss)
 
-		h.clear_stdout(spaces)
+		clear_stdout(spaces)
 		print(
 			f"Epoch [{epoch+1}/{epochs}]",
 			f"Average loss [{round(epoch_loss, flt_prec)}]",

@@ -3,7 +3,7 @@ Contains text processing utilities.
 """
 
 import re
-import collections.abc as c
+from collections.abc import Callable
 
 import nltk
 from sklearn.feature_extraction.text import CountVectorizer
@@ -20,7 +20,7 @@ def get_keywords(
 	text: str,
 	num_words: int = 20,
 	stop_words: list[str] | None = None,
-	preprocessor: c.Callable[[str], str] | None = None
+	preprocessor: Callable[[str], str] | None = None
 ) -> list[str]:
 	vectorizer = CountVectorizer(
 		stop_words = stop_words,
@@ -172,7 +172,7 @@ class TextSegmenter:
 
 	def __init__(
 		self,
-		base_tokenizer: c.Callable[[str], list[str]],
+		base_tokenizer: Callable[[str], list[str]],
 		min_words: int,
 		sent_delimiter: str = " "
 	) -> None:

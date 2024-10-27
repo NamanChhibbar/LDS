@@ -4,8 +4,8 @@ Contains utilites for `evaluator.py`.
 
 import numpy as np
 import torch
-import bert_score
-import rouge
+from bert_score import BERTScorer
+from rouge import Rouge
 
 
 
@@ -26,12 +26,12 @@ class Evaluator:
 		self.num_pipelines = len(pipelines)
 
 		# Initialize BERT scorer
-		self.bert_scorer = bert_score.BERTScorer(lang="en", device=device)
+		self.bert_scorer = BERTScorer(lang="en", device=device)
 		self.device = device
 
 		# Initialise ROUGE scorer
 		rouge_metrics = rouge_metrics or ["rouge-n", "rouge-l", "rouge-w"]
-		self.rouge_scorer = rouge.Rouge(
+		self.rouge_scorer = Rouge(
 			metrics=rouge_metrics,
 			max_n=rougen_max_n,
 			limit_length=False,

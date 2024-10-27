@@ -4,13 +4,13 @@ Contains callable end-to-end summarization pipelines.
 
 import time
 import abc
-import collections.abc as c
+from collections.abc import Callable
 
 import torch
 import openai
 
-import encoders as e
-import utils as u
+from encoders import Encoder
+from utils import count_tokens, show_exception, SummarizationDataset
 
 
 
@@ -19,8 +19,8 @@ class Pipeline(abc.ABC):
 	def __init__(
 		self,
 		model,
-		encoder: e.Encoder,
-		postprocessor: c.Callable[[list[str]], list[str]] | None = None
+		encoder: Encoder,
+		postprocessor: Callable[[list[str]], list[str]] | None = None
 	) -> None:
 
 		self.model = model
@@ -68,8 +68,8 @@ class SummarizationPipeline(Pipeline):
 	def __init__(
 		self,
 		model,
-		encoder: e.Encoder,
-		postprocessor: c.Callable[[list[str]], list[str]] | None = None,
+		encoder: Encoder,
+		postprocessor: Callable[[list[str]], list[str]] | None = None,
 		summary_min_tokens: int | None = None,
 		summary_max_tokens: int | None = None,
 		device: str | torch.device = "cpu",
@@ -106,7 +106,7 @@ class SummarizationPipeline(Pipeline):
 		top_p = kwargs.get("top_p", self.top_p)
 
 		# Generate encodings in batches
-		batches = u.SummarizationDataset(texts, encoder, batch_size)
+		batches = SummarizationDataset(texts, encoder, batch_size)
 
 		# Generate summaries
 		all_summaries = []
@@ -151,8 +151,8 @@ class OpenAIPipeline(Pipeline):
 	def __init__(
 		self,
 		model: str,
-		encoder: e.Encoder,
-		postprocessor: c.Callable[[list[str]], list[str]] | None = None,
+		encoder: Encoder,
+		postprocessor: Callable[[list[str]], list[str]] | None = None,
 		system_prompt: str | None = None,
 		delay: float = 1.
 	) -> None:
@@ -214,7 +214,7 @@ class OpenAIPipeline(Pipeline):
 		messages = []
 		if system_prompt is not None:
 			messages.append({"role": "system", "content": system_prompt})
-			tokens_used += u.count_tokens(system_prompt, tokenizer)[0] + 4
+			tokens_used += count_tokens(system_prompt, tokenizer)[0] + 4
 
 		# Distill text
 		encodings = encoder(
@@ -247,7 +247,7 @@ class OpenAIPipeline(Pipeline):
 
 		# Show exception and return False if the call failed
 		except Exception as e:
-			u.show_exception(e)
+			show_exception(e)
 			return False
 
 		# Return True if call is successful
