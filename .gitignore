@@ -1,7 +1,7 @@
 temp*
+configs.py
 *.pdf
 .venv
-.env
 
 .DS_Store
 __pycache__/
