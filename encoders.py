@@ -2,18 +2,18 @@
 Contains callable encoder classes.
 """
 
-import abc
-import collections.abc as c
+from abc import ABC, abstractmethod
+from collections.abc import Callable
 
 import numpy as np
 from transformers.tokenization_utils_base import BatchEncoding
-import sentence_transformers as stfm
+from sentence_transformers import SentenceTransformer
 
-import utils as u
+from utils import count_tokens, get_keywords
 
 
 
-class Encoder(abc.ABC):
+class Encoder(ABC):
 	"""
 	Base class for encoders.
 
@@ -31,7 +31,7 @@ class Encoder(abc.ABC):
 		tokenizer,
 		min_tokens: int,
 		max_tokens: int,
-		preprocessor: c.Callable[[list[str]], list[str]] | None = None,
+		preprocessor: Callable[[list[str]], list[str]] | None = None,
 		add_special_tokens: bool = True,
 		bos_id: int | None = None,
 		eos_id: int | None = None
@@ -96,7 +96,7 @@ class Encoder(abc.ABC):
 
 		return encodings
 	
-	@abc.abstractmethod
+	@abstractmethod
 	def encode(
 		self,
 		text: str,
@@ -124,7 +124,7 @@ class Encoder(abc.ABC):
 			max_tokens -= self.num_special_tokens
 
 		# Check if text fits in the model
-		num_tokens, encoding = u.count_tokens(text, self.tokenizer)
+		num_tokens, encoding = count_tokens(text, self.tokenizer)
 		if num_tokens > max_tokens:
 			encoding = self.encode(
 				text,
@@ -152,7 +152,7 @@ class TruncateMiddle(Encoder):
 		tokenizer,
 		max_tokens: int,
 		head_size: float = .5,
-		preprocessor: c.Callable[[list[str]], list[str]] | None = None,
+		preprocessor: Callable[[list[str]], list[str]] | None = None,
 		add_special_tokens: bool = True
 	) -> None:
 
@@ -173,7 +173,7 @@ class TruncateMiddle(Encoder):
 		max_tokens = kwargs.get("max_tokens", self.max_tokens)
 
 		# Encode the text
-		num_tokens, encoding = u.count_tokens(text, tokenizer)
+		num_tokens, encoding = count_tokens(text, tokenizer)
 
 		# Calculate indices of head and tail
 		head_idx = int(max_tokens * self.head_size)
@@ -196,8 +196,8 @@ class UniformSampler(Encoder):
 		tokenizer,
 		min_tokens: int,
 		max_tokens: int,
-		text_segmenter: c.Callable[[str], list[str]],
-		preprocessor: c.Callable[[list[str]], list[str]] | None = None,
+		text_segmenter: Callable[[str], list[str]],
+		preprocessor: Callable[[list[str]], list[str]] | None = None,
 		seed: int | None = None,
 		segment_delimiter: str = " ",
 		add_special_tokens: bool = True
@@ -224,7 +224,7 @@ class UniformSampler(Encoder):
 		max_tokens = kwargs.get("max_tokens", self.max_tokens)
 
 		# Check if encodings fit in the model
-		len_encoding, _ = u.count_tokens(text, tokenizer)
+		len_encoding, _ = count_tokens(text, tokenizer)
 
 		# Extract and tokenize segments
 		segments = self.text_segmenter(text)
@@ -262,9 +262,9 @@ class SegmentSampler(Encoder):
 		tokenizer,
 		min_tokens: int,
 		max_tokens: int,
-		text_segmenter: c.Callable[[str], list[str]],
-		sent_encoder: stfm.SentenceTransformer,
-		preprocessor: c.Callable[[list[str]], list[str]] | None = None,
+		text_segmenter: Callable[[str], list[str]],
+		sent_encoder: SentenceTransformer,
+		preprocessor: Callable[[list[str]], list[str]] | None = None,
 		threshold: float = .7,
 		prob_boost: float = .03,
 		seed: int | None = None,
@@ -302,7 +302,7 @@ class SegmentSampler(Encoder):
 		segments = text_segmenter(text)
 
 		# Approximate probability of picking a segment
-		num_tokens, _ = u.count_tokens(text, tokenizer)
+		num_tokens, _ = count_tokens(text, tokenizer)
 		p = (1 + self.prob_boost) * max_tokens / num_tokens
 
 		# Sample until segments fit in model
@@ -360,9 +360,9 @@ class RemoveRedundancy(Encoder):
 		tokenizer,
 		min_tokens: int,
 		max_tokens: int,
-		text_segmenter: c.Callable[[str], list[str]],
-		sent_encoder: stfm.SentenceTransformer,
-		preprocessor: c.Callable[[list[str]], list[str]] | None = None,
+		text_segmenter: Callable[[str], list[str]],
+		sent_encoder: SentenceTransformer,
+		preprocessor: Callable[[list[str]], list[str]] | None = None,
 		threshold: float = .7,
 		seed: int | None = None,
 		segment_delimiter: str = " ",
@@ -401,7 +401,7 @@ class RemoveRedundancy(Encoder):
 		num_segments = len(segments)
 
 		# Count number of tokens in segments
-		num_tokens, _ = u.count_tokens(segments, tokenizer)
+		num_tokens, _ = count_tokens(segments, tokenizer)
 		
 		# Account for segment delimiters
 		num_tokens += num_segments - 1
@@ -482,9 +482,9 @@ class RemoveRedundancy2(Encoder):
 		tokenizer,
 		min_tokens: int,
 		max_tokens: int,
-		text_segmenter: c.Callable[[str], list[str]],
-		sent_encoder: stfm.SentenceTransformer,
-		preprocessor: c.Callable[[list[str]], list[str]] | None = None,
+		text_segmenter: Callable[[str], list[str]],
+		sent_encoder: SentenceTransformer,
+		preprocessor: Callable[[list[str]], list[str]] | None = None,
 		threshold: float = .7,
 		seed: int | None = None,
 		segment_delimiter: str = " ",
@@ -519,7 +519,7 @@ class RemoveRedundancy2(Encoder):
 		segments = self.text_segmenter(text)
 
 		# Get keywords
-		keywords = u.get_keywords(text)
+		keywords = get_keywords(text)
 
 		# Convert list of segments to numpy array for sampling
 		segments = np.array(segments)
@@ -529,7 +529,7 @@ class RemoveRedundancy2(Encoder):
 		num_segments = len(segments)
 
 		# Count number of tokens in segments
-		num_tokens, _ = u.count_tokens(segments, tokenizer)
+		num_tokens, _ = count_tokens(segments, tokenizer)
 		
 		# Account for segment delimiters
 		num_tokens += num_segments - 1
@@ -594,11 +594,11 @@ class KeywordScorer(Encoder):
 		self,
 		tokenizer,
 		max_tokens: int,
-		text_segmenter: c.Callable[[str], list[str]],
-		sent_encoder: stfm.SentenceTransformer,
-		preprocessor: c.Callable[[list[str]], list[str]] | None = None,
+		text_segmenter: Callable[[str], list[str]],
+		sent_encoder: SentenceTransformer,
+		preprocessor: Callable[[list[str]], list[str]] | None = None,
 		num_keywords: int = 20,
-		keywords_preprocessor: c.Callable[[list[str]], list[str]] | None = None,
+		keywords_preprocessor: Callable[[list[str]], list[str]] | None = None,
 		stop_words: list[str] | None = None,
 		segment_delimiter: str = " ",
 		add_special_tokens: bool = True
@@ -627,7 +627,7 @@ class KeywordScorer(Encoder):
 		sent_encoder = self.sent_encoder
 
 		# Extract keywords from the text
-		keywords = u.get_keywords(
+		keywords = get_keywords(
 			text, self.num_keywords, self.stop_words,
 			self.keywords_preprocessor
 		)
@@ -651,7 +651,7 @@ class KeywordScorer(Encoder):
 		selected_indices = []
 		tokens_used = 0
 		for i in best_indices:
-			segment_len, _ = u.count_tokens(segments[i], tokenizer)
+			segment_len, _ = count_tokens(segments[i], tokenizer)
 			if tokens_used + segment_len + 1 > max_tokens:
 				continue
 			selected_indices.append(i)
