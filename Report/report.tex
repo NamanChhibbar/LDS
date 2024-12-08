@@ -5,8 +5,7 @@
 \documentclass[11pt]{article}
 
 % Remove the "review" option to generate the final version.
-% \usepackage{ACL2023}
-\usepackage[review]{ACL2023}
+\usepackage{ACL2023}
 
 % Standard package includes
 \usepackage{times}
@@ -45,11 +44,11 @@
 
 \makeatletter
 \@ifpackagewith{ACL2023}{review}{
-    % Code if "review" option is enabled
-    \newcommand{\noreview}[1]{}
+  % Code if "review" option is enabled
+  \newcommand{\noreview}[1]{}
 }{
-    % Code if "review" option is NOT enabled
-    \newcommand{\noreview}[1]{#1}
+  % Code if "review" option is NOT enabled
+  \newcommand{\noreview}[1]{#1}
 }
 \makeatother
 
