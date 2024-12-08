@@ -26,9 +26,9 @@
   \end{tabular}
 
   \caption{
-    Automatic evaluation results on the GovReport dataset. Context size of the models are mentioned in parentheses.
+    Automatic evaluation results on the GovReport dataset. The context sizes of the models are mentioned in parentheses.
     The best score in each metric category is highlighted in \textbf{bold}.
-    Results of our algorithms are below the horizontal line in the middle.
+    The results of our algorithms are below the horizontal line in the middle.
   }
   \label{tab:govreport}
 \end{table*}
@@ -51,9 +51,9 @@
   \end{tabular}
 
   \caption{
-    Automatic evaluation results on the BigPatent dataset. Context size of the models are mentioned in parentheses.
+    Automatic evaluation results on the BigPatent dataset. The context sizes of the models are mentioned in parentheses.
     The best score in each metric category is highlighted in \textbf{bold}.
-    Results of our algorithms are below the horizontal line in the middle.
+    The results of our algorithms are below the horizontal line in the middle.
   }
   \label{tab:bigpatent}
 \end{table*}
@@ -64,14 +64,14 @@ We compare our results with the state-of-the-art summarization models on the Gov
 We also compare our results with BigBird-Pegasus \cite{zaheer2020big} on the BigPatent dataset.
 Refer to \autoref{tab:govreport} and \autoref{tab:bigpatent} for results on the GovReport and BigPatent datasets, respectively.
 
-We were unable to obtain the BERTScores of our baselines, except for Unlimiformer, due to unavailability of code or computational limitations.
+We could not obtain the BERTScores of our baselines, except for Unlimiformer, due to the unavailability of code or computational limitations.
 
 
 \subsection*{Time complexity analysis}
 
 We evaluate the time complexity of our methods by measuring the mean time taken to process a document (excluding the time taken by the model to generate the summaries).
 We find that "Central Truncation" (\autoref{method:truncation}) and "Document Skimming" (\autoref{method:skimming}) take approximately the same time.
-"Skimming with post-sampling removal" (removing segments after sampling) takes slightly more time than the other two methods.
+"Skimming with post-sampling removal" (removing segments after sampling) takes slightly longer than the other two methods.
 We can see a significant increase in time taken by "Skimming with pre-sampling removal" (removing segments after sampling) and "Summarization with Keyword Extraction" (\autoref{method:keyword}) due to the additional computations required.
 \autoref{fig:times} illustrates the average time taken by our methods.
 Check \autoref{tab:encoder-times} for exact values rounded off to two decimal places.
