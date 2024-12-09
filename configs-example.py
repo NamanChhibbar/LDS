@@ -7,7 +7,7 @@ Rename this file to configs.py after filling in the paths and configurations.
 
 inf = float('inf')
 
-# Directory for the project containing models and datasets
+# Directory containing models and datasets
 BASE_DIR = './'
 
 # Directory containing all model configuration directories (in lower case names)
