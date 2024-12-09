@@ -1,13 +1,8 @@
 \section{Related Works}
 \label{sec:related-works}
 
-\citet{golia2024action} take a "Divide and Conquer" approach to address sequence length limitations in summarizing long meeting transcripts.
-They begin by segmenting the transcript and then use the BART (Bidirectional and Auto-Regressive Transformer) \cite{lewis-etal-2020-bart} model to summarize each segment individually.
-These segment summaries are then recursively combined and summarized until a single summary remains.
-This method performs well with long documents but may take considerable time to converge due to repeated calls to the model.
-
-There have also been efforts to improve the efficiency of the attention mechanisms in transformers.
-\citet{beltagy2020longformer} introduce the Longformer, which replaces the quadratic self-attention mechanism in the Transformer architecture with a sliding window self-attention, resulting in a linear complexity with respect to the input size.
+There have been efforts to improve the efficiency of the attention mechanisms in transformers.
+\citet{beltagy2020longformer} introduce the Longformer, which replaces the quadratic self-attention mechanism in the transformer architecture with a sliding window self-attention, resulting in a linear complexity with respect to the input size.
 To capture long-range dependencies, they include global attention at specific token positions.
 \citet{huang-etal-2021-efficient} modify the encoder-decoder attention mechanism such that each attention head in the decoder attends to $n/s_h$ tokens in the input sequence, where $n$ is the input length and $s_h$ is the number of heads.
 This method has a complexity of $O(mn/s_h)$, where $m$ is the length of the output sequence.
@@ -19,13 +14,18 @@ In the block-local attention mechanism, the input sequence is divided into multi
 Tokens in a block attend only to the tokens in the same block.
 In staggered block-local attention, the blocks are staggered such that each token is in a different block in each head.
 
-Other unique approaches include VideoAgent, introduced by \citet{wang2024videoagent}, an AI agent designed to answer a given question based on a long video.
+Other relevant approaches include VideoAgent, introduced by \citet{wang2024videoagent}, an AI agent designed to answer a given question based on a long video.
 They achieve this by generating captions from multiple uniformly sampled frames from the video.
 These captions are used to answer the user's question.
 \citet{chen2022long} describe a novel algorithm to classify long Chinese news into predefined categories.
 They form multiple groups of sentences based on a maximum token threshold in each group.
 These groups are then encoded using BERT (Bidirectional Encoder Representations from Transformers) \cite{devlin2018bert} and passed through a 1D convolution layer for local feature extraction.
-This method is unique because a 1D convolution layer replaces the attention mechanism with a linear time complexity.
+This method is unique because a 1D convolution layer replaces the attention mechanism with linear time complexity.
 \citet{chen2023extending} use positional interpolation to extend the context size of a pre-trained model.
 Instead of the usual extrapolation of the positional embeddings, they downscale and force them into a range the model is trained on, hence interpolating in the pre-trained range.
 They claim that the model should use the positional embeddings on which it is trained.
+
+\citet{golia2024action} take a "Divide and Conquer" approach to address sequence length limitations in summarizing long meeting transcripts.
+They begin by segmenting the transcript and then use the BART (Bidirectional and Auto-Regressive Transformer) \cite{lewis-etal-2020-bart} model to summarize each segment individually.
+These segment summaries are then recursively combined and summarized until a single summary remains.
+This method performs well with long documents but may take considerable time to converge due to repeated calls to the model.
