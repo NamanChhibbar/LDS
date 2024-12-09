@@ -1,6 +1,6 @@
-"""
+'''
 Contains utilities for `trainer.py`.
-"""
+'''
 
 import math
 import time
@@ -14,7 +14,7 @@ from utils.helpers import count_words, show_exception, clear_stdout
 
 
 class SummarizationDataset:
-	"""
+	'''
 	Creates an iterable batched dataset of text (and summary) encodings.
 
 	## Parameters
@@ -25,12 +25,12 @@ class SummarizationDataset:
 	`summary_max_tokens`: Maximum tokens in summary encodings
 	`shuffle`: Shuffle batches before iterating
 	`seed`: Manual seed for output reproducibility
-	"""
+	'''
 
 	def __init__(
 		self,
 		texts: list[str],
-		encoder: "Encoder", # type: ignore
+		encoder: 'Encoder', # type: ignore
 		batch_size: int,
 		summaries: list[str] | None = None,
 		summary_max_tokens: int = 0,
@@ -42,7 +42,7 @@ class SummarizationDataset:
 		# if summaries are provided
 		if summaries is not None:
 			assert len(texts) == len(summaries), \
-				"Length of texts and summaries must be equal"
+				'Length of texts and summaries must be equal'
 
 		# This enables dynamic batching
 		perm = np.argsort([count_words(text) for text in texts])
@@ -100,13 +100,13 @@ class SummarizationDataset:
 			summaries = summary_batches[ind]
 			summ_encodings = tokenizer(
 				summaries, padding=True, max_length=self.summary_max_tokens,
-				truncation=True, return_tensors="pt"
-			)["input_ids"]
+				truncation=True, return_tensors='pt'
+			)['input_ids']
 
 			# Set padding token ids to -100 (ignored id in attention)
 			filt = summ_encodings == tokenizer.pad_token_id
 			summ_encodings[filt] = -100
-			encodings["labels"] = summ_encodings
+			encodings['labels'] = summ_encodings
 
 		# Create batch encoding
 		batch_encodings = BatchEncoding(encodings)
@@ -136,7 +136,7 @@ class SummarizationDataset:
 
 		# Check if iterator is initialized
 		it = self.it
-		assert it is not None, "Iterator not initialized"
+		assert it is not None, 'Iterator not initialized'
 
 		# Check if iterations are completed
 		if it == self.num_batches:
@@ -153,7 +153,7 @@ def train_model(
 	epochs: int,
 	optimizer: torch.optim.Optimizer,
 	scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
-	device: str | torch.device = "cpu",
+	device: str | torch.device = 'cpu',
 	flt_prec: int = 4,
 	spaces: int = 100
 ) -> list[int]:
@@ -182,7 +182,7 @@ def train_model(
 
 			except Exception as e:
 				show_exception(e)
-				print("Training terminated")
+				print('Training terminated')
 				model.train(False)
 				return epoch_losses, False
 
@@ -197,21 +197,21 @@ def train_model(
 			hours = minutes // 60
 			days = hours // 24
 
-			time_remaining = f"{seconds % 60}s"
+			time_remaining = f'{seconds % 60}s'
 			if minutes:
-				time_remaining = f"{minutes % 60}m {time_remaining}"
+				time_remaining = f'{minutes % 60}m {time_remaining}'
 			if hours:
-				time_remaining = f"{hours % 24}h {time_remaining}"
+				time_remaining = f'{hours % 24}h {time_remaining}'
 			if days:
-				time_remaining = f"{days}d {time_remaining}"
+				time_remaining = f'{days}d {time_remaining}'
 
 			clear_stdout(spaces)
 			print(
-				f"Epoch [{epoch+1}/{epochs}]",
-				f"Batch [{batch+1}/{num_batches}]",
-				f"Time [{round(time_taken, flt_prec)} ms/batch]",
-				f"Loss [{round(loss.item(), flt_prec)}]",
-				f"Time remaining [{time_remaining}]",
+				f'Epoch [{epoch+1}/{epochs}]',
+				f'Batch [{batch+1}/{num_batches}]',
+				f'Time [{round(time_taken, flt_prec)} ms/batch]',
+				f'Loss [{round(loss.item(), flt_prec)}]',
+				f'Time remaining [{time_remaining}]',
 				end = None
 			)
 
@@ -224,9 +224,9 @@ def train_model(
 
 		clear_stdout(spaces)
 		print(
-			f"Epoch [{epoch+1}/{epochs}]",
-			f"Average loss [{round(epoch_loss, flt_prec)}]",
-			f"Avergage time [{round(epoch_time, flt_prec)} ms/batch]"
+			f'Epoch [{epoch+1}/{epochs}]',
+			f'Average loss [{round(epoch_loss, flt_prec)}]',
+			f'Avergage time [{round(epoch_time, flt_prec)} ms/batch]'
 		)
 
 	model.train(False)

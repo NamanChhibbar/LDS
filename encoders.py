@@ -1,6 +1,6 @@
-"""
+'''
 Contains callable encoder classes.
-"""
+'''
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable
@@ -14,7 +14,7 @@ from utils import count_tokens, get_keywords
 
 
 class Encoder(ABC):
-	"""
+	'''
 	Base class for encoders.
 
 	:param tokenizer: Hugging Face tokenizer
@@ -24,7 +24,7 @@ class Encoder(ABC):
 	:param bool = True add_special_tokens: Add BOS and EOS tokens to text before summary generation
 	:param int | None = None bos_id: Beginning Of Sentence (BOS) token id
 	:param int | None = None eos_id: End Of Sentence (EOS) token id
-	"""
+	'''
 
 	def __init__(
 		self,
@@ -53,7 +53,7 @@ class Encoder(ABC):
 		return_batch: bool = True,
 		**kwargs
 	) -> list[int] | list[list[int]] | BatchEncoding:
-		"""
+		'''
 		Encodes texts to fit in the model's context size and creates a BatchEncoding.
 
 		:param str | list[str] texts: Texts (or text) to encode.
@@ -61,11 +61,11 @@ class Encoder(ABC):
 		:param **kwargs: Override default `min_tokens` or `max_tokens`.
 
 		:returns encodings (list[int] | list[list[int]] | BatchEncoding):Batched text encodings.
-		"""
+		'''
 
 		preprocessor = self.preprocessor
-		min_tokens = kwargs.get("min_tokens", self.min_tokens)
-		max_tokens = kwargs.get("max_tokens", self.max_tokens)
+		min_tokens = kwargs.get('min_tokens', self.min_tokens)
+		max_tokens = kwargs.get('max_tokens', self.max_tokens)
 
 		# Preprocess texts
 		if preprocessor is not None:
@@ -89,8 +89,8 @@ class Encoder(ABC):
 		# Return BatchEncoding if specified
 		if return_batch:
 			encodings = self.tokenizer.pad(
-				{"input_ids": encodings},
-				return_tensors = "pt",
+				{'input_ids': encodings},
+				return_tensors = 'pt',
 				verbose = False
 			)
 
@@ -102,14 +102,14 @@ class Encoder(ABC):
 		text: str,
 		**kwargs
 	) -> list[int]:
-		"""
+		'''
 		Creates encoding for a given text with number of tokens in the range [`min_tokens`, `max_tokens`].
 
 		:param str text: Text to encode
 		:param **kwargs: Override default `min_tokens` or `max_tokens`
 
 		:returns encoding (list[int]): Text encodings
-		"""
+		'''
 		...
 
 	def _encode_wrapper(
@@ -170,7 +170,7 @@ class TruncateMiddle(Encoder):
 	) -> list[int]:
 
 		tokenizer = self.tokenizer
-		max_tokens = kwargs.get("max_tokens", self.max_tokens)
+		max_tokens = kwargs.get('max_tokens', self.max_tokens)
 
 		# Encode the text
 		num_tokens, encoding = count_tokens(text, tokenizer)
@@ -199,7 +199,7 @@ class UniformSampler(Encoder):
 		text_segmenter: Callable[[str], list[str]],
 		preprocessor: Callable[[list[str]], list[str]] | None = None,
 		seed: int | None = None,
-		segment_delimiter: str = " ",
+		segment_delimiter: str = ' ',
 		add_special_tokens: bool = True
 	) -> None:
 
@@ -220,8 +220,8 @@ class UniformSampler(Encoder):
 	) -> list[int]:
 
 		tokenizer = self.tokenizer
-		min_tokens = kwargs.get("min_tokens", self.min_tokens)
-		max_tokens = kwargs.get("max_tokens", self.max_tokens)
+		min_tokens = kwargs.get('min_tokens', self.min_tokens)
+		max_tokens = kwargs.get('max_tokens', self.max_tokens)
 
 		# Check if encodings fit in the model
 		len_encoding, _ = count_tokens(text, tokenizer)
@@ -247,7 +247,7 @@ class UniformSampler(Encoder):
 				flattened,
 				add_special_tokens = False,
 				verbose = False
-			)["input_ids"]
+			)['input_ids']
 
 			# Return if number of tokens is in range
 			if min_tokens <= len(flattened) <= max_tokens:
@@ -268,7 +268,7 @@ class SegmentSampler(Encoder):
 		threshold: float = .7,
 		prob_boost: float = .03,
 		seed: int | None = None,
-		segment_delimiter: str = " ",
+		segment_delimiter: str = ' ',
 		add_special_tokens: bool = True
 	) -> None:
 
@@ -295,8 +295,8 @@ class SegmentSampler(Encoder):
 		tokenizer = self.tokenizer
 		text_segmenter = self.text_segmenter
 		sent_encoder = self.sent_encoder
-		min_tokens = kwargs.get("min_tokens", self.min_tokens)
-		max_tokens = kwargs.get("max_tokens", self.max_tokens)
+		min_tokens = kwargs.get('min_tokens', self.min_tokens)
+		max_tokens = kwargs.get('max_tokens', self.max_tokens)
 
 		# Extract and tokenize segments
 		segments = text_segmenter(text)
@@ -345,7 +345,7 @@ class SegmentSampler(Encoder):
 				flattened,
 				add_special_tokens = False,
 				verbose = False
-			)["input_ids"]
+			)['input_ids']
 
 			# Return if number of tokens is in range
 			if min_tokens <= len(flattened) <= max_tokens:
@@ -365,7 +365,7 @@ class RemoveRedundancy(Encoder):
 		preprocessor: Callable[[list[str]], list[str]] | None = None,
 		threshold: float = .7,
 		seed: int | None = None,
-		segment_delimiter: str = " ",
+		segment_delimiter: str = ' ',
 		add_special_tokens: bool = True
 	) -> None:
 
@@ -390,8 +390,8 @@ class RemoveRedundancy(Encoder):
 		
 		tokenizer = self.tokenizer
 		segment_delimiter = self.segment_delimiter
-		min_tokens = kwargs.get("min_tokens", self.min_tokens)
-		max_tokens = kwargs.get("max_tokens", self.max_tokens)
+		min_tokens = kwargs.get('min_tokens', self.min_tokens)
+		max_tokens = kwargs.get('max_tokens', self.max_tokens)
 
 		# Extract segments
 		segments = self.text_segmenter(text)
@@ -413,7 +413,7 @@ class RemoveRedundancy(Encoder):
 				flattened,
 				add_special_tokens = False,
 				verbose = False
-			)["input_ids"]
+			)['input_ids']
 			return flattened
 
 		# Approximate probability of picking a segment
@@ -433,7 +433,7 @@ class RemoveRedundancy(Encoder):
 				flattened,
 				add_special_tokens = False,
 				verbose = False
-			)["input_ids"]
+			)['input_ids']
 
 			# Return if number of tokens is in range
 			if min_tokens <= len(flattened) <= max_tokens:
@@ -487,7 +487,7 @@ class RemoveRedundancy2(Encoder):
 		preprocessor: Callable[[list[str]], list[str]] | None = None,
 		threshold: float = .7,
 		seed: int | None = None,
-		segment_delimiter: str = " ",
+		segment_delimiter: str = ' ',
 		add_special_tokens: bool = True
 	) -> None:
 		
@@ -512,8 +512,8 @@ class RemoveRedundancy2(Encoder):
 		
 		tokenizer = self.tokenizer
 		segment_delimiter = self.segment_delimiter
-		min_tokens = kwargs.get("min_tokens", self.min_tokens)
-		max_tokens = kwargs.get("max_tokens", self.max_tokens)
+		min_tokens = kwargs.get('min_tokens', self.min_tokens)
+		max_tokens = kwargs.get('max_tokens', self.max_tokens)
 
 		# Extract segments
 		segments = self.text_segmenter(text)
@@ -541,7 +541,7 @@ class RemoveRedundancy2(Encoder):
 				flattened,
 				add_special_tokens = False,
 				verbose = False
-			)["input_ids"]
+			)['input_ids']
 			return flattened
 
 		# Approximate probability of picking a segment
@@ -558,7 +558,7 @@ class RemoveRedundancy2(Encoder):
 				flattened,
 				add_special_tokens = False,
 				verbose = False
-			)["input_ids"]
+			)['input_ids']
 
 			# Return if number of tokens is in range
 			if min_tokens <= len(flattened) <= max_tokens:
@@ -573,7 +573,7 @@ class RemoveRedundancy2(Encoder):
 		sent_encoder = self.sent_encoder
 
 		# Get keyword embedding
-		keywords = " ".join(keywords)
+		keywords = ' '.join(keywords)
 		keyword_emb = sent_encoder.encode(keywords)
 
 		# Get segment embeddings
@@ -600,7 +600,7 @@ class KeywordScorer(Encoder):
 		num_keywords: int = 20,
 		keywords_preprocessor: Callable[[list[str]], list[str]] | None = None,
 		stop_words: list[str] | None = None,
-		segment_delimiter: str = " ",
+		segment_delimiter: str = ' ',
 		add_special_tokens: bool = True
 	) -> None:
 
@@ -623,7 +623,7 @@ class KeywordScorer(Encoder):
 	) -> list[str]:
 
 		tokenizer = self.tokenizer
-		max_tokens = kwargs.get("max_tokens", self.max_tokens)
+		max_tokens = kwargs.get('max_tokens', self.max_tokens)
 		sent_encoder = self.sent_encoder
 
 		# Extract keywords from the text
@@ -633,7 +633,7 @@ class KeywordScorer(Encoder):
 		)
 
 		# Create keywords embedding
-		keywords_emb = sent_encoder.encode(" ".join(keywords))
+		keywords_emb = sent_encoder.encode(' '.join(keywords))
 
 		# Extract segments from the text
 		segments = self.text_segmenter(text)
@@ -669,6 +669,6 @@ class KeywordScorer(Encoder):
 			flattened,
 			add_special_tokens = False,
 			verbose = False
-		)["input_ids"]
+		)['input_ids']
 
 		return flattened

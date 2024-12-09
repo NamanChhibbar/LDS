@@ -1,6 +1,6 @@
-"""
+'''
 Contains utilites for `evaluator.py`.
-"""
+'''
 
 import numpy as np
 import torch
@@ -13,8 +13,8 @@ class Evaluator:
 
 	def __init__(
 		self,
-		pipelines: list["Pipeline"], # type: ignore
-		device: str | torch.device = "cpu",
+		pipelines: list['Pipeline'], # type: ignore
+		device: str | torch.device = 'cpu',
 		rouge_metrics: list[str] | None = None,
 		rougen_max_n: int = 2,
 		rougew_weight_factor: int = 1.2
@@ -26,21 +26,21 @@ class Evaluator:
 		self.num_pipelines = len(pipelines)
 
 		# Initialize BERT scorer
-		self.bert_scorer = BERTScorer(lang="en", device=device)
+		self.bert_scorer = BERTScorer(lang='en', device=device)
 		self.device = device
 
 		# Initialise ROUGE scorer
-		rouge_metrics = rouge_metrics or ["rouge-n", "rouge-l", "rouge-w"]
+		rouge_metrics = rouge_metrics or ['rouge-n', 'rouge-l', 'rouge-w']
 		self.rouge_scorer = Rouge(
 			metrics=rouge_metrics,
 			max_n=rougen_max_n,
 			limit_length=False,
 			weight_factor=rougew_weight_factor
 		)
-		if "rouge-n" in rouge_metrics:
-			rouge_metrics.remove("rouge-n")
+		if 'rouge-n' in rouge_metrics:
+			rouge_metrics.remove('rouge-n')
 			rouge_metrics = [
-				f"rouge-{i + 1}"
+				f'rouge-{i + 1}'
 				for i in range(rougen_max_n)
 			] + rouge_metrics
 		self.rouge_metrics = rouge_metrics
@@ -60,8 +60,8 @@ class Evaluator:
 		bert_score = self.get_bert_score(summaries)
 		rouge_score = self.get_rouge_score(summaries)
 		scores = {
-			"bert-scores": bert_score,
-			"rouge-scores": rouge_score
+			'bert-scores': bert_score,
+			'rouge-scores': rouge_score
 		}
 		return scores
 
@@ -75,7 +75,7 @@ class Evaluator:
 			texts = [texts]
 		all_summaries = self.summaries = []
 		for i, pipeline in enumerate(self.pipelines):
-			print(f"Generating summaries for pipeline {i + 1}...")
+			print(f'Generating summaries for pipeline {i + 1}...')
 			summaries = pipeline(texts, batch_size=batch_size)
 			all_summaries.extend(summaries)
 	
@@ -86,7 +86,7 @@ class Evaluator:
 	) -> list[list[float]]:
 
 		all_summaries = self.summaries
-		assert all_summaries is not None, "Summaries not generated"
+		assert all_summaries is not None, 'Summaries not generated'
 		num_pipelines = self.num_pipelines
 		summaries = num_pipelines * summaries
 		metrics = self.bert_scorer.score(all_summaries, summaries)
@@ -106,7 +106,7 @@ class Evaluator:
 	) -> list[dict[str, list[float]]]:
 
 		generated_summaries = self.summaries
-		assert generated_summaries is not None, "Summaries not generated"
+		assert generated_summaries is not None, 'Summaries not generated'
 		num_generated_summaries = len(generated_summaries)
 		num_summaries = len(summaries)
 		scores = []

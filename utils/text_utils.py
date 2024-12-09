@@ -1,6 +1,6 @@
-"""
+'''
 Contains text processing utilities.
-"""
+'''
 
 import re
 from collections.abc import Callable
@@ -12,7 +12,7 @@ from sklearn.decomposition import LatentDirichletAllocation
 from .helpers import count_words
 
 
-inf = float("inf")
+inf = float('inf')
 
 
 
@@ -39,7 +39,7 @@ def get_keywords(
 
 def get_stop_words(
 	extra_stop_words: list[str] | None = None,
-	lang: str = "english"
+	lang: str = 'english'
 ) -> list[str]:
 	stop_words: list[str] = nltk.corpus.stopwords.words(lang)
 	if extra_stop_words is not None:
@@ -60,57 +60,44 @@ def get_stop_words(
 class TextProcessor:
 
 	# Matches everything except words, numbers, and single quotes
-	_non_word_pat_sub = (r"[^\w\s']", "")
+	_non_word_pat_sub = (r"[^\w\s']", '')
 
 	_preprocessing_pats_subs = [
 		# Remove hyperlinks
-		(r"https?://[^\s]+", ""),
+		(r'https?://[^\s]+', ''),
 		# Remove unecessary periods
-		(r"\.\s*([,;:?!-])", r"\1"),
-		(r"([,;:?!-])\s*\.", r"\1"),
-		(r"\.(\s+)([a-z])", r"\1\2"),
+		(r'\.\s*([,;:?!-])', r'\1'),
+		(r'([,;:?!-])\s*\.', r'\1'),
+		(r'\.(\s+)([a-z])', r'\1\2'),
 		# Remove ending period of abbreviations
 		# (due to difficulties in sentence segmentation)
-		(r"(\.\w+)\.(\s)", r"\1\2"),
+		(r'(\.\w+)\.(\s)', r'\1\2'),
 		# Fix spaces before and after punctuations
-		(r"\s+([,.;:?!])", r"\1"),
-		(r",([^\s\d])", r", \1"),
-		(r"([;:?!])(\S)", r"\1 \2"),
+		(r'\s+([,.;:?!])', r'\1'),
+		(r',([^\s\d])', r', \1'),
+		(r'([;:?!])(\S)', r'\1 \2'),
 		# Remove spaces within brackets and quotes
-		(
-			r'"([^"]*)"',
-			lambda m: f'"{m.group(1).strip()}"'
-		), (
-			r"'([^']*)'",
-			lambda m: f"'{m.group(1).strip()}'"
-		), (
-			r"“([^”]*)”",
-			lambda m: f"“{m.group(1).strip()}”"
-		), (
-			r"‘([^’]*)’",
-			lambda m: f"‘{m.group(1).strip()}’"
-		), (
-			r"\[([^\]]*)\]",
-			lambda m: f"[{m.group(1).strip()}]"
-		), (
-			r"\(([^\)]*)\)",
-			lambda m: f"({m.group(1).strip()})"
-		),
+		(r"'([^']*)'", lambda m: f"'{m.group(1).strip()}'"),
+		(r'"([^"]*)"', lambda m: f'"{m.group(1).strip()}"'),
+		(r'“([^”]*)”', lambda m: f'“{m.group(1).strip()}”'),
+		(r'‘([^’]*)’', lambda m: f'‘{m.group(1).strip()}’'),
+		(r'\[([^\]]*)\]', lambda m: f'[{m.group(1).strip()}]'),
+		(r'\(([^\)]*)\)', lambda m: f'({m.group(1).strip()})'),
 		# Join broken sentences
-		(r"(\w[,;]?)\s+(\w)", r"\1 \2"),
+		(r'(\w[,;]?)\s+(\w)', r'\1 \2'),
 	]
 
 	# Remove numbers
-	_number_pat_sub = (r"(\b|\+)[\d+-]+\b", "")
+	_number_pat_sub = (r'(\b|\+)[\d+-]+\b', '')
 
 	# White spaces
 	_whitespace_pats_subs = [
 		# Replace multiple spaces and tabs
-		(r"[ \t]+", " "),
+		(r'[ \t]+', ' '),
 		# Remove spaces around newline
-		(r" ?\n ?", "\n"),
+		(r' ?\n ?', '\n'),
 		# Replace multiple newlines
-		(r"\n{3,}", "\n\n"),
+		(r'\n{3,}', '\n\n'),
 	]
 
 	def __init__(
@@ -137,7 +124,7 @@ class TextProcessor:
 
 		# Ignore specific tokens
 		if ignore_tokens is not None:
-			pats_subs.append((re.compile(r"|".join(ignore_tokens)), ""))
+			pats_subs.append((re.compile(r'|'.join(ignore_tokens)), ''))
 
 		# Fix white spaces
 		pats_subs.extend(TextProcessor._whitespace_pats_subs)
@@ -174,7 +161,7 @@ class TextSegmenter:
 		self,
 		base_tokenizer: Callable[[str], list[str]],
 		min_words: int,
-		sent_delimiter: str = " "
+		sent_delimiter: str = ' '
 	) -> None:
 
 		self.base_tokenizer = base_tokenizer
@@ -192,7 +179,7 @@ class TextSegmenter:
 		parts = self.base_tokenizer(text)
 		new_parts = []
 		for part in parts:
-			new_parts.extend(part.split(";"))
+			new_parts.extend(part.split(';'))
 		parts = new_parts
 		num_parts = len(parts)
 
@@ -212,8 +199,8 @@ class TextSegmenter:
 			):
 				segments.append(sent)
 			elif prev_text_words < next_text_words:
-				segments[-1] = f"{segments[-1]}{sent_delimiter}{sent}"
+				segments[-1] = f'{segments[-1]}{sent_delimiter}{sent}'
 			else:
-				parts[i + 1] = f"{sent}{sent_delimiter}{parts[i + 1]}"
+				parts[i + 1] = f'{sent}{sent_delimiter}{parts[i + 1]}'
 
 		return segments

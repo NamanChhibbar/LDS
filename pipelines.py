@@ -1,20 +1,20 @@
-"""
+'''
 Contains callable end-to-end summarization pipelines.
-"""
+'''
 
-import time
-import abc
+from time import sleep
+from abc import ABC, abstractmethod
 from collections.abc import Callable
 
 import torch
-import openai
+from openai import OpenAI
 
 from encoders import Encoder
 from utils import count_tokens, show_exception, SummarizationDataset
 
 
 
-class Pipeline(abc.ABC):
+class Pipeline(ABC):
 
 	def __init__(
 		self,
@@ -33,22 +33,20 @@ class Pipeline(abc.ABC):
 		**kwargs
 	) -> str | list[str]:
 
-		return self.generate_summaries([texts], **kwargs)[0] \
-			if isinstance(texts, str) else \
-			self.generate_summaries(texts, **kwargs)
+		return self.generate_summaries([texts], **kwargs)[0] if isinstance(texts, str) \
+			else self.generate_summaries(texts, **kwargs)
 
-	@abc.abstractmethod
+	@abstractmethod
 	def generate_summaries(
 		self,
 		texts: list[str],
 		**kwargs
-	) -> list[str]:
-		...
+	) -> list[str]: ...
 
 
 
 class SummarizationPipeline(Pipeline):
-	"""
+	'''
 	Pipeline for generating summaries using an encoder.
 
 	:param model: The model model.
@@ -56,14 +54,14 @@ class SummarizationPipeline(Pipeline):
 	:param int | None = None summary_min_tokens: The minimum number of tokens in the summary.
 	:param int | None = None summary_max_tokens: The maximum number of tokens in the summary.
 	:param (list[str]) -> list[str] | None = None postprocessor: The postprocessor for the generated summaries.
-	:param str | torch.device = "cpu" device: The device to use for computation.
+	:param str | torch.device = 'cpu' device: The device to use for computation.
 	:param float = 1.0 temperature: The temperature for sampling.
 	:param float = 1.0 repetition_penalty: The repetition penalty.
 	:param float = 0.9 top_p: The nucleus sampling threshold.
 
 	## Returns
 	list[str]: The generated summaries.
-	"""
+	'''
 
 	def __init__(
 		self,
@@ -72,13 +70,13 @@ class SummarizationPipeline(Pipeline):
 		postprocessor: Callable[[list[str]], list[str]] | None = None,
 		summary_min_tokens: int | None = None,
 		summary_max_tokens: int | None = None,
-		device: str | torch.device = "cpu",
+		device: str | torch.device = 'cpu',
 		temperature: float = 1.,
 		repetition_penalty: float = 1.,
 		top_p: float = .9
 	) -> None:
 
-		super().__init__(model.to("cpu"), encoder, postprocessor)
+		super().__init__(model.to('cpu'), encoder, postprocessor)
 		self.summary_min_tokens = summary_min_tokens or model.config.min_length
 		self.summary_max_tokens = summary_max_tokens or encoder.max_tokens
 		self.device = device
@@ -98,12 +96,12 @@ class SummarizationPipeline(Pipeline):
 		postprocessor = self.postprocessor
 		summary_min_tokens = self.summary_min_tokens
 		summary_max_tokens = self.summary_max_tokens
-		batch_size = kwargs.get("batch_size", 1)
-		temperature = kwargs.get("temperature", self.temperature)
+		batch_size = kwargs.get('batch_size', 1)
+		temperature = kwargs.get('temperature', self.temperature)
 		repetition_penalty = kwargs.get(
-			"repetition_penalty", self.repetition_penalty
+			'repetition_penalty', self.repetition_penalty
 		)
-		top_p = kwargs.get("top_p", self.top_p)
+		top_p = kwargs.get('top_p', self.top_p)
 
 		# Generate encodings in batches
 		batches = SummarizationDataset(texts, encoder, batch_size)
@@ -118,12 +116,12 @@ class SummarizationPipeline(Pipeline):
 			# Generate summaries' encodings
 			output = model.generate(
 				**encodings,
-				min_length = summary_min_tokens,
-				max_length = summary_max_tokens,
-				temperature = temperature,
-				repetition_penalty = repetition_penalty,
-				top_p = top_p,
-				early_stopping = True
+				min_length=summary_min_tokens,
+				max_length=summary_max_tokens,
+				temperature=temperature,
+				repetition_penalty=repetition_penalty,
+				top_p=top_p,
+				early_stopping=True
 			)
 
 			# Decode summaries' encodings
@@ -136,7 +134,7 @@ class SummarizationPipeline(Pipeline):
 			all_summaries.extend(summaries)
 
 		# Remove model from device
-		model.to("cpu")
+		model.to('cpu')
 
 		# Postprocess summaries
 		if postprocessor is not None:
@@ -152,12 +150,14 @@ class OpenAIPipeline(Pipeline):
 		self,
 		model: str,
 		encoder: Encoder,
+		openai_api_key: str,
 		postprocessor: Callable[[list[str]], list[str]] | None = None,
 		system_prompt: str | None = None,
 		delay: float = 1.
 	) -> None:
 
 		super().__init__(model, encoder, postprocessor)
+		self.openai_client = OpenAI(api_key=openai_api_key)
 		self.max_tokens = encoder.max_tokens
 		self.system_prompt = system_prompt
 		self.delay = delay
@@ -179,7 +179,7 @@ class OpenAIPipeline(Pipeline):
 			self.create_inputs(text)
 
 			# Extract summary if call is successful
-			summary = ""
+			summary = ''
 			if self.send_call():
 				summary = self.response.choices[0].message.content
 
@@ -191,7 +191,7 @@ class OpenAIPipeline(Pipeline):
 			summaries.append(summary)
 
 			# Delay before next call
-			time.sleep(self.delay)
+			sleep(self.delay)
 
 		return summaries
 	
@@ -213,25 +213,25 @@ class OpenAIPipeline(Pipeline):
 		system_prompt = self.system_prompt
 		messages = []
 		if system_prompt is not None:
-			messages.append({"role": "system", "content": system_prompt})
+			messages.append({'role': 'system', 'content': system_prompt})
 			tokens_used += count_tokens(system_prompt, tokenizer)[0] + 4
 
 		# Distill text
 		encodings = encoder(
-			text,
-			return_batch = False,
-			max_tokens = max_tokens - tokens_used
+			texts=text,
+			return_batch=False,
+			max_tokens=max_tokens-tokens_used
 		)
 		text = tokenizer.decode(encodings, ignore_special_tokens=True)
 
 		# Create prompt
-		messages.append({"role": "user", "content": text})
+		messages.append({'role': 'user', 'content': text})
 
 		# Create inptuts
 		self.call_inputs = {
-			"model": self.model,
-			"messages": messages,
-			"max_tokens": max_tokens
+			'model': self.model,
+			'messages': messages,
+			'max_tokens': max_tokens
 		}
 		return tokens_used
 	
@@ -239,11 +239,11 @@ class OpenAIPipeline(Pipeline):
 
 		# Check if call inputs are created
 		call_inputs = self.call_inputs
-		assert call_inputs is not None, "Call inputs not created"
+		assert call_inputs is not None, 'Call inputs not created'
 
 		# Send call
 		try:
-			self.response = openai.chat.completions.create(**call_inputs)
+			self.response = self.openai_client.chat.completions.create(**call_inputs)
 
 		# Show exception and return False if the call failed
 		except Exception as e:
