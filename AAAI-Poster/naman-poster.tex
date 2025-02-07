@@ -1,0 +1,106 @@
+\documentclass[20pt]{beamer}
+\usepackage[size=custom, height=80, width=100, scale=1.6]{beamerposter}
+\usepackage{graphicx}
+\usepackage{multicol}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+% Theme settings
+% \usetheme{ConfPoster} 
+% \usecolortheme{dolphin}  % You can experiment with different color themes
+
+% Title and Author Information
+\title{Automatic Summarization of Long Documents}
+\author{
+  Naman Chhibbar\textsuperscript{\rm 1},
+  Jugal Kalita\textsuperscript{\rm 2}
+}
+\institute{
+  \textsuperscript{\rm 1}Indian Institute of Technology, Hyderabad \\
+  \textsuperscript{\rm 2}University of Colorado, Colorado Springs \\
+  \texttt{naman.iith@gmail.com, jkalita@uccs.edu}
+}
+\date{}
+
+% Begin Document
+\begin{document}
+
+% Title Block
+\begin{frame}[t]
+
+\begin{columns}[t]
+
+  \column{.15\textwidth}
+    \begin{figure}
+      \centering
+      \includegraphics[width=.65\textwidth]{images/iith.png}
+    \end{figure}
+
+  \column{.85\textwidth}
+    \vspace{2cm}
+    \begin{minipage}{\columnwidth}
+      \centering
+      \Huge \textbf{\inserttitle} \\
+      \large \insertauthor \\
+      \large \insertinstitute
+    \end{minipage}
+
+\end{columns}
+
+% Add space after the title block
+\vspace{1cm}
+
+% Poster Content
+\begin{columns}[t]
+
+  \column{.33\textwidth}
+  \begin{block}{Introduction}
+    This is where you describe the background of your research. 
+    Include important context, goals, and what your study is about.
+  \end{block}    
+
+  \begin{block}{Methods}
+    Describe the methodology, tools, or techniques you used. 
+    Include diagrams or equations if necessary.
+  \end{block}
+
+
+  \column{.33\textwidth}
+  \begin{block}{Results}
+    Present your key findings. 
+    Use figures, tables, or bullet points for clarity.
+    % \begin{figure}[h!]
+    %     \centering
+    %     \includegraphics[width=0.9\linewidth]{path/to/figure.png}
+    %     \caption{Your figure caption here.}
+    % \end{figure}
+  \end{block}
+
+  \begin{block}{Discussion}
+    Explain what the results mean in the context of your research question. 
+    Address any limitations or implications.
+  \end{block}
+
+
+  \column{.33\textwidth}
+  \begin{block}{Conclusion}
+    Summarize the key takeaways from your research. 
+    Highlight the importance of your findings.
+  \end{block}
+
+  \begin{block}{References}
+    \begin{itemize}
+      \item First reference [1]
+      \item Second reference [2]
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Acknowledgments}
+    All work herein reported is supported by the National Science Foundation under Grant No. 2349452.
+    Any opinion, finding, or conclusion in this study is that of the authors and does not necessarily reflect the views of the National Science Foundation.
+  \end{block}
+
+\end{columns}
+
+\end{frame}
+\end{document}
