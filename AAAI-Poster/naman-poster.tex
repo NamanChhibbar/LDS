@@ -32,12 +32,14 @@
 
 % Title Block
 \begin{columns}[t]
-  \column{.15\textwidth}
+  \column{.2\textwidth}
     \begin{figure}[!h]
       \centering
-      \includegraphics[width=.6\textwidth]{images/iith.png}
+      \includegraphics[width=.4\textwidth]{images/iith.png}
+      \hspace{1cm}
+      \includegraphics[width=.4\textwidth]{images/uccs.png}
     \end{figure}
-  \column{.85\textwidth}
+  \column{.8\textwidth}
     \vspace{1cm}
     \begin{minipage}{\columnwidth}
       \centering
@@ -55,21 +57,21 @@
   \begin{block}{Introduction}
     The rapid growth of online textual data has made \textbf{document summarization} essential for extracting relevant information efficiently.
     \textbf{Transformer models} have demonstrated remarkable capabilities in this domain, producing coherent and relevant summaries.
-    However, \textbf{long document summarization remains a challenge} due to the \textbf{limited context size} of transformers, which stems from quadratic memory and computational complexity of the attention mechanism \cite{du2023improving}.
+    However, \textbf{long document summarization remains a challenge} due to the \textbf{limited context size} of transformers, which stems from quadratic memory and computational complexity of the attention mechanism.
     This constraint makes it difficult to process extensive texts wherein summarization is crucial for reducing reading time and improving comprehension.
-    We explore novel methods to overcome input size limitations in transformers \textbf{without modifying the model architecture}.
+    We explore three novel methods to overcome input size limitations in transformers \textbf{without modifying the model architecture}.
     These methods can be integrated into any existing summarization pipelines, maximizing an LLM’s ability to extract key information.
   \end{block}
 
   \begin{block}{Methodology}
     \heading{Central Truncation}
     In this method, we truncate the text from the middle; that is, we keep parts of the beginning and end of the document.
-    This time-efficient method is an adaptation of \cite{worsham-kalita-2018-genre} and \cite{sun2019fine}, both of which pertain to long text classification.
-    We introduce a new hyperparameter to control the fraction of the text to be taken from the head.
+    This is an extension of the default truncation method used to handle long inputs in transformers.
+    We introduce a hyperparameter to control the fraction of the text to be taken from the head.
 
     \heading{Document Skimming}
     This method first segments the document and then uniformly samples the segments, meaning each segment has an equal probability of being sampled.
-    This ensures that the model is exposed to all parts of the document while preserving efficiency.
+    This ensures the model is exposed to all document parts while preserving efficiency.
     We also experiment with removing redundant segments before and after sampling to prevent the model from repeating itself.
     \begin{figure}[!h]
       \centering
@@ -83,21 +85,30 @@
   \vspace{.8cm}
   \begin{minipage}{\columnwidth}
     \heading{Summarization with Keyword Extraction}
-    This method is based on extracting keywords from the text to help choose the segments intelligently.
-    We use LDA \cite{blei2003latent} with a single topic to extract topic words (keywords) from the text.
+    This method extracts keywords from the text to help intelligently choose the segments.
+    We use Latent Dirichlet allocation (LDA) with a single topic to extract topic words (keywords) from the text.
     These keywords are concatenated with space as a delimiter to form a single sentence.
     This sentence is compared against the segments using a sentence transformer using cosine similarity to gain scores for each segment.
     Segments with the highest scores are selected for summarization.
   \end{minipage}
   
-  \begin{block}{Results}
+  \begin{block}{Experiments}
+
+    We conduct our experiments on \textbf{GovReport} and \textbf{BigPatent} datasets with maximum word counts of \textbf{73,815} and \textbf{71,027}, respectively.
+    Our methods (below) are separated from the baselines (above) by a horizontal line in both tables.
+    The best metric in each table is highlighted in bold.
+    Context size of each model is given in parentheses.
+    R-1, R-2, and R-L stand for ROUGE-1, ROUGE-2, and ROUGE-L respectively.
+
+    The table below shows the results on GovReport dataset.
+
     \begin{table}[!ht]
       \centering
       \small
     
       \begin{tabular}{c c c c c}
         \hline
-        Model & R-1 & R-2 & R-L & BERTScore \\
+        Model & R-1 & R-2 & R-L & B-Score \\
         \hline
         BART /w Unlimiformer (1,024) & 53.4 & 22.5 & 22.5 & 66.0 \\
         PRIMERA w/ & 56.5 & 24.8 & 26.3 & 67.7 \\
@@ -116,13 +127,11 @@
         removal /w LongT5 (4,096) & & & & \\
         \hline
       \end{tabular}
-    
-      % \caption{
-      %   Automatic evaluation on GovReport dataset.
-      %   The best metric in each category is highlighted in \textbf{bold}.
-      % }
+
       \label{tab:govreport}
     \end{table}
+
+    Below are the results on BigPatent dataset.
     
     \begin{table}[!t]
       \centering
@@ -130,7 +139,7 @@
     
       \begin{tabular}{c c c c c}
         \hline
-        Model & R-1 & R-2 & R-L & BERTScore \\
+        Model & R-1 & R-2 & R-L & B-Score \\
         \hline
         BigBird-Pegasus (16k) & \textbf{60.64} & \textbf{42.46} & \textbf{50.01} & - \\
         \hline
@@ -142,24 +151,29 @@
         removal w/ GPT-3.5 Turbo (4,096) & & & & \\
         \hline
       \end{tabular}
-    
-      % \caption{
-      %   Automatic evaluation on BigPatent dataset.
-      %   The best metric in each category is highlighted in \textbf{bold}.
-      % }
+
       \label{tab:bigpatent}
     \end{table}
   \end{block}
 
 
   \column{.33\textwidth}
+  \vspace{.8cm}
+  \begin{minipage}{\columnwidth}
+    The bar chart below depicts the time taken by each method (in milliseconds).
+    \begin{figure}[!h]
+      \centering
+      \includegraphics[width=.8\textwidth]{images/encoder-times.png}
+    \end{figure}
+  \end{minipage}
+  
   \begin{block}{Conclusion}
-    Summarize the key takeaways from your research. 
-    Highlight the importance of your findings.
-  \end{block}
-
-  \begin{block}{References}
-    \small\bibliography{anthology.bib}
+    Our experiments demonstrate that “Document Skimming” with post-sampling removal achieves strong performance while remaining efficient, while the “Central Truncation” method also performs well, highlighting the effectiveness of simple approaches in long-document summarization.
+    “Document Skimming” with pre-sampling removal and “Summarization with Keyword Extraction” yield the best results but are computationally expensive.
+    Our methods show a significant BERTScore improvement over Unlimiformer, indicating better semantic understanding.
+    While our ROUGE-2 scores are lower, ROUGE-1 and ROUGE-L remain competitive.
+    Given that BERTScore better captures semantic similarity, we emphasize its importance over ROUGE scores.
+    Despite using models with much smaller context sizes than the baselines, our methods demonstrate strong potential, especially when scaled to larger models.
   \end{block}
 
   \begin{block}{Acknowledgments}
