@@ -12,7 +12,7 @@
 \bibliographystyle{plainnat}
 
 % Theme settings
-% \usetheme{ConfPoster} 
+% \usetheme{ConfPoster}
 % \usecolortheme{dolphin}  % You can experiment with different color themes
 
 % Title and Author Information
@@ -91,7 +91,7 @@
     This sentence is compared against the segments using a sentence transformer using cosine similarity to gain scores for each segment.
     Segments with the highest scores are selected for summarization.
   \end{minipage}
-  
+
   \begin{block}{Experiments}
 
     We conduct our experiments on \textbf{GovReport} and \textbf{BigPatent} datasets with maximum word counts of \textbf{73,815} and \textbf{71,027}, respectively.
@@ -105,7 +105,7 @@
     \begin{table}[!ht]
       \centering
       \small
-    
+
       \begin{tabular}{c c c c c}
         \hline
         Model & R-1 & R-2 & R-L & B-Score \\
@@ -132,11 +132,11 @@
     \end{table}
 
     Below are the results on BigPatent dataset.
-    
+
     \begin{table}[!t]
       \centering
       \small
-    
+
       \begin{tabular}{c c c c c}
         \hline
         Model & R-1 & R-2 & R-L & B-Score \\
@@ -166,7 +166,7 @@
       \includegraphics[width=.8\textwidth]{images/encoder-times.png}
     \end{figure}
   \end{minipage}
-  
+
   \begin{block}{Conclusion}
     Our experiments demonstrate that “Document Skimming” with post-sampling removal achieves strong performance while remaining efficient, while the “Central Truncation” method also performs well, highlighting the effectiveness of simple approaches in long-document summarization.
     “Document Skimming” with pre-sampling removal and “Summarization with Keyword Extraction” yield the best results but are computationally expensive.
