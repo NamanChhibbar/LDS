@@ -18,10 +18,19 @@ Activate the virtual environment by running:
 source .venv/bin/activate
 ```
 
+## Updating the Configurations
+
+Update the default configurations in [configs.py](configs.py).
+You will need to update the `OPENAI_API_KEY` in this file to use the OpenAIPipeline in [pipelines.py](pipelines.py).
+
+## Using a Summarization Pipeline
+
+There are two summarizaation pipelines available in [pipelines.py](pipelines.py).
+To generate the summary for a given text, instantiate them with the necessary arguments and use the `generate_summaries` method.
+
 ## Using the Encoders independently
 
 To use any of the encoding algorithm mentioned in the paper, import the necessary class from [encoders.py](encoders.py).
-
 Refer to the documentation in the file for usage.
 
 ## Training a Model using an Encoder
