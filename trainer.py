@@ -31,9 +31,13 @@ from utils import (
 
 
 def main() -> None:
-
+  '''
+  Main function to train a model using an encoder on a dataset.
+  The model, dataset, encoder, batch size, number of epochs,
+  and whether to use GPU or shuffle the data are specified
+  as command line arguments.
+  '''
   filterwarnings('ignore')
-
   # Get command line arguments
   # See function get_arguments for descriptions
   args = get_arguments()
@@ -44,39 +48,33 @@ def main() -> None:
   batch_size = args.batch_size
   epochs = args.epochs
   device = 'cpu' if args.no_gpu else get_device(GPU_USAGE_TOLERANCE)
-
   # All paths that are needed to be hard coded
   data_dir = f'{BASE_DIR}/{dataset}'
   sent_dir = f'{MODELS_DIR}/sent-transformer'
   model_dir = f'{MODELS_DIR}/{model_name}'
   save_dir = f'{MODELS_DIR}/{model_name}-{dataset}-{encoder_name}'
   train_history_path = f'{BASE_DIR}/{model_name}-{dataset}-history.json'
-
+  # Load tokenizer and model
   print('Loading tokenizer and model...')
   match model_name:
-
     case 'bart' | 'pegasus':
       tokenizer = AutoTokenizer.from_pretrained(model_dir)
       model = AutoModelForCausalLM.from_pretrained(model_dir)
       context_size = model.config.max_position_embeddings
-
     case 't5':
       tokenizer = AutoTokenizer.from_pretrained(model_dir)
       model = AutoModelForCausalLM.from_pretrained(model_dir)
       context_size = model.config.n_positions
-
     case _:
       raise ValueError(f'Invalid model name: {model_name}')
-
+  # Get minimum number of tokens and display context size
   min_tokens = int(MIN_TOKEN_FRAC * context_size)
   print(f'Context size of model: {context_size}')
-
   texts, summaries = [], []
   num_texts = 0
-
+  # Load data
   print('Loading data...')
   match dataset:
-
     case 'govreport':
       files = os.listdir(data_dir)
       for file in files:
@@ -89,7 +87,6 @@ def main() -> None:
           num_texts += 1
         if num_texts == MAX_TEXTS:
           break
-
     case 'bigpatent':
       files = os.listdir(data_dir)
       for file in files:
@@ -105,12 +102,10 @@ def main() -> None:
             break
         if num_texts == MAX_TEXTS:
           break
-
     case _:
       raise ValueError(f'Invalid dataset name: {dataset}')
-
   print(f'Using {num_texts} texts')
-
+  # Initialize encoder and text processor and segmenter
   print('Initializing encoder...')
   preprocessor = TextProcessor(preprocessing=True)
   text_segmenter = TextSegmenter(nltk.sent_tokenize, SEGMENT_MIN_WORDS)
@@ -119,34 +114,28 @@ def main() -> None:
     remove_nums = True
   )
   stop_words = get_stop_words(EXTRA_STOP_WORDS)
-
   match encoder_name:
-
     case 'truncatemiddle':
       encoder = TruncateMiddle(
         tokenizer, context_size, HEAD_SIZE, preprocessor
       )
-
     case 'uniformsampler':
       encoder = UniformSampler(
         tokenizer, min_tokens, context_size, text_segmenter,
         preprocessor, SEED
       )
-
     case 'segmentsampler':
       sent_encoder = SentenceTransformer(sent_dir, device=device)
       encoder = SegmentSampler(
         tokenizer, min_tokens, context_size, text_segmenter,
         sent_encoder, preprocessor, THRESHOLD, PROB_BOOST, SEED
       )
-
     case 'removeredundancy':
       sent_encoder = SentenceTransformer(sent_dir, device=device)
       encoder = RemoveRedundancy(
         tokenizer, min_tokens, context_size, text_segmenter,
         sent_encoder, preprocessor, THRESHOLD, SEED
       )
-
     case 'keywordscorer':
       sent_encoder = SentenceTransformer(sent_dir, device=device)
       encoder = KeywordScorer(
@@ -154,37 +143,32 @@ def main() -> None:
         preprocessor, NUM_KEYWORDS, keywords_preprocessor,
         stop_words
       )
-
     case _:
       raise ValueError(f'Invalid encoder name: {encoder_name}')
-
+  # Initialize dataset
   print('Initializing dataset...')
   dataset = SummarizationDataset(
     texts, encoder, batch_size, summaries,
     context_size, shuffle, SEED
   )
-
   # Adam optimizer with weight decay
   optimizer = torch.optim.AdamW(model.parameters(), LEARNING_RATE)
-
-  # Reduces LR when a tracked metric stops improving
+  # ReduceLROnPlateau scheduler
   scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
     optimizer, mode='min',
     factor=SCHEDULER_FACTOR, patience=SCHEDULER_PATIENCE
   )
-
+  # Train model
   print(f'Starting training with device {device}...\n')
   train_history, successful = train_model(
     model, dataset, epochs, optimizer, scheduler,
     device, FLT_PREC, SPACES
   )
-
   if not successful:
     input('Press enter to save model')
-
+  # Save model
   print(f'\nSaving model in {save_dir}...')
   model.save_pretrained(save_dir)
-
   print(f'Saving training history in {train_history_path}...')
   dirs, _ = os.path.split(train_history_path)
   if not os.path.exists(dirs):
@@ -193,13 +177,11 @@ def main() -> None:
     json.dump({
       'train-history': train_history
     }, fp, indent=2)
-
   print('Finished')
 
 
 def get_arguments() -> Namespace:
   parser = ArgumentParser(description='Training script')
-
   # Command line arguments
   parser.add_argument(
     '--model', action='store', type=str, required=True,
@@ -233,7 +215,6 @@ def get_arguments() -> Namespace:
     '--seed', action='store', type=int,
     help='use a manual seed for output reproducibility'
   )
-
   args = parser.parse_args()
   return args
 

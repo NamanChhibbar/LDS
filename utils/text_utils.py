@@ -103,28 +103,21 @@ class TextProcessor:
     remove_nums: bool = False,
     ignore_tokens: list[str] | None = None
   ) -> None:
-
     pats_subs = []
-
     # Only words and numbers
     if only_words_nums:
       pats_subs.append(TextProcessor._non_word_pat_sub)
-
     # Preprocessing
     if preprocessing:
       pats_subs.extend(TextProcessor._preprocessing_pats_subs)
-
     # Remove numbers
     if remove_nums:
       pats_subs.append(TextProcessor._number_pat_sub)
-
     # Ignore specific tokens
     if ignore_tokens is not None:
       pats_subs.append((re.compile(r'|'.join(ignore_tokens)), ''))
-
     # Fix white spaces
     pats_subs.extend(TextProcessor._whitespace_pats_subs)
-
     self._pats_subs = [
       (re.compile(pat), sub) for pat, sub in pats_subs
     ]
@@ -133,12 +126,10 @@ class TextProcessor:
     self,
     texts: str | list[str]
   ) -> str | list[str]:	
-
     # Check if single text is given		
     single_text = isinstance(texts, str)
     if single_text:
       texts = [texts]
-
     # Process texts
     processed_texts = []
     for text in texts:
@@ -146,7 +137,6 @@ class TextProcessor:
         text = pat.sub(sub, text)
       text = text.strip()
       processed_texts.append(text)
-
     return processed_texts[0] if single_text else processed_texts
 
 
@@ -158,26 +148,19 @@ class TextSegmenter:
     min_words: int,
     sent_delimiter: str = ' '
   ) -> None:
-
     self.base_tokenizer = base_tokenizer
     self.min_words = min_words
     self.sent_delimiter = sent_delimiter
 
-  def __call__(
-    self,
-    text: str
-  ) -> list[str]:
-
+  def __call__(self, text: str) -> list[str]:
     min_words = self.min_words
     sent_delimiter = self.sent_delimiter
-
     parts = self.base_tokenizer(text)
     new_parts = []
     for part in parts:
       new_parts.extend(part.split(';'))
     parts = new_parts
     num_parts = len(parts)
-
     segments = []
     for i, sent in enumerate(parts):
       prev_text_words = (
@@ -197,5 +180,4 @@ class TextSegmenter:
         segments[-1] = f'{segments[-1]}{sent_delimiter}{sent}'
       else:
         parts[i + 1] = f'{sent}{sent_delimiter}{parts[i + 1]}'
-
     return segments

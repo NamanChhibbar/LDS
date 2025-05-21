@@ -18,16 +18,13 @@ class Evaluator:
     rougen_max_n: int = 2,
     rougew_weight_factor: int = 1.2
   ) -> None:
-
     # Initialize pipelines
     pipelines = self.pipelines = pipelines if \
       isinstance(pipelines, list) else [pipelines]
     self.num_pipelines = len(pipelines)
-
     # Initialize BERT scorer
     self.bert_scorer = BERTScorer(lang='en', device=device)
     self.device = device
-
     # Initialise ROUGE scorer
     rouge_metrics = rouge_metrics or ['rouge-n', 'rouge-l', 'rouge-w']
     self.rouge_scorer = Rouge(
@@ -45,7 +42,6 @@ class Evaluator:
     self.rouge_metrics = rouge_metrics
     self.rougen_max_n = rougen_max_n
     self.rougew_weight_factor = rougew_weight_factor
-
     self.summaries = None
 
   def __call__(
@@ -54,7 +50,6 @@ class Evaluator:
     summaries: str | list[str],
     batch_size: int | None = None
   ) -> dict[str]:
-
     self.generate_summaries(texts, batch_size)
     bert_score = self.get_bert_score(summaries)
     rouge_score = self.get_rouge_score(summaries)
@@ -69,7 +64,6 @@ class Evaluator:
     texts: str | list[str],
     batch_size: int | None = None
   ) -> None:
-
     if isinstance(texts, str):
       texts = [texts]
     all_summaries = self.summaries = []
@@ -83,7 +77,6 @@ class Evaluator:
     self,
     summaries: list[str]
   ) -> list[list[float]]:
-
     all_summaries = self.summaries
     assert all_summaries is not None, 'Summaries not generated'
     num_pipelines = self.num_pipelines
@@ -103,7 +96,6 @@ class Evaluator:
     self,
     summaries: list[str]
   ) -> list[dict[str, list[float]]]:
-
     generated_summaries = self.summaries
     assert generated_summaries is not None, 'Summaries not generated'
     num_generated_summaries = len(generated_summaries)

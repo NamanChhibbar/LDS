@@ -31,23 +31,23 @@ from utils import (
 )
 
 
-
 def main() -> None:
-
+  '''
+  Main function to evaluate summarization pipelines on a dataset.
+  '''
   filterwarnings('ignore')
+  # Get command line arguments
   args = get_arguments()
-
   model_name = args.model.lower()
   dataset_name = args.dataset.lower()
   batch_size = args.batch_size
   device = 'cpu' if args.no_gpu else get_device(GPU_USAGE_TOLERANCE)
   time_only = args.time_only
-
   data_dir = f'{BASE_DIR}/{dataset_name}'
   sent_dir = f'{BASE_DIR}/Models/sent-transformer'
   model_dir = f'{MODELS_DIR}/{model_name}'
   results_path = f'{BASE_DIR}/{model_name}-{dataset_name}{'-times' if time_only else ''}.json'
-
+  # Load text processor and segmenter
   print('Loading text processors and segmenter...')
   preprocessor = TextProcessor(preprocessing=True)
   keywords_preprocessor = TextProcessor(
@@ -56,39 +56,34 @@ def main() -> None:
   )
   postprocessor = None
   text_segmenter = TextSegmenter(nltk.sent_tokenize, SEGMENT_MIN_WORDS)
-
+  # Load sentence encoder
   print('Loading sentence encoder...')
   sent_encoder = SentenceTransformer(sent_dir, device=device)
-
+  # Load model
   print('Loading tokenizer and model...')
   match model_name:
-
     case 'bart' | 'pegasus':
       tokenizer = AutoTokenizer.from_pretrained(model_dir)
       model = AutoModelForCausalLM.from_pretrained(model_dir)
       context_size = model.config.max_position_embeddings
-
     case 't5':
       tokenizer = AutoTokenizer.from_pretrained(model_dir)
       model = AutoModelForCausalLM.from_pretrained(model_dir)
       context_size = model.config.n_positions
-
     case 'gpt':
       if not OPENAI_API_KEY:
         raise RuntimeError('OpenAI API key not found')
       tokenizer = AutoTokenizer.from_pretrained(model_dir)
       model = 'gpt-3.5-turbo'
       context_size = 4096
-
     case _:
       raise ValueError(f'Invalid model name: {model_name}')
-
+  # Get minimum number of tokens and display context size
   print(f'Context size of model: {context_size}')
-
-  print('Initializing encoders and pipelines...')
   stop_words = get_stop_words(EXTRA_STOP_WORDS)
   min_tokens = int(MIN_TOKEN_FRAC * context_size)
-
+  # Initialize encoders and pipelines
+  print('Initializing encoders and pipelines...')
   encoders = [
     TruncateMiddle(
       tokenizer, context_size, 1, preprocessor
@@ -118,7 +113,6 @@ def main() -> None:
       stop_words
     )
   ]
-
   pipelines = [
     SummarizationPipeline(
       model, enc, postprocessor, MIN_SUMMARY_TOKENS,
@@ -129,13 +123,11 @@ def main() -> None:
       model, enc, OPENAI_API_KEY, postprocessor, SYSTEM_PROMPT
     ) for enc in encoders
   ]
-
   texts, summaries = [], []
   num_texts = 0
-
+  # Load data
   print('Loading data...')
   match dataset_name:
-
     case 'govreport':
       files = os.listdir(data_dir)
       for file in files:
@@ -148,7 +140,6 @@ def main() -> None:
           num_texts += 1
         if num_texts == MAX_TEXTS:
           break
-
     case 'bigpatent':
       files = os.listdir(data_dir)
       for file in files:
@@ -164,18 +155,15 @@ def main() -> None:
             break
         if num_texts == MAX_TEXTS:
           break
-
     case _:
       raise ValueError(f'Invalid dataset name: {dataset_name}')
-
   print(f'Using {num_texts} texts')
-
+  # Initialize results dictionary
   results = {
     'min_words': MIN_WORDS,
     'max_words': MAX_WORDS,
     'max_texts': MAX_TEXTS
   }
-
   if time_only:
     all_times = []
     print('Timing encoders...')
@@ -189,23 +177,19 @@ def main() -> None:
       )
       all_times.append(time_taken)
     results['encoder_times'] = all_times
-
   else:
     print(f'Evaluating pipelines with device {device}...')
     evaluator = Evaluator(pipelines, device)
     evaluator_results = evaluator(texts, summaries, batch_size)
     results.update(evaluator_results)
-
+  # Save results
   print(f'Saving results in {results_path}...')
   with open(results_path, 'w') as fp:
     json.dump(results, fp, indent=2)
 
 
-
 def get_arguments() -> ap.Namespace:
-
   parser = ap.ArgumentParser(description='Training script')
-
   # Command line arguments
   parser.add_argument(
     '--model', action='store', type=str, required=True,
@@ -227,10 +211,8 @@ def get_arguments() -> ap.Namespace:
     '--time-only', action='store_true',
     help='Specify to ONLY time encoders'
   )
-
   args = parser.parse_args()
   return args
-
 
 
 if __name__ == '__main__':

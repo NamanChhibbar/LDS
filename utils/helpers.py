@@ -18,10 +18,8 @@ def gpu_usage() -> list[int]:
     '--query-gpu=memory.used',
     '--format=csv,nounits,noheader'
   ]).decode('utf-8').strip()
-
   # Extract memory used by GPUs in MiB
   gpu_memory = [int(mem) for mem in result.split('\n')]
-
   return gpu_memory
 
 def get_device(threshold: int | float = 500) -> str:
